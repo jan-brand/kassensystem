@@ -1,0 +1,3 @@
+<?php
+namespace App\Foundation\Console;use App\Foundation\Generation\FilePlan;use App\Foundation\Registry\ProjectRegistry;
+final class SurfaceRemoveCommand extends FoundationCommand{protected $signature='surface:remove {name} {--dry-run} {--force}';protected $description='Remove a surface manifest after page checks.';public function handle(FilePlan $p,ProjectRegistry $r):int{$n=$this->argument('name');$pages=array_filter($r->pages(),fn($x)=>($x['surface']??'')===$n);if($pages&&!$this->option('force')){$this->error('Surface has pages; move/remove them first.');return self::FAILURE;}$p->delete("resources/surfaces/{$n}/surface.json");return $this->runPlan($p,"surface:remove {$n}");}}

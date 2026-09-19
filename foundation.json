@@ -1,0 +1,25 @@
+{
+    "project": {
+        "name": "Kassensystem",
+        "slug": "kassensystem",
+        "default_surface": "pos"
+    },
+    "generator": {
+        "tests": true,
+        "docs": true,
+        "interactive": true
+    },
+    "design": {
+        "strict": true
+    },
+    "environment": {
+        "targets": [
+            ".env",
+            ".env.testing"
+        ]
+    },
+    "dashboard": {
+        "enabled": true,
+        "local_only": true
+    }
+}

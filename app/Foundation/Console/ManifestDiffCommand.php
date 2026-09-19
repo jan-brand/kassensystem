@@ -1,0 +1,3 @@
+<?php
+namespace App\Foundation\Console;use Illuminate\Console\Command;
+final class ManifestDiffCommand extends Command{protected $signature='manifest:diff';protected $description='Tell whether the generated registry snapshot exists and may need rebuilding.';public function handle():int{$p=storage_path('framework/foundation/registry.json');if(!is_file($p)){$this->warn('No generated registry. Run manifest:build.');return self::FAILURE;}$this->line('Generated registry modified: '.date(DATE_ATOM,filemtime($p)));$this->comment('Run manifest:build after source manifest changes.');return self::SUCCESS;}}

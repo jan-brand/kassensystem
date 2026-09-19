@@ -1,0 +1,3 @@
+<?php
+namespace App\Foundation\Console;use App\Foundation\Registry\ProjectRegistry;use Illuminate\Console\Command;
+final class PermissionCheckCommand extends Command{protected $signature='permission:check';protected $description='Check permission references from pages and navigation.';public function handle(ProjectRegistry $r):int{$known=$r->permissions();$bad=false;foreach($r->pages() as $p){if(($p['permission']??null)&&!in_array($p['permission'],$known,true)){$this->error($p['name'].': missing permission '.$p['permission']);$bad=true;}}if(!$bad)$this->info('Permission references valid.');return $bad?self::FAILURE:self::SUCCESS;}}

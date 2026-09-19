@@ -1,0 +1,3 @@
+<?php
+namespace App\Foundation\Console;use App\Foundation\Generation\FilePlan;use App\Foundation\Support\JsonFile;
+final class NavigationAddCommand extends FoundationCommand{protected $signature='navigation:add {surface} {label} {route} {--permission=} {--dry-run} {--force}';protected $description='Add a navigation item to a surface navigation manifest.';public function handle(FilePlan $p):int{$rel='resources/navigation/'.$this->argument('surface').'.json';$d=JsonFile::read(base_path($rel),['items'=>[]]);$d['items'][]=['label'=>$this->argument('label'),'route'=>$this->argument('route'),'permission'=>$this->option('permission')];$p->write($rel,JsonFile::encode($d),true);return $this->runPlan($p,'navigation:add');}}

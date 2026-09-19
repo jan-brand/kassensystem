@@ -1,0 +1,3 @@
+<?php
+namespace App\Foundation\Console;use App\Foundation\Generation\FilePlan;use App\Foundation\Registry\ProjectRegistry;
+final class PageRemoveCommand extends FoundationCommand{protected $signature='page:remove {name} {--dry-run} {--force}';protected $description='Remove a page manifest; Blade source is kept unless --force is used.';public function handle(FilePlan $p,ProjectRegistry $r):int{foreach($r->pages() as $page){if($page['name']===$this->argument('name')){$p->delete(str_replace(base_path().'/','',$page['_file']));if($this->option('force')){$view=$page['handler']['target']??'';$p->delete('resources/views/'.str_replace('.','/',$view).'.blade.php');}return $this->runPlan($p,'page:remove '.$page['name']);}}$this->error('Page not found.');return self::FAILURE;}}

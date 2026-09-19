@@ -1,0 +1,3 @@
+<?php
+namespace App\Foundation\Console;use App\Foundation\Generation\UndoService;use Illuminate\Console\Command;
+final class ToolingUndoCommand extends Command{protected $signature='tooling:undo {--yes}';protected $description='Undo the latest recorded generator file change.';public function handle(UndoService $u):int{if(!$this->option('yes')&&$this->input->isInteractive()&&!$this->confirm('Undo the latest generator change?',false))return self::SUCCESS;$e=$u->undoLatest();if(!$e){$this->comment('Nothing to undo.');return self::SUCCESS;}$this->info('Undid '.$e['label'].' ('.$e['id'].').');return self::SUCCESS;}}

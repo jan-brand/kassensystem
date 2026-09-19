@@ -1,0 +1,81 @@
+{
+  "$schema": "https://getcomposer.org/schema.json",
+  "name": "example/webapp-foundation",
+  "type": "project",
+  "description": "A generic Laravel foundation with architecture-aware scaffolding, design-system tooling, environment synchronization and project diagnostics.",
+  "license": "MIT",
+  "require": {
+    "php": "^8.4",
+    "laravel/framework": "^13.0",
+    "laravel/tinker": "^3.0",
+    "livewire/livewire": "^4.4"
+  },
+  "require-dev": {
+    "fakerphp/faker": "^1.24",
+    "larastan/larastan": "^3.11",
+    "laravel/pail": "^1.2",
+    "laravel/pint": "^1.27",
+    "mockery/mockery": "^1.6",
+    "nunomaduro/collision": "^8.6",
+    "pestphp/pest": "^4.7",
+    "pestphp/pest-plugin-laravel": "^4.1",
+    "phpunit/phpunit": "^12.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "app/",
+      "Database\\Factories\\": "database/factories/",
+      "Database\\Seeders\\": "database/seeders/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "setup": [
+      "composer install",
+      "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
+      "@php artisan key:generate",
+      "@php artisan env:sync --yes",
+      "npm install",
+      "npm run build",
+      "@php artisan app:init --no-interaction"
+    ],
+    "dev": [
+      "Composer\\Config::disableProcessTimeout",
+      "npx concurrently \"php artisan serve\" \"npm run dev\" --names=server,vite --kill-others"
+    ],
+    "lint": "@php vendor/bin/pint --test",
+    "analyse": "@php vendor/bin/phpstan analyse --memory-limit=1G --no-progress",
+    "test": "@php artisan test",
+    "qa": [
+      "composer validate --no-check-publish",
+      "@lint",
+      "@analyse",
+      "@test",
+      "@php artisan app:check",
+      "npm run build"
+    ],
+    "security": [
+      "composer audit --locked",
+      "npm audit --audit-level=high"
+    ],
+    "post-autoload-dump": [
+      "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+      "@php artisan package:discover --ansi"
+    ]
+  },
+  "config": {
+    "optimize-autoloader": true,
+    "preferred-install": "dist",
+    "sort-packages": true,
+    "allow-plugins": {
+      "pestphp/pest-plugin": true,
+      "php-http/discovery": true
+    }
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}

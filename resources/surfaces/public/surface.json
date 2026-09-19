@@ -1,0 +1,10 @@
+{
+  "name": "public",
+  "description": "Öffentliche Oberfläche",
+  "prefix": "",
+  "domain": null,
+  "middleware": [
+    "web"
+  ],
+  "layout": "public"
+}
