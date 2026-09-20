@@ -1,0 +1,1275 @@
+diff --git a/app/Http/Middleware/EnsureAdministrationAccess.php b/app/Http/Middleware/EnsureAdministrationAccess.php
+new file mode 100644
+index 0000000..3c4a37e
+--- /dev/null
++++ b/app/Http/Middleware/EnsureAdministrationAccess.php
+@@ -0,0 +1,27 @@
++<?php
++
++namespace App\Http\Middleware;
++
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use Closure;
++use Illuminate\Http\Request;
++use Symfony\Component\HttpFoundation\Response;
++
++final class EnsureAdministrationAccess
++{
++    public function handle(Request $request, Closure $next): Response
++    {
++        $user = $request->user();
++
++        if (
++            ! $user instanceof User
++            || ! $user->active
++            || ! in_array($user->role, [UserRole::Manager, UserRole::Administrator], true)
++        ) {
++            abort(403);
++        }
++
++        return $next($request);
++    }
++}
+diff --git a/app/Modules/Catalog/Actions/UpdateCategoryAction.php b/app/Modules/Catalog/Actions/UpdateCategoryAction.php
+new file mode 100644
+index 0000000..77d8c05
+--- /dev/null
++++ b/app/Modules/Catalog/Actions/UpdateCategoryAction.php
+@@ -0,0 +1,44 @@
++<?php
++
++namespace App\Modules\Catalog\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Catalog\Models\Category;
++use App\Modules\Identity\Models\User;
++use InvalidArgumentException;
++
++final class UpdateCategoryAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(Category $category, string $name, int $sortOrder, ?User $actor = null): Category
++    {
++        $name = trim($name);
++
++        if ($name === '' || $sortOrder < 0) {
++            throw new InvalidArgumentException('Category name is required and sort order must not be negative.');
++        }
++
++        $before = $category->only(['name', 'active', 'sort_order']);
++
++        $category->update([
++            'name' => $name,
++            'sort_order' => $sortOrder,
++        ]);
++
++        $fresh = $category->refresh();
++
++        $this->audit->execute(
++            eventKey: 'category.updated',
++            actorUserId: $actor?->id,
++            actorUsername: $actor?->username,
++            actorDisplayName: $actor?->auditDisplayName(),
++            subjectType: Category::class,
++            subjectId: $fresh->id,
++            before: $before,
++            after: $fresh->only(['name', 'active', 'sort_order']),
++        );
++
++        return $fresh;
++    }
++}
+diff --git a/app/Modules/Identity/Services/CashierManagementService.php b/app/Modules/Identity/Services/CashierManagementService.php
+new file mode 100644
+index 0000000..f4187fd
+--- /dev/null
++++ b/app/Modules/Identity/Services/CashierManagementService.php
+@@ -0,0 +1,168 @@
++<?php
++
++namespace App\Modules\Identity\Services;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Modules\Identity\Actions\ResetUserPinAction;
++use App\Modules\Identity\Actions\SetUserActiveAction;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use InvalidArgumentException;
++use LogicException;
++
++final class CashierManagementService
++{
++    public function __construct(
++        private readonly CreateUserAction $createUser,
++        private readonly ResetUserPinAction $resetUserPin,
++        private readonly SetUserActiveAction $setUserActive,
++        private readonly WriteAuditEventAction $audit,
++    ) {}
++
++    public function create(
++        User $actor,
++        string $username,
++        string $pin,
++        string $firstName,
++        string $lastName,
++        ?string $displayName = null,
++        ?string $email = null,
++        ?string $phone = null,
++    ): User {
++        $this->assertActor($actor);
++
++        return $this->createUser->execute(
++            username: $username,
++            pin: $pin,
++            firstName: $firstName,
++            lastName: $lastName,
++            role: UserRole::Cashier,
++            displayName: $displayName,
++            email: $email,
++            phone: $phone,
++            actor: $actor,
++        );
++    }
++
++    public function update(
++        User $actor,
++        User $cashier,
++        string $username,
++        string $firstName,
++        string $lastName,
++        ?string $displayName = null,
++        ?string $email = null,
++        ?string $phone = null,
++    ): User {
++        $this->assertActor($actor);
++        $this->assertCashier($cashier);
++
++        $username = strtolower(trim($username));
++        $firstName = trim($firstName);
++        $lastName = trim($lastName);
++        $displayName = $this->nullableTrim($displayName);
++        $email = $this->nullableTrim($email);
++        $phone = $this->nullableTrim($phone);
++
++        if ($username === '' || $firstName === '' || $lastName === '') {
++            throw new InvalidArgumentException('Username, first name and last name are required.');
++        }
++
++        if (User::query()->where('username', $username)->where('id', '!=', $cashier->id)->exists()) {
++            throw new InvalidArgumentException('Username is already in use.');
++        }
++
++        if (
++            $email !== null
++            && User::query()->where('email', $email)->where('id', '!=', $cashier->id)->exists()
++        ) {
++            throw new InvalidArgumentException('Email address is already in use.');
++        }
++
++        $before = $this->auditFields($cashier);
++
++        $cashier->update([
++            'username' => $username,
++            'first_name' => $firstName,
++            'last_name' => $lastName,
++            'display_name' => $displayName,
++            'email' => $email,
++            'phone' => $phone,
++        ]);
++
++        $fresh = $cashier->refresh();
++
++        $this->audit->execute(
++            eventKey: 'user.updated',
++            actorUserId: $actor->id,
++            actorUsername: $actor->username,
++            actorDisplayName: $actor->auditDisplayName(),
++            subjectType: User::class,
++            subjectId: $fresh->id,
++            before: $before,
++            after: $this->auditFields($fresh),
++        );
++
++        return $fresh;
++    }
++
++    public function setActive(User $actor, User $cashier, bool $active): User
++    {
++        $this->assertActor($actor);
++        $this->assertCashier($cashier);
++
++        return $this->setUserActive->execute($cashier, $active, $actor);
++    }
++
++    public function resetPin(User $actor, User $cashier, string $pin): User
++    {
++        $this->assertActor($actor);
++        $this->assertCashier($cashier);
++
++        return $this->resetUserPin->execute($cashier, $pin, $actor);
++    }
++
++    private function assertActor(User $actor): void
++    {
++        if (
++            ! $actor->active
++            || ! in_array($actor->role, [UserRole::Manager, UserRole::Administrator], true)
++        ) {
++            throw new LogicException('Only active managers and administrators may manage cashiers.');
++        }
++    }
++
++    private function assertCashier(User $user): void
++    {
++        if ($user->role !== UserRole::Cashier) {
++            throw new LogicException('This area may only manage cashier accounts.');
++        }
++    }
++
++    private function nullableTrim(?string $value): ?string
++    {
++        if ($value === null) {
++            return null;
++        }
++
++        $value = trim($value);
++
++        return $value === '' ? null : $value;
++    }
++
++    /** @return array<string, mixed> */
++    private function auditFields(User $user): array
++    {
++        return [
++            'username' => $user->username,
++            'first_name' => $user->first_name,
++            'last_name' => $user->last_name,
++            'display_name' => $user->display_name,
++            'email' => $user->email,
++            'phone' => $user->phone,
++            'role' => $user->role->value,
++            'active' => $user->active,
++        ];
++    }
++}
+diff --git a/app/Surfaces/Administration/Livewire/CashiersScreen.php b/app/Surfaces/Administration/Livewire/CashiersScreen.php
+new file mode 100644
+index 0000000..23898a5
+--- /dev/null
++++ b/app/Surfaces/Administration/Livewire/CashiersScreen.php
+@@ -0,0 +1,188 @@
++<?php
++
++namespace App\Surfaces\Administration\Livewire;
++
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use App\Modules\Identity\Services\CashierManagementService;
++use Illuminate\Contracts\View\View;
++use Illuminate\Support\Facades\Auth;
++use InvalidArgumentException;
++use Livewire\Attributes\Layout;
++use Livewire\Component;
++use LogicException;
++use Throwable;
++
++#[Layout('layouts.administration')]
++final class CashiersScreen extends Component
++{
++    public string $username = '';
++    public string $pin = '';
++    public string $firstName = '';
++    public string $lastName = '';
++    public string $email = '';
++    public string $phone = '';
++
++    public ?int $editingId = null;
++    public string $editUsername = '';
++    public string $editFirstName = '';
++    public string $editLastName = '';
++    public string $editDisplayName = '';
++    public string $editEmail = '';
++    public string $editPhone = '';
++
++    public ?int $resetPinId = null;
++    public string $newPin = '';
++
++    public ?string $notice = null;
++    public ?string $screenError = null;
++
++    public function createCashier(CashierManagementService $service): void
++    {
++        $this->clearMessages();
++
++        try {
++            $service->create(
++                actor: $this->currentUser(),
++                username: $this->username,
++                pin: $this->pin,
++                firstName: $this->firstName,
++                lastName: $this->lastName,
++                email: $this->email ?: null,
++                phone: $this->phone ?: null,
++            );
++
++            $this->username = $this->pin = $this->firstName = $this->lastName = '';
++            $this->email = $this->phone = '';
++            $this->notice = 'Kassierer wurde angelegt.';
++        } catch (Throwable $e) {
++            $this->pin = '';
++            $this->screenError = $this->message($e);
++        }
++    }
++
++    public function startEdit(int $id): void
++    {
++        $cashier = $this->cashier($id);
++        $this->editingId = $cashier->id;
++        $this->editUsername = $cashier->username;
++        $this->editFirstName = $cashier->first_name;
++        $this->editLastName = $cashier->last_name;
++        $this->editDisplayName = $cashier->display_name ?? '';
++        $this->editEmail = $cashier->email ?? '';
++        $this->editPhone = $cashier->phone ?? '';
++    }
++
++    public function saveCashier(CashierManagementService $service): void
++    {
++        $this->clearMessages();
++
++        if ($this->editingId === null) {
++            return;
++        }
++
++        try {
++            $cashier = $this->cashier($this->editingId);
++
++            $service->update(
++                actor: $this->currentUser(),
++                cashier: $cashier,
++                username: $this->editUsername,
++                firstName: $this->editFirstName,
++                lastName: $this->editLastName,
++                displayName: $this->editDisplayName ?: null,
++                email: $this->editEmail ?: null,
++                phone: $this->editPhone ?: null,
++            );
++
++            $this->editingId = null;
++            $this->notice = 'Kassierer wurde gespeichert.';
++        } catch (Throwable $e) {
++            $this->screenError = $this->message($e);
++        }
++    }
++
++    public function toggleActive(int $id, CashierManagementService $service): void
++    {
++        $this->clearMessages();
++
++        try {
++            $cashier = $this->cashier($id);
++            $service->setActive($this->currentUser(), $cashier, ! $cashier->active);
++            $this->notice = 'Kassiererstatus wurde geändert.';
++        } catch (Throwable $e) {
++            $this->screenError = $this->message($e);
++        }
++    }
++
++    public function startPinReset(int $id): void
++    {
++        $this->cashier($id);
++        $this->resetPinId = $id;
++        $this->newPin = '';
++    }
++
++    public function resetPin(CashierManagementService $service): void
++    {
++        $this->clearMessages();
++
++        if ($this->resetPinId === null) {
++            return;
++        }
++
++        try {
++            $service->resetPin($this->currentUser(), $this->cashier($this->resetPinId), $this->newPin);
++            $this->resetPinId = null;
++            $this->newPin = '';
++            $this->notice = 'PIN wurde zurückgesetzt.';
++        } catch (Throwable $e) {
++            $this->newPin = '';
++            $this->screenError = $this->message($e);
++        }
++    }
++
++    public function render(): View
++    {
++        return view('surfaces.administration.cashiers', [
++            'cashiers' => User::query()
++                ->where('role', UserRole::Cashier->value)
++                ->orderByDesc('active')
++                ->orderBy('last_name')
++                ->orderBy('first_name')
++                ->get(),
++        ]);
++    }
++
++    private function currentUser(): User
++    {
++        return User::query()->findOrFail(Auth::id());
++    }
++
++    private function cashier(int $id): User
++    {
++        $user = User::query()->findOrFail($id);
++
++        if ($user->role !== UserRole::Cashier) {
++            throw new LogicException('This area may only manage cashier accounts.');
++        }
++
++        return $user;
++    }
++
++    private function clearMessages(): void
++    {
++        $this->notice = null;
++        $this->screenError = null;
++    }
++
++    private function message(Throwable $e): string
++    {
++        if ($e instanceof InvalidArgumentException || $e instanceof LogicException) {
++            return $e->getMessage();
++        }
++
++        report($e);
++
++        return 'Die Aktion konnte nicht ausgeführt werden.';
++    }
++}
+diff --git a/app/Surfaces/Administration/Livewire/CatalogScreen.php b/app/Surfaces/Administration/Livewire/CatalogScreen.php
+new file mode 100644
+index 0000000..3e95f53
+--- /dev/null
++++ b/app/Surfaces/Administration/Livewire/CatalogScreen.php
+@@ -0,0 +1,205 @@
++<?php
++
++namespace App\Surfaces\Administration\Livewire;
++
++use App\Modules\Catalog\Actions\CreateCategoryAction;
++use App\Modules\Catalog\Actions\CreateProductAction;
++use App\Modules\Catalog\Actions\SetProductActiveAction;
++use App\Modules\Catalog\Actions\UpdateCategoryAction;
++use App\Modules\Catalog\Actions\UpdateProductAction;
++use App\Modules\Catalog\Models\Category;
++use App\Modules\Catalog\Models\Product;
++use App\Modules\Identity\Models\User;
++use App\Support\Money;
++use Illuminate\Contracts\View\View;
++use Illuminate\Support\Facades\Auth;
++use InvalidArgumentException;
++use Livewire\Attributes\Layout;
++use Livewire\Component;
++use LogicException;
++use Throwable;
++
++#[Layout('layouts.administration')]
++final class CatalogScreen extends Component
++{
++    public string $categoryName = '';
++    public int $categorySortOrder = 0;
++    public ?int $editingCategoryId = null;
++    public string $editCategoryName = '';
++    public int $editCategorySortOrder = 0;
++
++    public ?int $productCategoryId = null;
++    public string $productName = '';
++    public string $productShortName = '';
++    public string $productPrice = '0,00';
++    public int $productSortOrder = 0;
++
++    public ?int $editingProductId = null;
++    public ?int $editProductCategoryId = null;
++    public string $editProductName = '';
++    public string $editProductShortName = '';
++    public string $editProductPrice = '0,00';
++    public int $editProductSortOrder = 0;
++
++    public ?string $notice = null;
++    public ?string $screenError = null;
++
++    public function createCategory(CreateCategoryAction $action): void
++    {
++        $this->clearMessages();
++
++        try {
++            $action->execute(
++                name: $this->categoryName,
++                sortOrder: $this->categorySortOrder,
++                actor: $this->currentUser(),
++            );
++            $this->categoryName = '';
++            $this->categorySortOrder = 0;
++            $this->notice = 'Kategorie wurde angelegt.';
++        } catch (Throwable $e) {
++            $this->screenError = $this->message($e);
++        }
++    }
++
++    public function startEditCategory(int $id): void
++    {
++        $category = Category::query()->findOrFail($id);
++        $this->editingCategoryId = $category->id;
++        $this->editCategoryName = $category->name;
++        $this->editCategorySortOrder = $category->sort_order;
++    }
++
++    public function saveCategory(UpdateCategoryAction $action): void
++    {
++        $this->clearMessages();
++
++        if ($this->editingCategoryId === null) {
++            return;
++        }
++
++        try {
++            $action->execute(
++                category: Category::query()->findOrFail($this->editingCategoryId),
++                name: $this->editCategoryName,
++                sortOrder: $this->editCategorySortOrder,
++                actor: $this->currentUser(),
++            );
++            $this->editingCategoryId = null;
++            $this->notice = 'Kategorie wurde gespeichert.';
++        } catch (Throwable $e) {
++            $this->screenError = $this->message($e);
++        }
++    }
++
++    public function createProduct(CreateProductAction $action): void
++    {
++        $this->clearMessages();
++
++        try {
++            if ($this->productCategoryId === null) {
++                throw new InvalidArgumentException('Bitte eine Kategorie auswählen.');
++            }
++
++            $action->execute(
++                category: Category::query()->findOrFail($this->productCategoryId),
++                name: $this->productName,
++                shortName: $this->productShortName,
++                priceCents: Money::parseCents($this->productPrice),
++                sortOrder: $this->productSortOrder,
++                actor: $this->currentUser(),
++            );
++
++            $this->productName = '';
++            $this->productShortName = '';
++            $this->productPrice = '0,00';
++            $this->productSortOrder = 0;
++            $this->notice = 'Produkt wurde angelegt.';
++        } catch (Throwable $e) {
++            $this->screenError = $this->message($e);
++        }
++    }
++
++    public function startEditProduct(int $id): void
++    {
++        $product = Product::query()->findOrFail($id);
++        $this->editingProductId = $product->id;
++        $this->editProductCategoryId = $product->category_id;
++        $this->editProductName = $product->name;
++        $this->editProductShortName = $product->short_name;
++        $this->editProductPrice = Money::decimal($product->price_cents);
++        $this->editProductSortOrder = $product->sort_order;
++    }
++
++    public function saveProduct(UpdateProductAction $action): void
++    {
++        $this->clearMessages();
++
++        if ($this->editingProductId === null || $this->editProductCategoryId === null) {
++            return;
++        }
++
++        try {
++            $action->execute(
++                product: Product::query()->findOrFail($this->editingProductId),
++                category: Category::query()->findOrFail($this->editProductCategoryId),
++                name: $this->editProductName,
++                shortName: $this->editProductShortName,
++                priceCents: Money::parseCents($this->editProductPrice),
++                sortOrder: $this->editProductSortOrder,
++                actor: $this->currentUser(),
++            );
++            $this->editingProductId = null;
++            $this->notice = 'Produkt wurde gespeichert.';
++        } catch (Throwable $e) {
++            $this->screenError = $this->message($e);
++        }
++    }
++
++    public function toggleProduct(int $id, SetProductActiveAction $action): void
++    {
++        $this->clearMessages();
++
++        try {
++            $product = Product::query()->findOrFail($id);
++            $action->execute($product, ! $product->active, $this->currentUser());
++            $this->notice = 'Produktstatus wurde geändert.';
++        } catch (Throwable $e) {
++            $this->screenError = $this->message($e);
++        }
++    }
++
++    public function render(): View
++    {
++        return view('surfaces.administration.catalog', [
++            'categories' => Category::query()
++                ->with('products')
++                ->orderBy('sort_order')
++                ->orderBy('id')
++                ->get(),
++            'currency' => (string) config('kassensystem.currency', 'EUR'),
++        ]);
++    }
++
++    private function currentUser(): User
++    {
++        return User::query()->findOrFail(Auth::id());
++    }
++
++    private function clearMessages(): void
++    {
++        $this->notice = null;
++        $this->screenError = null;
++    }
++
++    private function message(Throwable $e): string
++    {
++        if ($e instanceof InvalidArgumentException || $e instanceof LogicException) {
++            return $e->getMessage();
++        }
++
++        report($e);
++
++        return 'Die Aktion konnte nicht ausgeführt werden.';
++    }
++}
+diff --git a/app/Surfaces/Administration/Livewire/DashboardScreen.php b/app/Surfaces/Administration/Livewire/DashboardScreen.php
+new file mode 100644
+index 0000000..8386668
+--- /dev/null
++++ b/app/Surfaces/Administration/Livewire/DashboardScreen.php
+@@ -0,0 +1,29 @@
++<?php
++
++namespace App\Surfaces\Administration\Livewire;
++
++use App\Modules\Catalog\Models\Product;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use App\Modules\Reporting\Queries\GetDailySummaryQuery;
++use Carbon\CarbonImmutable;
++use Illuminate\Contracts\View\View;
++use Livewire\Attributes\Layout;
++use Livewire\Component;
++
++#[Layout('layouts.administration')]
++final class DashboardScreen extends Component
++{
++    public function render(GetDailySummaryQuery $dailySummary): View
++    {
++        $date = CarbonImmutable::now((string) config('kassensystem.timezone', 'Europe/Berlin'))
++            ->format('Y-m-d');
++
++        return view('surfaces.administration.dashboard', [
++            'date' => $date,
++            'summary' => $dailySummary->execute($date),
++            'activeProducts' => Product::query()->where('active', true)->count(),
++            'cashiers' => User::query()->where('role', UserRole::Cashier->value)->count(),
++        ]);
++    }
++}
+diff --git a/app/Surfaces/Administration/Livewire/ReportingScreen.php b/app/Surfaces/Administration/Livewire/ReportingScreen.php
+new file mode 100644
+index 0000000..d28104a
+--- /dev/null
++++ b/app/Surfaces/Administration/Livewire/ReportingScreen.php
+@@ -0,0 +1,84 @@
++<?php
++
++namespace App\Surfaces\Administration\Livewire;
++
++use App\Modules\Reporting\Queries\GetCashSessionReportQuery;
++use App\Modules\Reporting\Queries\GetDailySummaryQuery;
++use App\Modules\Reporting\Services\CsvExporter;
++use App\Support\Money;
++use Carbon\CarbonImmutable;
++use Illuminate\Contracts\View\View;
++use Livewire\Attributes\Layout;
++use Livewire\Component;
++use Symfony\Component\HttpFoundation\StreamedResponse;
++
++#[Layout('layouts.administration')]
++final class ReportingScreen extends Component
++{
++    public string $date = '';
++
++    public function mount(): void
++    {
++        $this->date = CarbonImmutable::now((string) config('kassensystem.timezone', 'Europe/Berlin'))
++            ->format('Y-m-d');
++    }
++
++    public function downloadCsv(
++        GetDailySummaryQuery $summaryQuery,
++        GetCashSessionReportQuery $sessionQuery,
++        CsvExporter $exporter,
++    ): StreamedResponse {
++        $summary = $summaryQuery->execute($this->date);
++        $sessions = $sessionQuery->execute($this->date);
++
++        $rows = [
++            ['Übersicht', 'Verkäufe', $summary['sales_count'], Money::decimal($summary['revenue_cents']), '', '', ''],
++        ];
++
++        foreach ($summary['products'] as $product) {
++            $rows[] = [
++                'Produkt',
++                $product['product_name'],
++                $product['quantity'],
++                Money::decimal($product['revenue_cents']),
++                '',
++                '',
++                '',
++            ];
++        }
++
++        foreach ($sessions as $session) {
++            $rows[] = [
++                'Kassenschicht',
++                $session->register->name,
++                '',
++                '',
++                Money::decimal((int) $session->closing_expected_cash_cents),
++                Money::decimal((int) $session->closing_counted_cash_cents),
++                Money::decimal((int) $session->closing_difference_cents),
++            ];
++        }
++
++        $csv = $exporter->export(
++            ['Typ', 'Bezeichnung', 'Anzahl', 'Umsatz EUR', 'Soll EUR', 'Gezählt EUR', 'Differenz EUR'],
++            $rows,
++        );
++
++        return response()->streamDownload(
++            static fn () => print($csv),
++            'kassenbericht-'.$this->date.'.csv',
++            ['Content-Type' => 'text/csv; charset=UTF-8'],
++        );
++    }
++
++    public function render(
++        GetDailySummaryQuery $summaryQuery,
++        GetCashSessionReportQuery $sessionQuery,
++    ): View {
++        return view('surfaces.administration.reporting', [
++            'summary' => $summaryQuery->execute($this->date),
++            'sessions' => $sessionQuery->execute($this->date),
++            'currency' => (string) config('kassensystem.currency', 'EUR'),
++        ]);
++    }
++}
+diff --git a/app/Surfaces/Pos/Livewire/RegisterScreen.php b/app/Surfaces/Pos/Livewire/RegisterScreen.php
+index 3456aba..218c981 100644
+--- a/app/Surfaces/Pos/Livewire/RegisterScreen.php
++++ b/app/Surfaces/Pos/Livewire/RegisterScreen.php
+@@ -23,6 +23,7 @@ use App\Support\Money;
+ use Illuminate\Contracts\View\View;
+ use Illuminate\Support\Collection;
+ use Illuminate\Support\Facades\Auth;
++use Illuminate\Support\Facades\Session;
+ use InvalidArgumentException;
+ use Livewire\Attributes\Layout;
+ use Livewire\Component;
+@@ -195,8 +196,8 @@ final class RegisterScreen extends Component
+         }
+ 
+         Auth::logout();
+-        request()->session()->invalidate();
+-        request()->session()->regenerateToken();
++        Session::invalidate();
++        Session::regenerateToken();
+ 
+         $this->redirectRoute('login', navigate: true);
+     }
+diff --git a/resources/navigation/administration.json b/resources/navigation/administration.json
+new file mode 100644
+index 0000000..eed9dfb
+--- /dev/null
++++ b/resources/navigation/administration.json
+@@ -0,0 +1,8 @@
++{
++    "items": [
++        {"label": "Übersicht", "route": "administration.dashboard", "permission": null},
++        {"label": "Katalog", "route": "administration.catalog", "permission": null},
++        {"label": "Kassierer", "route": "administration.cashiers", "permission": null},
++        {"label": "Berichte", "route": "administration.reporting", "permission": null}
++    ]
++}
+diff --git a/resources/pages/administration/cashiers/page.json b/resources/pages/administration/cashiers/page.json
+new file mode 100644
+index 0000000..b52d96e
+--- /dev/null
++++ b/resources/pages/administration/cashiers/page.json
+@@ -0,0 +1,13 @@
++{
++    "name": "cashiers",
++    "surface": "administration",
++    "uri": "/cashiers",
++    "route_name": "administration.cashiers",
++    "permission": null,
++    "template": null,
++    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "handler": {
++        "type": "livewire",
++        "target": "App\\Surfaces\\Administration\\Livewire\\CashiersScreen"
++    }
++}
+diff --git a/resources/pages/administration/catalog/page.json b/resources/pages/administration/catalog/page.json
+new file mode 100644
+index 0000000..b59de72
+--- /dev/null
++++ b/resources/pages/administration/catalog/page.json
+@@ -0,0 +1,13 @@
++{
++    "name": "catalog",
++    "surface": "administration",
++    "uri": "/catalog",
++    "route_name": "administration.catalog",
++    "permission": null,
++    "template": null,
++    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "handler": {
++        "type": "livewire",
++        "target": "App\\Surfaces\\Administration\\Livewire\\CatalogScreen"
++    }
++}
+diff --git a/resources/pages/administration/dashboard/page.json b/resources/pages/administration/dashboard/page.json
+new file mode 100644
+index 0000000..3e3d5d1
+--- /dev/null
++++ b/resources/pages/administration/dashboard/page.json
+@@ -0,0 +1,13 @@
++{
++    "name": "dashboard",
++    "surface": "administration",
++    "uri": "/",
++    "route_name": "administration.dashboard",
++    "permission": null,
++    "template": null,
++    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "handler": {
++        "type": "livewire",
++        "target": "App\\Surfaces\\Administration\\Livewire\\DashboardScreen"
++    }
++}
+diff --git a/resources/pages/administration/reporting/page.json b/resources/pages/administration/reporting/page.json
+new file mode 100644
+index 0000000..65a5904
+--- /dev/null
++++ b/resources/pages/administration/reporting/page.json
+@@ -0,0 +1,13 @@
++{
++    "name": "reporting",
++    "surface": "administration",
++    "uri": "/reporting",
++    "route_name": "administration.reporting",
++    "permission": null,
++    "template": null,
++    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "handler": {
++        "type": "livewire",
++        "target": "App\\Surfaces\\Administration\\Livewire\\ReportingScreen"
++    }
++}
+diff --git a/resources/surfaces/administration/surface.json b/resources/surfaces/administration/surface.json
+new file mode 100644
+index 0000000..6ae595a
+--- /dev/null
++++ b/resources/surfaces/administration/surface.json
+@@ -0,0 +1,8 @@
++{
++    "name": "administration",
++    "description": "Verwaltung des Kassensystems",
++    "prefix": "administration",
++    "domain": null,
++    "middleware": ["web"],
++    "layout": "administration"
++}
+diff --git a/resources/views/layouts/administration.blade.php b/resources/views/layouts/administration.blade.php
+new file mode 100644
+index 0000000..7410b6f
+--- /dev/null
++++ b/resources/views/layouts/administration.blade.php
+@@ -0,0 +1,26 @@
++<!doctype html>
++<html lang="de">
++<head>
++    <meta charset="utf-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1">
++    <title>Administration · {{ config('app.name') }}</title>
++    @vite(['resources/css/app.css', 'resources/js/app.js'])
++    @livewireStyles
++</head>
++<body class="min-h-screen bg-slate-100 text-slate-950">
++<header class="border-b border-slate-200 bg-white">
++    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
++        <div><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Kassensystem</p><h1 class="text-xl font-black">Administration</h1></div>
++        <nav class="flex flex-wrap gap-2 text-sm font-bold">
++            <a href="{{ route('administration.dashboard') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Übersicht</a>
++            <a href="{{ route('administration.catalog') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Katalog</a>
++            <a href="{{ route('administration.cashiers') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Kassierer</a>
++            <a href="{{ route('administration.reporting') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Berichte</a>
++            <a href="{{ route('pos.register') }}" wire:navigate class="rounded-xl border border-slate-300 px-3 py-2">Zur Kasse</a>
++        </nav>
++    </div>
++</header>
++{{ $slot }}
++@livewireScripts
++</body>
++</html>
+diff --git a/resources/views/surfaces/administration/cashiers.blade.php b/resources/views/surfaces/administration/cashiers.blade.php
+new file mode 100644
+index 0000000..69173f5
+--- /dev/null
++++ b/resources/views/surfaces/administration/cashiers.blade.php
+@@ -0,0 +1,46 @@
++<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
++<h2 class="text-3xl font-black">Kassierer</h2>
++@if($notice)<div class="mt-4 rounded-xl bg-emerald-50 p-3 font-bold text-emerald-900">{{ $notice }}</div>@endif
++@if($screenError)<div class="mt-4 rounded-xl bg-red-50 p-3 font-bold text-red-900">{{ $screenError }}</div>@endif
++<div class="mt-6 grid gap-6 xl:grid-cols-[340px_1fr]">
++<section class="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
++<h3 class="font-black">Kassierer anlegen</h3>
++<div class="mt-3 space-y-2">
++<input wire:model="username" placeholder="Benutzername" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="firstName" placeholder="Vorname" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="lastName" placeholder="Nachname" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="email" type="email" placeholder="E-Mail (optional)" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="phone" placeholder="Telefon (optional)" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="pin" type="password" inputmode="numeric" maxlength="6" placeholder="6-stellige PIN" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<button wire:click="createCashier" class="w-full rounded-xl bg-slate-950 px-4 py-3 font-black text-white">Anlegen</button>
++</div>
++</section>
++<section class="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
++<div class="divide-y divide-slate-100">
++@forelse($cashiers as $cashier)
++<div class="py-4">
++@if($editingId === $cashier->id)
++<div class="grid gap-2 sm:grid-cols-2">
++<input wire:model="editUsername" class="rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="editDisplayName" placeholder="Anzeigename" class="rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="editFirstName" class="rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="editLastName" class="rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="editEmail" type="email" placeholder="E-Mail" class="rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="editPhone" placeholder="Telefon" class="rounded-xl border border-slate-300 px-3 py-2">
++<button wire:click="saveCashier" class="rounded-xl bg-slate-950 px-4 py-2 font-bold text-white sm:col-span-2">Speichern</button>
++</div>
++@else
++<div class="flex flex-wrap items-start justify-between gap-3">
++<div><p class="font-black">{{ $cashier->auditDisplayName() }}</p><p class="text-sm text-slate-500">{{ $cashier->username }} · {{ $cashier->active ? 'aktiv' : 'inaktiv' }}</p></div>
++<div class="flex flex-wrap gap-2"><button wire:click="startEdit({{ $cashier->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold">Bearbeiten</button><button wire:click="startPinReset({{ $cashier->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold">PIN</button><button wire:click="toggleActive({{ $cashier->id }})" class="rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold">{{ $cashier->active ? 'Deaktivieren' : 'Aktivieren' }}</button></div>
++</div>
++@endif
++@if($resetPinId === $cashier->id)
++<div class="mt-3 flex gap-2"><input wire:model="newPin" type="password" inputmode="numeric" maxlength="6" placeholder="Neue PIN" class="flex-1 rounded-xl border border-amber-300 px-3 py-2"><button wire:click="resetPin" class="rounded-xl bg-amber-600 px-4 py-2 font-bold text-white">Speichern</button></div>
++@endif
++</div>
++@empty<div class="py-6 text-center text-slate-500">Noch keine Kassierer.</div>@endforelse
++</div>
++</section>
++</div>
++</main>
+diff --git a/resources/views/surfaces/administration/catalog.blade.php b/resources/views/surfaces/administration/catalog.blade.php
+new file mode 100644
+index 0000000..e9a8108
+--- /dev/null
++++ b/resources/views/surfaces/administration/catalog.blade.php
+@@ -0,0 +1,71 @@
++@php use App\Support\Money; @endphp
++<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
++<h2 class="text-3xl font-black">Katalog</h2>
++@if($notice)<div class="mt-4 rounded-xl bg-emerald-50 p-3 font-bold text-emerald-900">{{ $notice }}</div>@endif
++@if($screenError)<div class="mt-4 rounded-xl bg-red-50 p-3 font-bold text-red-900">{{ $screenError }}</div>@endif
++
++<div class="mt-6 grid gap-6 xl:grid-cols-[340px_1fr]">
++<div class="space-y-5">
++<section class="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
++<h3 class="font-black">Kategorie anlegen</h3>
++<div class="mt-3 space-y-2">
++<input wire:model="categoryName" placeholder="Name" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="categorySortOrder" type="number" min="0" placeholder="Sortierung" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<button wire:click="createCategory" class="w-full rounded-xl bg-slate-950 px-4 py-3 font-black text-white">Anlegen</button>
++</div>
++</section>
++
++<section class="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
++<h3 class="font-black">Produkt anlegen</h3>
++<div class="mt-3 space-y-2">
++<select wire:model="productCategoryId" class="w-full rounded-xl border border-slate-300 px-3 py-2"><option value="">Kategorie</option>@foreach($categories as $category)<option value="{{ $category->id }}">{{ $category->name }}</option>@endforeach</select>
++<input wire:model="productName" placeholder="Name" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="productShortName" placeholder="Kurzname" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="productPrice" inputmode="decimal" placeholder="Preis z. B. 1,50" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="productSortOrder" type="number" min="0" placeholder="Sortierung" class="w-full rounded-xl border border-slate-300 px-3 py-2">
++<button wire:click="createProduct" class="w-full rounded-xl bg-emerald-600 px-4 py-3 font-black text-white">Produkt anlegen</button>
++</div>
++</section>
++</div>
++
++<div class="space-y-4">
++@forelse($categories as $category)
++<section class="rounded-3xl bg-white p-5 ring-1 ring-slate-200">
++<div class="flex items-center justify-between gap-3">
++<div><h3 class="text-xl font-black">{{ $category->name }}</h3><p class="text-sm text-slate-500">Sortierung {{ $category->sort_order }}</p></div>
++<button wire:click="startEditCategory({{ $category->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold">Kategorie bearbeiten</button>
++</div>
++@if($editingCategoryId === $category->id)
++<div class="mt-3 grid gap-2 sm:grid-cols-[1fr_120px_auto]">
++<input wire:model="editCategoryName" class="rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="editCategorySortOrder" type="number" min="0" class="rounded-xl border border-slate-300 px-3 py-2">
++<button wire:click="saveCategory" class="rounded-xl bg-slate-950 px-4 py-2 font-bold text-white">Speichern</button>
++</div>
++@endif
++
++<div class="mt-4 divide-y divide-slate-100">
++@forelse($category->products as $product)
++<div class="py-3">
++@if($editingProductId === $product->id)
++<div class="grid gap-2 md:grid-cols-2">
++<select wire:model="editProductCategoryId" class="rounded-xl border border-slate-300 px-3 py-2">@foreach($categories as $option)<option value="{{ $option->id }}">{{ $option->name }}</option>@endforeach</select>
++<input wire:model="editProductName" class="rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="editProductShortName" class="rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="editProductPrice" inputmode="decimal" class="rounded-xl border border-slate-300 px-3 py-2">
++<input wire:model="editProductSortOrder" type="number" min="0" class="rounded-xl border border-slate-300 px-3 py-2">
++<button wire:click="saveProduct" class="rounded-xl bg-slate-950 px-4 py-2 font-bold text-white">Produkt speichern</button>
++</div>
++@else
++<div class="flex flex-wrap items-center justify-between gap-3">
++<div><p class="font-black">{{ $product->name }} @if(!$product->active)<span class="text-sm text-slate-400">(inaktiv)</span>@endif</p><p class="text-sm text-slate-500">{{ $product->short_name }} · {{ Money::format($product->price_cents, $currency) }}</p></div>
++<div class="flex gap-2"><button wire:click="startEditProduct({{ $product->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold">Bearbeiten</button><button wire:click="toggleProduct({{ $product->id }})" class="rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold">{{ $product->active ? 'Deaktivieren' : 'Aktivieren' }}</button></div>
++</div>
++@endif
++</div>
++@empty<div class="py-4 text-slate-500">Noch keine Produkte.</div>@endforelse
++</div>
++</section>
++@empty<div class="rounded-3xl bg-white p-8 text-center text-slate-500 ring-1 ring-slate-200">Noch keine Kategorien.</div>@endforelse
++</div>
++</div>
++</main>
+diff --git a/resources/views/surfaces/administration/dashboard.blade.php b/resources/views/surfaces/administration/dashboard.blade.php
+new file mode 100644
+index 0000000..135af99
+--- /dev/null
++++ b/resources/views/surfaces/administration/dashboard.blade.php
+@@ -0,0 +1,11 @@
++@php use App\Support\Money; @endphp
++<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
++    <h2 class="text-3xl font-black">Übersicht</h2>
++    <p class="mt-1 text-slate-500">{{ $date }}</p>
++    <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
++        <div class="rounded-3xl bg-white p-6 ring-1 ring-slate-200"><p class="text-sm font-bold text-slate-500">Tagesumsatz</p><p class="mt-2 text-3xl font-black">{{ Money::format($summary['revenue_cents']) }}</p></div>
++        <div class="rounded-3xl bg-white p-6 ring-1 ring-slate-200"><p class="text-sm font-bold text-slate-500">Verkäufe</p><p class="mt-2 text-3xl font-black">{{ $summary['sales_count'] }}</p></div>
++        <div class="rounded-3xl bg-white p-6 ring-1 ring-slate-200"><p class="text-sm font-bold text-slate-500">Aktive Produkte</p><p class="mt-2 text-3xl font-black">{{ $activeProducts }}</p></div>
++        <div class="rounded-3xl bg-white p-6 ring-1 ring-slate-200"><p class="text-sm font-bold text-slate-500">Kassierer</p><p class="mt-2 text-3xl font-black">{{ $cashiers }}</p></div>
++    </div>
++</main>
+diff --git a/resources/views/surfaces/administration/reporting.blade.php b/resources/views/surfaces/administration/reporting.blade.php
+new file mode 100644
+index 0000000..9dc176a
+--- /dev/null
++++ b/resources/views/surfaces/administration/reporting.blade.php
+@@ -0,0 +1,9 @@
++@php use App\Support\Money; @endphp
++<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
++<div class="flex flex-wrap items-end justify-between gap-4"><div><h2 class="text-3xl font-black">Berichte</h2><p class="mt-1 text-slate-500">Tagesumsatz und Kassenschichten.</p></div><div class="flex items-end gap-2"><input wire:model.live="date" type="date" class="rounded-xl border border-slate-300 px-3 py-2"><button wire:click="downloadCsv" class="rounded-xl bg-slate-950 px-4 py-2 font-black text-white">CSV</button></div></div>
++<div class="mt-6 grid gap-4 sm:grid-cols-3"><div class="rounded-3xl bg-white p-5 ring-1 ring-slate-200"><p class="text-sm font-bold text-slate-500">Umsatz</p><p class="text-3xl font-black">{{ Money::format($summary['revenue_cents'], $currency) }}</p></div><div class="rounded-3xl bg-white p-5 ring-1 ring-slate-200"><p class="text-sm font-bold text-slate-500">Verkäufe</p><p class="text-3xl font-black">{{ $summary['sales_count'] }}</p></div><div class="rounded-3xl bg-white p-5 ring-1 ring-slate-200"><p class="text-sm font-bold text-slate-500">Kostenlos</p><p class="text-3xl font-black">{{ $summary['free_sales_count'] }}</p></div></div>
++<div class="mt-6 grid gap-6 lg:grid-cols-2">
++<section class="rounded-3xl bg-white p-5 ring-1 ring-slate-200"><h3 class="font-black">Produkte</h3><div class="mt-3 divide-y divide-slate-100">@forelse($summary['products'] as $product)<div class="flex justify-between gap-3 py-2"><span>{{ $product['product_name'] }} · {{ $product['quantity'] }}×</span><strong>{{ Money::format($product['revenue_cents'], $currency) }}</strong></div>@empty<p class="py-4 text-slate-500">Keine Verkäufe.</p>@endforelse</div></section>
++<section class="rounded-3xl bg-white p-5 ring-1 ring-slate-200"><h3 class="font-black">Kassenschichten</h3><div class="mt-3 divide-y divide-slate-100">@forelse($sessions as $session)<div class="py-2"><div class="flex justify-between"><span>{{ $session->register->name }}</span><strong>{{ Money::format((int)$session->closing_difference_cents, $currency) }}</strong></div><p class="text-sm text-slate-500">Soll {{ Money::format((int)$session->closing_expected_cash_cents, $currency) }} · gezählt {{ Money::format((int)$session->closing_counted_cash_cents, $currency) }}</p></div>@empty<p class="py-4 text-slate-500">Keine abgeschlossenen Schichten.</p>@endforelse</div></section>
++</div>
++</main>
+diff --git a/resources/views/surfaces/pos/register.blade.php b/resources/views/surfaces/pos/register.blade.php
+index 543f00e..aa9ed9d 100644
+--- a/resources/views/surfaces/pos/register.blade.php
++++ b/resources/views/surfaces/pos/register.blade.php
+@@ -1,5 +1,6 @@
+ @php
+     use App\Modules\CashRegister\Enums\CashSessionStatus;
++    use App\Modules\Identity\Enums\UserRole;
+     use App\Support\Money;
+ @endphp
+ 
+@@ -27,6 +28,15 @@
+                     <p class="text-sm font-bold">{{ $user->auditDisplayName() }}</p>
+                     <p class="text-xs text-slate-500">{{ $user->username }}</p>
+                 </div>
++                @if (in_array($user->role, [UserRole::Manager, UserRole::Administrator], true))
++                    <a
++                        href="{{ route('administration.dashboard') }}"
++                        wire:navigate
++                        class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold hover:bg-slate-50"
++                    >
++                        Administration
++                    </a>
++                @endif
+                 <button
+                     type="button"
+                     wire:click="switchUser"
+diff --git a/tests/Feature/Administration/AdministrationFlowTest.php b/tests/Feature/Administration/AdministrationFlowTest.php
+new file mode 100644
+index 0000000..66df648
+--- /dev/null
++++ b/tests/Feature/Administration/AdministrationFlowTest.php
+@@ -0,0 +1,135 @@
++<?php
++
++use App\Modules\Catalog\Models\Category;
++use App\Modules\Catalog\Models\Product;
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use App\Modules\Identity\Services\CashierManagementService;
++use App\Surfaces\Administration\Livewire\CashiersScreen;
++use App\Surfaces\Administration\Livewire\CatalogScreen;
++use App\Surfaces\Administration\Livewire\ReportingScreen;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++use Illuminate\Support\Facades\Hash;
++use Illuminate\Support\Facades\Route;
++use Livewire\Livewire;
++
++uses(RefreshDatabase::class);
++
++it('protects administration routes by role', function () {
++    expect(Route::has('administration.dashboard'))->toBeTrue();
++
++    $this->get(route('administration.dashboard'))->assertRedirect(route('login'));
++
++    $cashier = app(CreateUserAction::class)->execute('cashier-admin-test', '123456', 'Casey', 'Cashier');
++    $this->actingAs($cashier)->get(route('administration.dashboard'))->assertForbidden();
++
++    $manager = app(CreateUserAction::class)->execute(
++        'manager-admin-test',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $this->actingAs($manager)->get(route('administration.dashboard'))->assertOk();
++});
++
++it('manages categories and products', function () {
++    $manager = app(CreateUserAction::class)->execute(
++        'manager-catalog',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $this->actingAs($manager);
++
++    $component = Livewire::test(CatalogScreen::class)
++        ->set('categoryName', 'Getränke')
++        ->set('categorySortOrder', 10)
++        ->call('createCategory');
++
++    $category = Category::query()->firstOrFail();
++
++    $component
++        ->set('productCategoryId', $category->id)
++        ->set('productName', 'Apfelschorle')
++        ->set('productShortName', 'Schorle')
++        ->set('productPrice', '1,50')
++        ->call('createProduct');
++
++    $product = Product::query()->firstOrFail();
++
++    expect($product->price_cents)->toBe(150);
++
++    $component
++        ->call('startEditProduct', $product->id)
++        ->set('editProductPrice', '1,80')
++        ->call('saveProduct')
++        ->call('toggleProduct', $product->id);
++
++    $product->refresh();
++
++    expect($product->price_cents)->toBe(180)
++        ->and($product->active)->toBeFalse();
++});
++
++it('lets managers manage cashier accounts but not administrators', function () {
++    $manager = app(CreateUserAction::class)->execute(
++        'manager-users',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $administrator = app(CreateUserAction::class)->execute(
++        'administrator-users',
++        '123456',
++        'Ada',
++        'Admin',
++        UserRole::Administrator,
++    );
++    $this->actingAs($manager);
++
++    Livewire::test(CashiersScreen::class)
++        ->set('username', 'kasse-neu')
++        ->set('pin', '654321')
++        ->set('firstName', 'Klara')
++        ->set('lastName', 'Kasse')
++        ->call('createCashier');
++
++    $cashier = User::query()->where('username', 'kasse-neu')->firstOrFail();
++
++    $component = Livewire::test(CashiersScreen::class)
++        ->call('startEdit', $cashier->id)
++        ->set('editDisplayName', 'Klara K.')
++        ->call('saveCashier')
++        ->call('startPinReset', $cashier->id)
++        ->set('newPin', '111222')
++        ->call('resetPin')
++        ->call('toggleActive', $cashier->id);
++
++    $cashier->refresh();
++
++    expect($cashier->display_name)->toBe('Klara K.')
++        ->and(Hash::check('111222', $cashier->pin_hash))->toBeTrue()
++        ->and($cashier->active)->toBeFalse();
++
++    expect(fn () => app(CashierManagementService::class)->setActive($manager, $administrator, false))
++        ->toThrow(LogicException::class, 'This area may only manage cashier accounts.');
++});
++
++it('renders the reporting page', function () {
++    $manager = app(CreateUserAction::class)->execute(
++        'manager-reporting',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $this->actingAs($manager);
++
++    Livewire::test(ReportingScreen::class)
++        ->assertStatus(200)
++        ->assertSee('Berichte');
++});

@@ -1,0 +1,883 @@
+diff --git a/app/Modules/CashRegister/Actions/CancelCashSessionClosingAction.php b/app/Modules/CashRegister/Actions/CancelCashSessionClosingAction.php
+index a1f85d2..25a2fee 100644
+--- a/app/Modules/CashRegister/Actions/CancelCashSessionClosingAction.php
++++ b/app/Modules/CashRegister/Actions/CancelCashSessionClosingAction.php
+@@ -6,6 +6,7 @@ use App\Modules\Audit\Actions\WriteAuditEventAction;
+ use App\Modules\CashRegister\Enums\CashSessionStatus;
+ use App\Modules\CashRegister\Models\CashSession;
+ use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\DB;
+ use LogicException;
+ 
+ final class CancelCashSessionClosingAction
+@@ -14,24 +15,28 @@ final class CancelCashSessionClosingAction
+ 
+     public function execute(CashSession $session, User $user): CashSession
+     {
+-        if ($session->status !== CashSessionStatus::Closing) {
+-            throw new LogicException('Cash session is not in closing state.');
+-        }
+-
+-        $session->update([
+-            'status' => CashSessionStatus::Open,
+-            'closing_started_at' => null,
+-        ]);
+-
+-        $this->audit->execute(
+-            eventKey: 'cash_session.closing_cancelled',
+-            actorUserId: $user->id,
+-            actorUsername: $user->username,
+-            actorDisplayName: $user->auditDisplayName(),
+-            subjectType: CashSession::class,
+-            subjectId: $session->id,
+-        );
+-
+-        return $session->refresh();
++        return DB::transaction(function () use ($session, $user): CashSession {
++            $locked = CashSession::query()->lockForUpdate()->findOrFail($session->id);
++
++            if ($locked->status !== CashSessionStatus::Closing) {
++                throw new LogicException('Cash session is not in closing state.');
++            }
++
++            $locked->update([
++                'status' => CashSessionStatus::Open,
++                'closing_started_at' => null,
++            ]);
++
++            $this->audit->execute(
++                eventKey: 'cash_session.closing_cancelled',
++                actorUserId: $user->id,
++                actorUsername: $user->username,
++                actorDisplayName: $user->auditDisplayName(),
++                subjectType: CashSession::class,
++                subjectId: $locked->id,
++            );
++
++            return $locked->refresh();
++        });
+     }
+ }
+diff --git a/app/Modules/CashRegister/Queries/GetCashSessionCashSummaryQuery.php b/app/Modules/CashRegister/Queries/GetCashSessionCashSummaryQuery.php
+new file mode 100644
+index 0000000..ae19afa
+--- /dev/null
++++ b/app/Modules/CashRegister/Queries/GetCashSessionCashSummaryQuery.php
+@@ -0,0 +1,40 @@
++<?php
++
++namespace App\Modules\CashRegister\Queries;
++
++use App\Modules\CashRegister\Enums\CashMovementType;
++use App\Modules\CashRegister\Models\CashSession;
++
++final class GetCashSessionCashSummaryQuery
++{
++    /**
++     * @return array{
++     *     opening_cash_cents: int,
++     *     cash_sales_cents: int,
++     *     deposits_cents: int,
++     *     withdrawals_cents: int,
++     *     expected_cash_cents: int
++     * }
++     */
++    public function execute(CashSession $session): array
++    {
++        $deposits = (int) $session->movements()
++            ->where('type', CashMovementType::Deposit->value)
++            ->sum('amount_cents');
++
++        $withdrawals = (int) $session->movements()
++            ->where('type', CashMovementType::Withdrawal->value)
++            ->sum('amount_cents');
++
++        return [
++            'opening_cash_cents' => (int) $session->opening_cash_cents,
++            'cash_sales_cents' => (int) $session->cash_sales_cents,
++            'deposits_cents' => $deposits,
++            'withdrawals_cents' => $withdrawals,
++            'expected_cash_cents' => (int) $session->opening_cash_cents
++                + (int) $session->cash_sales_cents
++                + $deposits
++                - $withdrawals,
++        ];
++    }
++}
+diff --git a/app/Modules/CashRegister/README.md b/app/Modules/CashRegister/README.md
+index 0d14f3e..ae0eeb6 100644
+--- a/app/Modules/CashRegister/README.md
++++ b/app/Modules/CashRegister/README.md
+@@ -9,3 +9,7 @@ ## V1-Regeln
+ - Einlagen und Entnahmen benötigen immer einen Grund.
+ - eine Kassendifferenz ist erlaubt, benötigt aber einen Abschlusskommentar.
+ - geschlossene Kassenschichten und Bargeldbewegungen werden nicht verändert oder gelöscht.
++
++## POS-Ablauf
++
++Die POS-Surface koordiniert modulübergreifende Regeln. Beim Start des Kassenabschlusses wird der Kassenplatz gesperrt und geprüft, dass kein offener Warenkorb existiert. Erst danach wechselt die Kassenschicht in `closing`. In diesem Zustand sind neue Verkäufe sowie Einlagen und Entnahmen gesperrt. Der Abschluss kann vor dem endgültigen Schließen wieder abgebrochen werden.
+diff --git a/app/Surfaces/Pos/Actions/StartRegisterClosingAction.php b/app/Surfaces/Pos/Actions/StartRegisterClosingAction.php
+new file mode 100644
+index 0000000..2f1c34b
+--- /dev/null
++++ b/app/Surfaces/Pos/Actions/StartRegisterClosingAction.php
+@@ -0,0 +1,53 @@
++<?php
++
++namespace App\Surfaces\Pos\Actions;
++
++use App\Modules\CashRegister\Actions\StartCashSessionClosingAction;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Identity\Models\User;
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Sale;
++use Illuminate\Support\Facades\DB;
++use LogicException;
++
++final class StartRegisterClosingAction
++{
++    public function __construct(
++        private readonly StartCashSessionClosingAction $startClosing,
++    ) {}
++
++    public function execute(Register $register, User $user): CashSession
++    {
++        return DB::transaction(function () use ($register, $user): CashSession {
++            Register::query()->lockForUpdate()->findOrFail($register->id);
++
++            $session = CashSession::query()
++                ->where('register_id', $register->id)
++                ->whereIn('status', [
++                    CashSessionStatus::Open->value,
++                    CashSessionStatus::Closing->value,
++                ])
++                ->latest('id')
++                ->first();
++
++            if ($session === null || $session->status !== CashSessionStatus::Open) {
++                throw new LogicException('Die Kasse ist nicht geöffnet.');
++            }
++
++            $hasOpenSale = Sale::query()
++                ->where('register_id', $register->id)
++                ->where('status', SaleStatus::Open->value)
++                ->exists();
++
++            if ($hasOpenSale) {
++                throw new LogicException(
++                    'Vor dem Kassenabschluss muss der offene Warenkorb abgeschlossen oder verworfen werden.',
++                );
++            }
++
++            return $this->startClosing->execute($session, $user);
++        });
++    }
++}
+diff --git a/app/Surfaces/Pos/Livewire/RegisterScreen.php b/app/Surfaces/Pos/Livewire/RegisterScreen.php
+index 218c981..d3b678d 100644
+--- a/app/Surfaces/Pos/Livewire/RegisterScreen.php
++++ b/app/Surfaces/Pos/Livewire/RegisterScreen.php
+@@ -2,12 +2,17 @@
+ 
+ namespace App\Surfaces\Pos\Livewire;
+ 
++use App\Modules\CashRegister\Actions\CancelCashSessionClosingAction;
++use App\Modules\CashRegister\Actions\CloseCashSessionAction;
+ use App\Modules\CashRegister\Actions\EnsureDefaultRegisterAction;
+ use App\Modules\CashRegister\Actions\OpenCashSessionAction;
++use App\Modules\CashRegister\Actions\RecordCashDepositAction;
++use App\Modules\CashRegister\Actions\RecordCashWithdrawalAction;
+ use App\Modules\CashRegister\Enums\CashSessionStatus;
+ use App\Modules\CashRegister\Models\CashSession;
+ use App\Modules\CashRegister\Models\Register;
+ use App\Modules\CashRegister\Queries\GetActiveCashSessionQuery;
++use App\Modules\CashRegister\Queries\GetCashSessionCashSummaryQuery;
+ use App\Modules\Catalog\Models\Product;
+ use App\Modules\Catalog\Queries\GetPosCatalogQuery;
+ use App\Modules\Identity\Models\User;
+@@ -20,6 +25,7 @@ use App\Modules\Sales\Models\SaleItem;
+ use App\Modules\Sales\Queries\GetOpenSaleForRegisterQuery;
+ use App\Modules\Settings\Queries\GetSystemSettingsQuery;
+ use App\Support\Money;
++use App\Surfaces\Pos\Actions\StartRegisterClosingAction;
+ use Illuminate\Contracts\View\View;
+ use Illuminate\Support\Collection;
+ use Illuminate\Support\Facades\Auth;
+@@ -45,6 +51,18 @@ final class RegisterScreen extends Component
+ 
+     public bool $paymentOpen = false;
+ 
++    public bool $cashMenuOpen = false;
++
++    public ?string $cashMovementMode = null;
++
++    public string $cashMovementAmount = '';
++
++    public string $cashMovementReason = '';
++
++    public string $closingCountedCash = '';
++
++    public string $closingComment = '';
++
+     public ?string $notice = null;
+ 
+     public ?string $screenError = null;
+@@ -83,6 +101,143 @@ final class RegisterScreen extends Component
+         }
+     }
+ 
++    public function openCashMenu(): void
++    {
++        $this->clearMessages();
++
++        try {
++            $this->requireOpenCashSession();
++            $this->cashMenuOpen = true;
++            $this->cashMovementMode = null;
++            $this->cashMovementAmount = '';
++            $this->cashMovementReason = '';
++        } catch (Throwable $exception) {
++            $this->screenError = $this->friendlyMessage($exception);
++        }
++    }
++
++    public function closeCashMenu(): void
++    {
++        $this->cashMenuOpen = false;
++        $this->cashMovementMode = null;
++        $this->cashMovementAmount = '';
++        $this->cashMovementReason = '';
++    }
++
++    public function prepareCashMovement(string $mode): void
++    {
++        $this->clearMessages();
++
++        if (! in_array($mode, ['deposit', 'withdrawal'], true)) {
++            $this->screenError = 'Unbekannte Kassenbewegung.';
++
++            return;
++        }
++
++        try {
++            $this->requireOpenCashSession();
++            $this->cashMenuOpen = true;
++            $this->cashMovementMode = $mode;
++            $this->cashMovementAmount = '';
++            $this->cashMovementReason = '';
++        } catch (Throwable $exception) {
++            $this->screenError = $this->friendlyMessage($exception);
++        }
++    }
++
++    public function recordCashMovement(
++        RecordCashDepositAction $deposit,
++        RecordCashWithdrawalAction $withdrawal,
++    ): void {
++        $this->clearMessages();
++
++        try {
++            $session = $this->requireOpenCashSession();
++            $amountCents = Money::parseCents($this->cashMovementAmount);
++            $reason = trim($this->cashMovementReason);
++
++            if ($this->cashMovementMode === 'deposit') {
++                $deposit->execute($session, $this->currentUser(), $amountCents, $reason);
++                $this->notice = 'Einlage wurde erfasst.';
++            } elseif ($this->cashMovementMode === 'withdrawal') {
++                $withdrawal->execute($session, $this->currentUser(), $amountCents, $reason);
++                $this->notice = 'Entnahme wurde erfasst.';
++            } else {
++                throw new LogicException('Bitte wähle zuerst Einlage oder Entnahme aus.');
++            }
++
++            $this->closeCashMenu();
++        } catch (Throwable $exception) {
++            $this->screenError = $this->friendlyMessage($exception);
++        }
++    }
++
++    public function startCashClosing(StartRegisterClosingAction $startClosing): void
++    {
++        $this->clearMessages();
++
++        try {
++            $startClosing->execute($this->register(), $this->currentUser());
++
++            $this->cashMenuOpen = false;
++            $this->cashMovementMode = null;
++            $this->closingCountedCash = '';
++            $this->closingComment = '';
++            $this->notice = 'Kassenabschluss wurde gestartet.';
++        } catch (Throwable $exception) {
++            $this->screenError = $this->friendlyMessage($exception);
++        }
++    }
++
++    public function cancelCashClosing(CancelCashSessionClosingAction $cancelClosing): void
++    {
++        $this->clearMessages();
++
++        try {
++            $session = $this->activeCashSession();
++
++            if ($session === null) {
++                throw new LogicException('Es gibt keine aktive Kassenschicht.');
++            }
++
++            $cancelClosing->execute($session, $this->currentUser());
++            $this->closingCountedCash = '';
++            $this->closingComment = '';
++            $this->notice = 'Kassenabschluss wurde abgebrochen.';
++        } catch (Throwable $exception) {
++            $this->screenError = $this->friendlyMessage($exception);
++        }
++    }
++
++    public function closeCashSession(CloseCashSessionAction $closeSession): void
++    {
++        $this->clearMessages();
++
++        try {
++            $session = $this->activeCashSession();
++
++            if ($session === null) {
++                throw new LogicException('Es gibt keine aktive Kassenschicht.');
++            }
++
++            $closed = $closeSession->execute(
++                session: $session,
++                user: $this->currentUser(),
++                countedCashCents: Money::parseCents($this->closingCountedCash),
++                comment: $this->closingComment,
++            );
++
++            $difference = (int) ($closed->closing_difference_cents ?? 0);
++            $this->closingCountedCash = '';
++            $this->closingComment = '';
++            $this->notice = $difference === 0
++                ? 'Kasse wurde ohne Differenz abgeschlossen.'
++                : 'Kasse wurde mit dokumentierter Differenz abgeschlossen.';
++        } catch (Throwable $exception) {
++            $this->screenError = $this->friendlyMessage($exception);
++        }
++    }
++
+     public function addProduct(int $productId, AddProductToCartAction $addProduct): void
+     {
+         $this->clearMessages();
+@@ -210,6 +365,18 @@ final class RegisterScreen extends Component
+         $catalog = app(GetPosCatalogQuery::class)->execute();
+         $settings = app(GetSystemSettingsQuery::class)->execute();
+         $user = $this->currentUser();
++        $cashSummary = $session !== null
++            ? app(GetCashSessionCashSummaryQuery::class)->execute($session)
++            : null;
++        $recentMovements = $session !== null
++            ? $session->movements()->with('user')->latest('id')->limit(8)->get()
++            : collect();
++        $closingCountedCents = $session?->status === CashSessionStatus::Closing
++            ? $this->parseOptionalMoney($this->closingCountedCash)
++            : null;
++        $closingDifferenceCents = $closingCountedCents !== null && $cashSummary !== null
++            ? $closingCountedCents - $cashSummary['expected_cash_cents']
++            : null;
+ 
+         $products = $catalog
+             ->when(
+@@ -238,6 +405,9 @@ final class RegisterScreen extends Component
+             'products' => $products,
+             'user' => $user,
+             'settings' => $settings,
++            'cashSummary' => $cashSummary,
++            'recentMovements' => $recentMovements,
++            'closingDifferenceCents' => $closingDifferenceCents,
+             'foreignSale' => $sale !== null && $sale->cashier_id !== $user->id,
+             'currency' => (string) config('kassensystem.currency', 'EUR'),
+         ]);
+@@ -294,6 +464,24 @@ final class RegisterScreen extends Component
+         return $session;
+     }
+ 
++    private function activeCashSession(): ?CashSession
++    {
++        return app(GetActiveCashSessionQuery::class)->execute($this->register());
++    }
++
++    private function parseOptionalMoney(string $value): ?int
++    {
++        if (trim($value) === '') {
++            return null;
++        }
++
++        try {
++            return Money::parseCents($value);
++        } catch (InvalidArgumentException) {
++            return null;
++        }
++    }
++
+     private function saleForCurrentCashier(): ?Sale
+     {
+         $sale = app(GetOpenSaleForRegisterQuery::class)->execute($this->register());
+diff --git a/docs/KASSENSYSTEM_V1.md b/docs/KASSENSYSTEM_V1.md
+index d4f63d5..2422627 100644
+--- a/docs/KASSENSYSTEM_V1.md
++++ b/docs/KASSENSYSTEM_V1.md
+@@ -31,3 +31,16 @@ ## Modulabhängigkeiten
+ `Sales -> Identity, Catalog, CashRegister, Audit`
+ 
+ Die Kassenlogik kennt das Sales-Modul nicht. Der Barumsatz wird beim Abschluss eines Verkaufs auf der Kassenschicht fortgeschrieben. Dadurch bleibt der Modulgraph azyklisch.
++
++## POS-Kassenführung
++
++Die POS-Oberfläche unterstützt neben Verkäufen auch die laufende Bargeldführung:
++
++- Einlagen und Entnahmen mit positivem Betrag und Pflichtgrund,
++- Anzeige von Startbestand, Barumsatz, Einlagen, Entnahmen und Sollbestand,
++- Beginn des Kassenabschlusses nur ohne offenen Warenkorb,
++- Sperre für neue Verkäufe und Kassenbewegungen während des Abschlusses,
++- Abbruch eines begonnenen Abschlusses,
++- Erfassung des gezählten Bargeldbestands,
++- Pflichtkommentar bei Kassendifferenz,
++- unveränderlicher abgeschlossener Kassenschicht-Datensatz.
+diff --git a/resources/views/surfaces/pos/register.blade.php b/resources/views/surfaces/pos/register.blade.php
+index aa9ed9d..0092eb7 100644
+--- a/resources/views/surfaces/pos/register.blade.php
++++ b/resources/views/surfaces/pos/register.blade.php
+@@ -1,4 +1,5 @@
+ @php
++    use App\Modules\CashRegister\Enums\CashMovementType;
+     use App\Modules\CashRegister\Enums\CashSessionStatus;
+     use App\Modules\Identity\Enums\UserRole;
+     use App\Support\Money;
+@@ -37,6 +38,15 @@ <h1 class="text-xl font-bold">{{ $register->name }}</h1>
+                         Administration
+                     </a>
+                 @endif
++                @if ($session?->status === CashSessionStatus::Open)
++                    <button
++                        type="button"
++                        wire:click="openCashMenu"
++                        class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
++                    >
++                        Kassenmenü
++                    </button>
++                @endif
+                 <button
+                     type="button"
+                     wire:click="switchUser"
+@@ -88,9 +98,118 @@ <h2 class="mt-2 text-3xl font-bold">Kasse öffnen</h2>
+                 </form>
+             </section>
+         @elseif ($session->status === CashSessionStatus::Closing)
+-            <section class="mx-auto max-w-2xl rounded-3xl border border-amber-200 bg-amber-50 p-8">
+-                <h2 class="text-2xl font-bold text-amber-950">Kassenabschluss wurde begonnen</h2>
+-                <p class="mt-2 text-amber-900">Neue Verkäufe und Kassenbewegungen sind gesperrt, bis der Abschluss beendet oder abgebrochen wurde.</p>
++            <section class="mx-auto max-w-5xl space-y-5">
++                <div class="rounded-3xl border border-amber-200 bg-amber-50 p-6 sm:p-8">
++                    <p class="text-sm font-bold uppercase tracking-[0.15em] text-amber-700">Kassenabschluss</p>
++                    <h2 class="mt-2 text-3xl font-black text-amber-950">Bargeld zählen und Kasse schließen</h2>
++                    <p class="mt-2 max-w-3xl text-amber-900">
++                        Neue Verkäufe, Einlagen und Entnahmen sind jetzt gesperrt. Der Abschluss kann abgebrochen werden, solange die Kasse noch nicht geschlossen wurde.
++                    </p>
++                </div>
++
++                @if ($cashSummary)
++                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
++                        <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
++                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Startbestand</p>
++                            <p class="mt-2 text-xl font-black">{{ Money::format($cashSummary['opening_cash_cents'], $currency) }}</p>
++                        </div>
++                        <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
++                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Barumsatz</p>
++                            <p class="mt-2 text-xl font-black text-emerald-700">+ {{ Money::format($cashSummary['cash_sales_cents'], $currency) }}</p>
++                        </div>
++                        <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
++                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Einlagen</p>
++                            <p class="mt-2 text-xl font-black text-emerald-700">+ {{ Money::format($cashSummary['deposits_cents'], $currency) }}</p>
++                        </div>
++                        <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
++                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Entnahmen</p>
++                            <p class="mt-2 text-xl font-black text-red-700">− {{ Money::format($cashSummary['withdrawals_cents'], $currency) }}</p>
++                        </div>
++                        <div class="rounded-2xl bg-slate-950 p-4 text-white shadow-sm">
++                            <p class="text-xs font-bold uppercase tracking-wide text-slate-300">Sollbestand</p>
++                            <p class="mt-2 text-xl font-black">{{ Money::format($cashSummary['expected_cash_cents'], $currency) }}</p>
++                        </div>
++                    </div>
++                @endif
++
++                <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
++                    <form wire:submit="closeCashSession" class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
++                        <div>
++                            <label for="closingCountedCash" class="block text-sm font-bold">Gezählter Bargeldbestand</label>
++                            <div class="relative mt-2">
++                                <input
++                                    id="closingCountedCash"
++                                    type="text"
++                                    inputmode="decimal"
++                                    wire:model.live.debounce.250ms="closingCountedCash"
++                                    placeholder="0,00"
++                                    class="w-full rounded-2xl border border-slate-300 px-4 py-4 pr-14 text-right text-3xl font-black outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
++                                >
++                                <span class="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-500">€</span>
++                            </div>
++                        </div>
++
++                        @if ($closingDifferenceCents !== null)
++                            <div class="mt-4 rounded-2xl p-4 {{ $closingDifferenceCents === 0 ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-950' }}">
++                                <div class="flex items-center justify-between gap-4">
++                                    <span class="font-bold">Differenz</span>
++                                    <span class="text-2xl font-black">{{ Money::format($closingDifferenceCents, $currency) }}</span>
++                                </div>
++                                @if ($closingDifferenceCents !== 0)
++                                    <p class="mt-1 text-sm">Bei einer Differenz ist ein Kommentar verpflichtend.</p>
++                                @endif
++                            </div>
++                        @endif
++
++                        <div class="mt-5">
++                            <label for="closingComment" class="block text-sm font-bold">Abschlusskommentar</label>
++                            <textarea
++                                id="closingComment"
++                                wire:model="closingComment"
++                                rows="3"
++                                placeholder="Bei Differenzen bitte Ursache oder Hinweis dokumentieren …"
++                                class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
++                            ></textarea>
++                        </div>
++
++                        <div class="mt-6 grid gap-3 sm:grid-cols-2">
++                            <button
++                                type="button"
++                                wire:click="cancelCashClosing"
++                                class="rounded-2xl border border-slate-300 bg-white px-5 py-4 text-base font-black hover:bg-slate-50"
++                            >
++                                Abschluss abbrechen
++                            </button>
++                            <button
++                                type="submit"
++                                class="rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white hover:bg-slate-800"
++                            >
++                                Kasse schließen
++                            </button>
++                        </div>
++                    </form>
++
++                    <aside class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
++                        <h3 class="font-black">Letzte Kassenbewegungen</h3>
++                        <div class="mt-4 divide-y divide-slate-100">
++                            @forelse ($recentMovements as $movement)
++                                <div class="py-3">
++                                    <div class="flex items-center justify-between gap-3">
++                                        <span class="text-sm font-bold {{ $movement->type === CashMovementType::Deposit ? 'text-emerald-700' : 'text-red-700' }}">
++                                            {{ $movement->type === CashMovementType::Deposit ? 'Einlage' : 'Entnahme' }}
++                                        </span>
++                                        <span class="font-black">
++                                            {{ $movement->type === CashMovementType::Deposit ? '+' : '−' }} {{ Money::format($movement->amount_cents, $currency) }}
++                                        </span>
++                                    </div>
++                                    <p class="mt-1 text-sm text-slate-600">{{ $movement->reason }}</p>
++                                </div>
++                            @empty
++                                <p class="py-5 text-sm text-slate-500">Keine Kassenbewegungen in dieser Schicht.</p>
++                            @endforelse
++                        </div>
++                    </aside>
++                </div>
+             </section>
+         @else
+             <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
+@@ -206,6 +325,111 @@ <h2 class="text-xl font-bold">Warenkorb</h2>
+         @endif
+     </main>
+ 
++    @if ($cashMenuOpen && $session?->status === CashSessionStatus::Open)
++        <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4">
++            <div class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl">
++                <div class="flex items-start justify-between gap-4">
++                    <div>
++                        <p class="text-sm font-bold uppercase tracking-[0.15em] text-slate-500">Bargeld</p>
++                        <h2 class="mt-1 text-2xl font-black">Kassenmenü</h2>
++                    </div>
++                    <button type="button" wire:click="closeCashMenu" class="rounded-xl bg-slate-100 px-3 py-2 font-bold">Schließen</button>
++                </div>
++
++                @if ($cashMovementMode === null)
++                    @if ($cashSummary)
++                        <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
++                            <div class="rounded-2xl bg-slate-50 p-4">
++                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Start</p>
++                                <p class="mt-1 font-black">{{ Money::format($cashSummary['opening_cash_cents'], $currency) }}</p>
++                            </div>
++                            <div class="rounded-2xl bg-slate-50 p-4">
++                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Barumsatz</p>
++                                <p class="mt-1 font-black">{{ Money::format($cashSummary['cash_sales_cents'], $currency) }}</p>
++                            </div>
++                            <div class="rounded-2xl bg-slate-50 p-4">
++                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Einlagen − Entnahmen</p>
++                                <p class="mt-1 font-black">{{ Money::format($cashSummary['deposits_cents'] - $cashSummary['withdrawals_cents'], $currency) }}</p>
++                            </div>
++                            <div class="rounded-2xl bg-slate-950 p-4 text-white">
++                                <p class="text-xs font-bold uppercase tracking-wide text-slate-300">Sollbestand</p>
++                                <p class="mt-1 font-black">{{ Money::format($cashSummary['expected_cash_cents'], $currency) }}</p>
++                            </div>
++                        </div>
++                    @endif
++
++                    <div class="mt-5 grid gap-3 sm:grid-cols-3">
++                        <button type="button" wire:click="prepareCashMovement('deposit')" class="rounded-2xl bg-emerald-50 px-4 py-5 text-left ring-1 ring-emerald-200 hover:bg-emerald-100">
++                            <span class="block text-lg font-black text-emerald-900">+ Einlage</span>
++                            <span class="mt-1 block text-sm text-emerald-800">Zusätzliches Bargeld in die Kasse legen.</span>
++                        </button>
++                        <button type="button" wire:click="prepareCashMovement('withdrawal')" class="rounded-2xl bg-red-50 px-4 py-5 text-left ring-1 ring-red-200 hover:bg-red-100">
++                            <span class="block text-lg font-black text-red-900">− Entnahme</span>
++                            <span class="mt-1 block text-sm text-red-800">Bargeld dokumentiert aus der Kasse nehmen.</span>
++                        </button>
++                        <button type="button" wire:click="startCashClosing" class="rounded-2xl bg-amber-50 px-4 py-5 text-left ring-1 ring-amber-200 hover:bg-amber-100">
++                            <span class="block text-lg font-black text-amber-950">Kasse abschließen</span>
++                            <span class="mt-1 block text-sm text-amber-900">Verkäufe sperren, zählen und Schicht beenden.</span>
++                        </button>
++                    </div>
++
++                    <div class="mt-6 border-t border-slate-200 pt-5">
++                        <h3 class="font-black">Letzte Kassenbewegungen</h3>
++                        <div class="mt-2 divide-y divide-slate-100">
++                            @forelse ($recentMovements as $movement)
++                                <div class="flex items-start justify-between gap-4 py-3">
++                                    <div class="min-w-0">
++                                        <p class="text-sm font-bold">{{ $movement->reason }}</p>
++                                        <p class="mt-0.5 text-xs text-slate-500">{{ $movement->user?->auditDisplayName() }} · {{ $movement->created_at?->format('d.m.Y H:i') }}</p>
++                                    </div>
++                                    <span class="shrink-0 font-black {{ $movement->type === CashMovementType::Deposit ? 'text-emerald-700' : 'text-red-700' }}">
++                                        {{ $movement->type === CashMovementType::Deposit ? '+' : '−' }} {{ Money::format($movement->amount_cents, $currency) }}
++                                    </span>
++                                </div>
++                            @empty
++                                <p class="py-4 text-sm text-slate-500">Noch keine Einlagen oder Entnahmen.</p>
++                            @endforelse
++                        </div>
++                    </div>
++                @else
++                    <form wire:submit="recordCashMovement" class="mt-6">
++                        <div class="rounded-2xl p-4 {{ $cashMovementMode === 'deposit' ? 'bg-emerald-50 text-emerald-950' : 'bg-red-50 text-red-950' }}">
++                            <p class="text-sm font-bold uppercase tracking-wide">{{ $cashMovementMode === 'deposit' ? 'Einlage' : 'Entnahme' }}</p>
++                            <p class="mt-1 text-sm">Betrag und Grund werden unveränderlich protokolliert.</p>
++                        </div>
++
++                        <label for="cashMovementAmount" class="mt-5 block text-sm font-bold">Betrag</label>
++                        <div class="relative mt-2">
++                            <input
++                                id="cashMovementAmount"
++                                type="text"
++                                inputmode="decimal"
++                                wire:model="cashMovementAmount"
++                                placeholder="0,00"
++                                class="w-full rounded-2xl border border-slate-300 px-4 py-4 pr-14 text-right text-3xl font-black outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
++                            >
++                            <span class="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-500">€</span>
++                        </div>
++
++                        <label for="cashMovementReason" class="mt-5 block text-sm font-bold">Grund</label>
++                        <input
++                            id="cashMovementReason"
++                            type="text"
++                            wire:model="cashMovementReason"
++                            placeholder="z. B. zusätzliches Wechselgeld"
++                            class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
++                        >
++
++                        <div class="mt-6 grid grid-cols-2 gap-3">
++                            <button type="button" wire:click="$set('cashMovementMode', null)" class="rounded-2xl border border-slate-300 px-5 py-4 font-black hover:bg-slate-50">Zurück</button>
++                            <button type="submit" class="rounded-2xl bg-slate-950 px-5 py-4 font-black text-white hover:bg-slate-800">Buchen</button>
++                        </div>
++                    </form>
++                @endif
++            </div>
++        </div>
++    @endif
++
+     @if ($paymentOpen && $sale && ! $foreignSale)
+         <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4">
+             <div class="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl">
+diff --git a/tests/Feature/Pos/CashManagementFlowTest.php b/tests/Feature/Pos/CashManagementFlowTest.php
+new file mode 100644
+index 0000000..237f866
+--- /dev/null
++++ b/tests/Feature/Pos/CashManagementFlowTest.php
+@@ -0,0 +1,172 @@
++<?php
++
++use App\Modules\CashRegister\Enums\CashMovementType;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashMovement;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\Catalog\Models\Category;
++use App\Modules\Catalog\Models\Product;
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Surfaces\Pos\Livewire\RegisterScreen;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++use Livewire\Livewire;
++
++uses(RefreshDatabase::class);
++
++it('records deposits and withdrawals and protects the expected cash balance', function () {
++    $cashier = app(CreateUserAction::class)->execute(
++        username: 'cash-movement',
++        pin: '123456',
++        firstName: 'Mara',
++        lastName: 'Money',
++    );
++
++    $this->actingAs($cashier);
++
++    $component = Livewire::test(RegisterScreen::class)
++        ->set('openingCash', '20,00')
++        ->call('openCashSession')
++        ->call('prepareCashMovement', 'deposit')
++        ->set('cashMovementAmount', '5,00')
++        ->set('cashMovementReason', 'Zusätzliches Wechselgeld')
++        ->call('recordCashMovement')
++        ->assertSet('screenError', null)
++        ->call('prepareCashMovement', 'withdrawal')
++        ->set('cashMovementAmount', '7,00')
++        ->set('cashMovementReason', 'Bargeld sicher verwahrt')
++        ->call('recordCashMovement')
++        ->assertSet('screenError', null);
++
++    $session = CashSession::query()->firstOrFail();
++
++    expect($session->expectedCashCents())->toBe(1800)
++        ->and(CashMovement::query()->count())->toBe(2)
++        ->and(CashMovement::query()->where('type', CashMovementType::Deposit->value)->value('amount_cents'))->toBe(500)
++        ->and(CashMovement::query()->where('type', CashMovementType::Withdrawal->value)->value('amount_cents'))->toBe(700);
++
++    $component
++        ->call('prepareCashMovement', 'withdrawal')
++        ->set('cashMovementAmount', '18,01')
++        ->set('cashMovementReason', 'Zu hohe Entnahme')
++        ->call('recordCashMovement');
++
++    expect($component->get('screenError'))->not->toBeNull()
++        ->and(CashMovement::query()->count())->toBe(2)
++        ->and($session->refresh()->expectedCashCents())->toBe(1800);
++});
++
++it('does not start closing while a cart is open and can cancel closing', function () {
++    $cashier = app(CreateUserAction::class)->execute(
++        username: 'closing-cart',
++        pin: '123456',
++        firstName: 'Clara',
++        lastName: 'Closing',
++    );
++
++    $category = Category::query()->create([
++        'name' => 'Kassenabschluss',
++        'active' => true,
++        'sort_order' => 10,
++    ]);
++
++    $product = Product::query()->create([
++        'category_id' => $category->id,
++        'name' => 'Testprodukt',
++        'short_name' => 'Test',
++        'price_cents' => 150,
++        'active' => true,
++        'sort_order' => 10,
++    ]);
++
++    $this->actingAs($cashier);
++
++    $component = Livewire::test(RegisterScreen::class)
++        ->set('openingCash', '10,00')
++        ->call('openCashSession')
++        ->call('addProduct', $product->id)
++        ->call('startCashClosing')
++        ->assertSet(
++            'screenError',
++            'Vor dem Kassenabschluss muss der offene Warenkorb abgeschlossen oder verworfen werden.',
++        );
++
++    expect(CashSession::query()->firstOrFail()->status)->toBe(CashSessionStatus::Open);
++
++    $component
++        ->call('discardSale')
++        ->call('startCashClosing')
++        ->assertSet('screenError', null);
++
++    expect(CashSession::query()->firstOrFail()->status)->toBe(CashSessionStatus::Closing);
++
++    $component
++        ->call('cancelCashClosing')
++        ->assertSet('screenError', null);
++
++    expect(CashSession::query()->firstOrFail()->status)->toBe(CashSessionStatus::Open);
++});
++
++it('closes the register with counted cash and requires a comment for differences', function () {
++    $cashier = app(CreateUserAction::class)->execute(
++        username: 'closing-count',
++        pin: '123456',
++        firstName: 'Karla',
++        lastName: 'Count',
++    );
++
++    $this->actingAs($cashier);
++
++    $component = Livewire::test(RegisterScreen::class)
++        ->set('openingCash', '20,00')
++        ->call('openCashSession')
++        ->call('prepareCashMovement', 'deposit')
++        ->set('cashMovementAmount', '5,00')
++        ->set('cashMovementReason', 'Wechselgeld')
++        ->call('recordCashMovement')
++        ->call('startCashClosing')
++        ->set('closingCountedCash', '24,50')
++        ->call('closeCashSession');
++
++    $session = CashSession::query()->firstOrFail();
++
++    expect($component->get('screenError'))->not->toBeNull()
++        ->and($session->refresh()->status)->toBe(CashSessionStatus::Closing);
++
++    $component
++        ->set('closingComment', '50 Cent fehlen beim Zählen')
++        ->call('closeCashSession')
++        ->assertSet('screenError', null)
++        ->assertSet('notice', 'Kasse wurde mit dokumentierter Differenz abgeschlossen.');
++
++    $session->refresh();
++
++    expect($session->status)->toBe(CashSessionStatus::Closed)
++        ->and($session->closing_expected_cash_cents)->toBe(2500)
++        ->and($session->closing_counted_cash_cents)->toBe(2450)
++        ->and($session->closing_difference_cents)->toBe(-50)
++        ->and($session->closing_comment)->toBe('50 Cent fehlen beim Zählen')
++        ->and($session->closed_by_user_id)->toBe($cashier->id);
++});
++
++it('blocks cash movements once closing has started', function () {
++    $cashier = app(CreateUserAction::class)->execute(
++        username: 'closing-lock',
++        pin: '123456',
++        firstName: 'Lina',
++        lastName: 'Lock',
++    );
++
++    $this->actingAs($cashier);
++
++    $component = Livewire::test(RegisterScreen::class)
++        ->call('openCashSession')
++        ->call('startCashClosing')
++        ->set('cashMovementMode', 'deposit')
++        ->set('cashMovementAmount', '1,00')
++        ->set('cashMovementReason', 'Soll nicht funktionieren')
++        ->call('recordCashMovement');
++
++    expect($component->get('screenError'))->toBe('Die Kasse ist nicht geöffnet.')
++        ->and(CashMovement::query()->count())->toBe(0)
++        ->and(CashSession::query()->firstOrFail()->status)->toBe(CashSessionStatus::Closing);
++});

@@ -1,0 +1,701 @@
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.yml b/.github/ISSUE_TEMPLATE/bug_report.yml
+new file mode 100644
+index 0000000..31b092c
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/bug_report.yml
+@@ -0,0 +1,81 @@
++name: Fehlerbericht
++description: Einen reproduzierbaren Fehler im Kassensystem melden
++title: "[BUG] "
++labels:
++  - type:bug
++  - status:triage
++body:
++  - type: markdown
++    attributes:
++      value: |
++        Danke für den Fehlerbericht. Bitte beschreibe den Fehler so konkret und reproduzierbar wie möglich.
++  - type: textarea
++    id: description
++    attributes:
++      label: Beschreibung
++      description: Was ist passiert?
++      placeholder: Kurze, konkrete Fehlerbeschreibung
++    validations:
++      required: true
++  - type: textarea
++    id: steps
++    attributes:
++      label: Schritte zur Reproduktion
++      placeholder: |
++        1. ...
++        2. ...
++        3. ...
++    validations:
++      required: true
++  - type: textarea
++    id: expected
++    attributes:
++      label: Erwartetes Verhalten
++    validations:
++      required: true
++  - type: textarea
++    id: actual
++    attributes:
++      label: Tatsächliches Verhalten
++    validations:
++      required: true
++  - type: dropdown
++    id: area
++    attributes:
++      label: Bereich
++      options:
++        - POS
++        - Administration
++        - Identity / Login
++        - Catalog
++        - CashRegister
++        - Sales
++        - Reporting
++        - Settings
++        - Audit
++        - Foundation / Tooling
++        - Unklar
++    validations:
++      required: true
++  - type: dropdown
++    id: severity
++    attributes:
++      label: Auswirkung
++      options:
++        - Blockiert den Betrieb
++        - Kritische Funktion fehlerhaft
++        - Funktion eingeschränkt
++        - Kosmetisch / geringe Auswirkung
++    validations:
++      required: true
++  - type: textarea
++    id: logs
++    attributes:
++      label: Logs / Fehlermeldung
++      description: Keine PINs, Passwörter, Tokens oder andere Secrets einfügen.
++      render: shell
++  - type: textarea
++    id: environment
++    attributes:
++      label: Umgebung
++      placeholder: Browser, PHP-Version, Datenbank, Betriebssystem
+diff --git a/.github/ISSUE_TEMPLATE/config.yml b/.github/ISSUE_TEMPLATE/config.yml
+new file mode 100644
+index 0000000..b210e78
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/config.yml
+@@ -0,0 +1,5 @@
++blank_issues_enabled: false
++contact_links:
++  - name: Sicherheitsproblem melden
++    url: https://github.com/jan-brand/kassensystem/security/policy
++    about: Sicherheitslücken nicht als öffentliches Issue veröffentlichen.
+diff --git a/.github/ISSUE_TEMPLATE/feature_request.yml b/.github/ISSUE_TEMPLATE/feature_request.yml
+new file mode 100644
+index 0000000..a7dcc4d
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/feature_request.yml
+@@ -0,0 +1,52 @@
++name: Feature-Vorschlag
++description: Eine neue Funktion oder fachliche Erweiterung vorschlagen
++title: "[FEATURE] "
++labels:
++  - type:feature
++  - status:triage
++body:
++  - type: textarea
++    id: problem
++    attributes:
++      label: Problem / Bedarf
++      description: Welches konkrete Problem soll gelöst werden?
++    validations:
++      required: true
++  - type: textarea
++    id: solution
++    attributes:
++      label: Gewünschte Lösung
++      description: Wie sollte sich die Funktion aus Sicht der Benutzer verhalten?
++    validations:
++      required: true
++  - type: dropdown
++    id: area
++    attributes:
++      label: Bereich
++      options:
++        - POS
++        - Administration
++        - Identity
++        - Catalog
++        - CashRegister
++        - Sales
++        - Reporting
++        - Settings
++        - Audit
++        - Foundation / Tooling
++        - Neuer Bereich
++    validations:
++      required: true
++  - type: textarea
++    id: acceptance
++    attributes:
++      label: Akzeptanzkriterien
++      placeholder: |
++        - [ ] ...
++        - [ ] ...
++    validations:
++      required: true
++  - type: textarea
++    id: notes
++    attributes:
++      label: Zusätzliche Hinweise
+diff --git a/.github/ISSUE_TEMPLATE/technical_task.yml b/.github/ISSUE_TEMPLATE/technical_task.yml
+new file mode 100644
+index 0000000..d67e626
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/technical_task.yml
+@@ -0,0 +1,35 @@
++name: Technische Aufgabe
++description: Refactoring, Qualität, Infrastruktur oder Entwicklungswerkzeug
++title: "[TECH] "
++labels:
++  - type:tech
++  - status:triage
++body:
++  - type: textarea
++    id: goal
++    attributes:
++      label: Ziel
++      description: Was soll technisch erreicht werden?
++    validations:
++      required: true
++  - type: textarea
++    id: scope
++    attributes:
++      label: Umfang
++      description: Welche Dateien, Module oder technischen Bereiche sind betroffen?
++    validations:
++      required: true
++  - type: textarea
++    id: done
++    attributes:
++      label: Definition of Done
++      placeholder: |
++        - [ ] Tests grün
++        - [ ] Architekturchecks grün
++        - [ ] Dokumentation aktualisiert
++    validations:
++      required: true
++  - type: textarea
++    id: risks
++    attributes:
++      label: Risiken / Abhängigkeiten
+diff --git a/.github/pull_request_template.md b/.github/pull_request_template.md
+new file mode 100644
+index 0000000..292dfa4
+--- /dev/null
++++ b/.github/pull_request_template.md
+@@ -0,0 +1,29 @@
++## Zweck
++
++<!-- Was ändert dieser Pull Request und warum? -->
++
++## Zugehörige Issues
++
++Closes #
++
++## Änderungen
++
++-
++
++## Prüfung
++
++- [ ] `php artisan test`
++- [ ] `php artisan app:check`
++- [ ] `php artisan module:check`
++- [ ] `php artisan architecture:check`
++- [ ] `php artisan page:check` (wenn Pages/Surfaces betroffen sind)
++- [ ] `npm run build` (wenn Frontend betroffen ist)
++- [ ] Keine Secrets oder lokalen Datenbankdateien eingecheckt
++
++## Manuelle Prüfung
++
++<!-- Welche Schritte wurden im Browser/POS getestet? -->
++
++## Hinweise / Risiken
++
++<!-- Migrationen, Datenänderungen, besondere Rollout-Hinweise -->
+diff --git a/.gitkeep b/.gitkeep
+deleted file mode 100644
+index e69de29..0000000
+diff --git a/docs/ISSUE_SYSTEM.md b/docs/ISSUE_SYSTEM.md
+new file mode 100644
+index 0000000..28ddaa6
+--- /dev/null
++++ b/docs/ISSUE_SYSTEM.md
+@@ -0,0 +1,85 @@
++# GitHub Issue System
++
++Dieses Repository verwendet GitHub Issues als verbindlichen Entwicklungs-Backlog.
++
++## Grundprinzip
++
++Jede eigenständige Änderung erhält ein Issue, bevor die Umsetzung beginnt. Kleine Korrekturen innerhalb eines bereits klar abgegrenzten Issues benötigen kein zusätzliches Unter-Issue.
++
++Ein Issue beschreibt **Problem/Ziel und Akzeptanzkriterien**. Technische Detailentscheidungen gehören in das Issue oder den Pull Request, sobald sie relevant werden.
++
++## Typen
++
++| Präfix | Label | Verwendung |
++|---|---|---|
++| `[BUG]` | `type:bug` | Fehler oder Regression |
++| `[FEATURE]` | `type:feature` | neue fachliche Funktion |
++| `[TECH]` | `type:tech` | Refactoring, Infrastruktur, Qualität |
++| `[DOCS]` | `type:docs` | Dokumentation |
++| `[QA]` | `type:qa` | Test-, Abnahme- oder Qualitätsthema |
++| `[EPIC]` | `type:epic` | größerer Arbeitsblock mit mehreren Issues |
++
++## Prioritäten
++
++| Label | Bedeutung |
++|---|---|
++| `priority:P0` | blockiert Betrieb oder sicherheitskritisch |
++| `priority:P1` | für die aktuelle Version erforderlich |
++| `priority:P2` | wichtig, aber nicht release-blockierend |
++| `priority:P3` | optional / später |
++
++## Status
++
++GitHub `open` / `closed` bleibt die primäre Statusquelle.
++
++Zusätzliche Labels:
++
++- `status:triage` – noch nicht vollständig eingeordnet
++- `status:blocked` – kann aktuell wegen einer Abhängigkeit nicht weitergeführt werden
++
++## Bereiche
++
++- `area:pos`
++- `area:administration`
++- `area:identity`
++- `area:catalog`
++- `area:cash-register`
++- `area:sales`
++- `area:reporting`
++- `area:settings`
++- `area:audit`
++- `area:foundation`
++
++## Milestones
++
++- `v1` – erster vollständiger Probebetrieb
++- `v1.1` – kleinere Erweiterungen nach v1
++- `v2` – größere fachliche Erweiterungen wie Schülerguthaben, Lager, Küche oder Service
++
++## Workflow
++
++1. Issue anlegen oder aus dem Backlog auswählen.
++2. Typ, Priorität, Bereich und Milestone setzen.
++3. Akzeptanzkriterien prüfen bzw. ergänzen.
++4. Feature-Branch anlegen, z. B. `feature/42-audit-browser`.
++5. Umsetzung und Tests.
++6. Pull Request mit `Closes #42` verknüpfen.
++7. CI und manuelle Prüfung durchführen.
++8. Nach Merge wird das Issue automatisch geschlossen.
++
++## Definition of Done für v1-Issues
++
++Ein v1-Issue ist erst fertig, wenn – soweit für das Issue relevant – folgende Punkte erfüllt sind:
++
++- Fachliche Akzeptanzkriterien erfüllt
++- serverseitige Berechtigungen geprüft
++- Audit-Verhalten berücksichtigt
++- automatisierte Tests ergänzt oder angepasst
++- bestehende Tests grün
++- Foundation-/Modul-/Architekturchecks grün
++- UI im Browser bzw. Tablet-Layout manuell geprüft
++- Dokumentation aktualisiert, wenn Bedienung oder Betrieb betroffen sind
++
++## Automatische Einrichtung
++
++`scripts/github/setup-issue-system.ps1` richtet Labels, Milestones und den initialen v1-Backlog idempotent mit der GitHub CLI ein.
+diff --git a/scripts/github/setup-issue-system.ps1 b/scripts/github/setup-issue-system.ps1
+new file mode 100644
+index 0000000..a92a843
+--- /dev/null
++++ b/scripts/github/setup-issue-system.ps1
+@@ -0,0 +1,369 @@
++param(
++    [string]$Repo = "jan-brand/kassensystem"
++)
++
++$ErrorActionPreference = "Stop"
++
++if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
++    throw "GitHub CLI (gh) wurde nicht gefunden. Installation unter Windows: winget install --id GitHub.cli"
++}
++
++Write-Host "Prüfe GitHub-Anmeldung ..."
++& gh auth status | Out-Host
++if ($LASTEXITCODE -ne 0) {
++    throw "GitHub CLI ist nicht angemeldet. Bitte zuerst 'gh auth login' ausführen."
++}
++
++Write-Host "Prüfe Repository $Repo ..."
++& gh repo view $Repo --json nameWithOwner | Out-Null
++if ($LASTEXITCODE -ne 0) {
++    throw "Repository $Repo ist mit der aktuellen GitHub-Anmeldung nicht erreichbar."
++}
++
++$labels = @(
++    @{ Name = "type:bug"; Color = "d73a4a"; Description = "Fehler oder Regression" },
++    @{ Name = "type:feature"; Color = "a2eeef"; Description = "Neue fachliche Funktion" },
++    @{ Name = "type:tech"; Color = "5319e7"; Description = "Technische Aufgabe, Refactoring oder Infrastruktur" },
++    @{ Name = "type:docs"; Color = "0075ca"; Description = "Dokumentation" },
++    @{ Name = "type:qa"; Color = "fbca04"; Description = "Test, Qualität oder Abnahme" },
++    @{ Name = "type:epic"; Color = "3e4b9e"; Description = "Übergeordneter Arbeitsblock" },
++
++    @{ Name = "priority:P0"; Color = "b60205"; Description = "Blockiert Betrieb oder sicherheitskritisch" },
++    @{ Name = "priority:P1"; Color = "d93f0b"; Description = "Für die aktuelle Version erforderlich" },
++    @{ Name = "priority:P2"; Color = "fbca04"; Description = "Wichtig, aber nicht release-blockierend" },
++    @{ Name = "priority:P3"; Color = "0e8a16"; Description = "Optional oder später" },
++
++    @{ Name = "status:triage"; Color = "ededed"; Description = "Noch nicht vollständig eingeordnet" },
++    @{ Name = "status:blocked"; Color = "000000"; Description = "Durch Abhängigkeit blockiert" },
++
++    @{ Name = "area:pos"; Color = "c5def5"; Description = "POS-Oberfläche" },
++    @{ Name = "area:administration"; Color = "c5def5"; Description = "Administrationsoberfläche" },
++    @{ Name = "area:identity"; Color = "c5def5"; Description = "Benutzer, Rollen und Authentifizierung" },
++    @{ Name = "area:catalog"; Color = "c5def5"; Description = "Kategorien und Produkte" },
++    @{ Name = "area:cash-register"; Color = "c5def5"; Description = "Kasse, Kassenschicht und Bargeldbewegungen" },
++    @{ Name = "area:sales"; Color = "c5def5"; Description = "Verkäufe, Zahlungen und Belege" },
++    @{ Name = "area:reporting"; Color = "c5def5"; Description = "Berichte und Exporte" },
++    @{ Name = "area:settings"; Color = "c5def5"; Description = "Systemeinstellungen" },
++    @{ Name = "area:audit"; Color = "c5def5"; Description = "Audit-Protokoll" },
++    @{ Name = "area:foundation"; Color = "c5def5"; Description = "Foundation, Architektur und Tooling" }
++)
++
++Write-Host "Richte Labels ein ..."
++foreach ($label in $labels) {
++    & gh label create $label.Name --repo $Repo --color $label.Color --description $label.Description --force | Out-Null
++    if ($LASTEXITCODE -ne 0) {
++        throw "Label $($label.Name) konnte nicht eingerichtet werden."
++    }
++}
++
++function Ensure-Milestone {
++    param(
++        [string]$Title,
++        [string]$Description
++    )
++
++    $milestones = (& gh api "repos/$Repo/milestones?state=all&per_page=100" | ConvertFrom-Json)
++    $existing = $milestones | Where-Object { $_.title -eq $Title } | Select-Object -First 1
++
++    if ($existing) {
++        return [int]$existing.number
++    }
++
++    $created = (& gh api --method POST "repos/$Repo/milestones" -f "title=$Title" -f "description=$Description" | ConvertFrom-Json)
++    return [int]$created.number
++}
++
++Write-Host "Richte Milestones ein ..."
++[void](Ensure-Milestone -Title "v1" -Description "Erster vollständiger Probebetrieb des Kassensystems")
++[void](Ensure-Milestone -Title "v1.1" -Description "Kleinere Erweiterungen nach v1")
++[void](Ensure-Milestone -Title "v2" -Description "Größere fachliche Erweiterungen")
++
++function Ensure-Issue {
++    param(
++        [string]$Title,
++        [string]$Body,
++        [string[]]$Labels,
++        [string]$Milestone = "v1"
++    )
++
++    $existingIssues = (& gh issue list --repo $Repo --state all --limit 500 --json number,title | ConvertFrom-Json)
++    $existing = $existingIssues | Where-Object { $_.title -eq $Title } | Select-Object -First 1
++
++    if ($existing) {
++        Write-Host "Vorhanden: #$($existing.number) $Title"
++        return [int]$existing.number
++    }
++
++    $args = @(
++        "issue", "create",
++        "--repo", $Repo,
++        "--title", $Title,
++        "--body", $Body,
++        "--assignee", "@me",
++        "--milestone", $Milestone
++    )
++
++    foreach ($label in $Labels) {
++        $args += @("--label", $label)
++    }
++
++    $url = (& gh @args).Trim()
++    if ($LASTEXITCODE -ne 0) {
++        throw "Issue '$Title' konnte nicht erstellt werden."
++    }
++
++    $number = [int](($url -split '/')[-1])
++    Write-Host "Erstellt: #$number $Title"
++    return $number
++}
++
++Write-Host "Richte v1-Backlog ein ..."
++
++$settings = Ensure-Issue -Title "[FEATURE] Systemeinstellungen in der Administration" -Labels @("type:feature", "priority:P1", "area:settings", "area:administration") -Body @'
++## Ziel
++
++Die vorhandenen Systemeinstellungen über die Administrationsoberfläche pflegen können.
++
++## Umfang
++
++- Cafeteria-/Systemname
++- Kassenname
++- Logo
++- POS-Anzeigeoptionen
++- technische Werte wie Währung und Zeitzone bleiben zentral konfiguriert
++- Änderungen werden im Audit protokolliert
++
++## Akzeptanzkriterien
++
++- [ ] Manager/Admin kann erlaubte Einstellungen lesen und speichern.
++- [ ] Ungültige Eingaben werden serverseitig validiert.
++- [ ] Änderungen erscheinen ohne manuelle Datenbankeingriffe im POS.
++- [ ] `settings.updated` wird im Audit geschrieben.
++- [ ] Tests decken Lesen, Speichern, Validierung und Berechtigungen ab.
++'@
++
++$audit = Ensure-Issue -Title "[FEATURE] Audit-Protokoll-Browser" -Labels @("type:feature", "priority:P1", "area:audit", "area:administration") -Body @'
++## Ziel
++
++Wichtige Audit-Ereignisse in der Administration nachvollziehbar machen.
++
++## Umfang
++
++- Liste der Audit-Ereignisse
++- Filter nach Zeitraum, Event-Key, Benutzer und Subject
++- Detailansicht mit before/after/metadata
++- ausschließlich lesend
++
++## Akzeptanzkriterien
++
++- [ ] Nur berechtigte Administratoren können Audit-Daten sehen.
++- [ ] Audit-Datensätze können über die UI weder geändert noch gelöscht werden.
++- [ ] Filter funktionieren serverseitig.
++- [ ] Detailansicht zeigt Actor-Snapshot, Zeitpunkt, Subject und Änderungen.
++- [ ] Sensible Werte bleiben redigiert.
++'@
++
++$reporting = Ensure-Issue -Title "[FEATURE] Reporting und CSV-Oberfläche fertigstellen" -Labels @("type:feature", "priority:P1", "area:reporting", "area:administration") -Body @'
++## Ziel
++
++Die vorhandenen Reporting-Queries vollständig über die Administration nutzbar machen.
++
++## Umfang
++
++- Datumsauswahl
++- Tagesumsatz
++- Verkaufsanzahl
++- Produktmengen und Produktumsätze
++- Kassenschichten
++- Soll-/Ist-Differenzen
++- CSV-Downloads aus der Oberfläche
++
++## Akzeptanzkriterien
++
++- [ ] Berichte verwenden Europe/Berlin für Verkaufstage.
++- [ ] Kassenschichten werden nach tatsächlichem Abschlusszeitpunkt eingeordnet.
++- [ ] CSV-Dateien sind UTF-8 und für Tabellenkalkulation geeignet.
++- [ ] Berechtigungsprüfung erfolgt serverseitig.
++- [ ] UI-Tests werden ergänzt.
++'@
++
++$sales = Ensure-Issue -Title "[FEATURE] Verkaufsdetails und Belegansicht" -Labels @("type:feature", "priority:P1", "area:sales", "area:administration") -Body @'
++## Ziel
++
++Abgeschlossene Verkäufe in der Administration nachvollziehen und als Beleg anzeigen können.
++
++## Umfang
++
++- Verkaufsliste mit Verkaufsnummer, Datum/Uhrzeit, Kassierer und Gesamtbetrag
++- Detailansicht mit Positionen und Preis-Snapshots
++- Zahlungsdaten und Rückgeld
++- HTML-Belegansicht
++- keine nachträgliche Bearbeitung abgeschlossener Verkäufe
++
++## Akzeptanzkriterien
++
++- [ ] Suche/Filter nach Datum und Verkaufsnummer.
++- [ ] Detailansicht basiert auf gespeicherten Snapshots.
++- [ ] 0-Euro-Verkäufe werden korrekt dargestellt.
++- [ ] Abgeschlossene Verkäufe bleiben unveränderlich.
++- [ ] Listen- und Detailansicht sind getestet.
++'@
++
++$permissions = Ensure-Issue -Title "[TECH] Berechtigungen zentralisieren und vollständig durchsetzen" -Labels @("type:tech", "priority:P1", "area:identity", "area:foundation") -Body @'
++## Ziel
++
++Rollen- und Rechteprüfung konsistent und serverseitig abbilden.
++
++## Geplante Rechte
++
++- `pos.access`
++- `sales.create`
++- `cash_sessions.open`
++- `cash_sessions.close`
++- `cash_movements.create`
++- `administration.access`
++- `catalog.manage`
++- `users.cashiers.manage`
++- `users.roles.manage`
++- `sales.view`
++- `cash_sessions.view`
++- `reports.view`
++- `audit.view`
++- `settings.manage`
++
++## Akzeptanzkriterien
++
++- [ ] Jede sensible Aktion prüft Berechtigungen serverseitig.
++- [ ] Manager können nur Kassierer verwalten.
++- [ ] Administrator-Funktionen sind klar getrennt.
++- [ ] UI blendet nicht erlaubte Aktionen aus, Sicherheit hängt aber nicht davon ab.
++- [ ] Rollenpfade sind automatisiert getestet.
++'@
++
++$operations = Ensure-Issue -Title "[TECH] Backup, Restore und Produktionsvorbereitung" -Labels @("type:tech", "priority:P1", "area:foundation") -Body @'
++## Ziel
++
++Einen reproduzierbaren und sicheren Probebetrieb ermöglichen.
++
++## Umfang
++
++- Backup- und Restore-Anleitung
++- Datenbank-Backup vor Updates
++- Produktionskonfiguration
++- MySQL/MariaDB-Kompatibilität
++- Logging und Fehlerseiten
++- Health-Check
++- Deployment-/Update-Ablauf
++
++## Akzeptanzkriterien
++
++- [ ] Backup und Restore sind dokumentiert und getestet.
++- [ ] Produktion läuft ohne Debug-Modus.
++- [ ] Migrationen funktionieren auf der vorgesehenen Produktionsdatenbank.
++- [ ] Health-Check liefert einen klaren Zustand.
++- [ ] Keine Secrets werden ins Repository committed.
++'@
++
++$quality = Ensure-Issue -Title "[TECH] Pint und PHPStan bereinigen" -Labels @("type:tech", "priority:P2", "area:foundation") -Body @'
++## Ziel
++
++Den Code ohne große Ignore-Listen auf einen sauberen Qualitätsstand bringen.
++
++## Umfang
++
++- Laravel Pint projektweit
++- Eloquent-Properties für Larastan
++- generische Relation-Typen
++- Pagination-Generics
++- Foundation-Array-Typen
++- Artisan-Options-Warnungen prüfen
++
++## Akzeptanzkriterien
++
++- [ ] `php vendor/bin/pint --test` läuft erfolgreich.
++- [ ] `php vendor/bin/phpstan analyse --no-progress` läuft erfolgreich.
++- [ ] Keine pauschalen Ignore-Regeln für neue Kassensystemfehler.
++- [ ] Alle funktionalen Tests bleiben grün.
++'@
++
++$qa = Ensure-Issue -Title "[QA] Demo-Daten und vollständige v1-Abnahme" -Labels @("type:qa", "priority:P1", "area:foundation") -Body @'
++## Ziel
++
++Die v1 als zusammenhängenden realistischen Ablauf testen.
++
++## Umfang
++
++- optionale Demo-/Seed-Daten
++- Rollenprüfung
++- Login
++- Kassenöffnung
++- Produkte und Warenkorb
++- Barzahlung und Rückgeld
++- Einlage/Entnahme
++- Kassenabschluss
++- Reporting
++- Administration
++- Browser-/Tablet-Prüfung
++
++## Akzeptanzkriterien
++
++- [ ] dokumentierte manuelle Abnahme-Checkliste
++- [ ] automatisierte Test-Suite vollständig grün
++- [ ] Demo-Daten enthalten keine produktiven Zugangsdaten
++- [ ] keine offenen P0/P1-Fehler für den Probebetrieb
++'@
++
++$posUx = Ensure-Issue -Title "[FEATURE] POS-Bedienung und Robustheit finalisieren" -Labels @("type:feature", "priority:P1", "area:pos") -Body @'
++## Ziel
++
++Die Kassenoberfläche für schnellen Tablet-Betrieb finalisieren.
++
++## Umfang
++
++- Produktsortierung/Favoriten
++- Suche und Touch-Bedienung
++- deutliche Rückgeldanzeige
++- klare Lade- und Fehlerzustände
++- Schutz vor Doppelklicks und wiederholten Requests
++- sinnvolle Fokus-/Tastatursteuerung
++
++## Akzeptanzkriterien
++
++- [ ] Kernablauf kann auf Tablet zügig ohne unnötige Dialoge bedient werden.
++- [ ] Doppelklicks erzeugen keine doppelten Verkäufe oder Zahlungen.
++- [ ] Fehlerzustände sind verständlich und lassen sich sicher fortsetzen.
++- [ ] Mobile/Tablet-Ansicht wurde manuell geprüft.
++'@
++
++$epicBody = @"
++## Ziel
++
++Die erste produktnahe Version des Kassensystems vollständig abschließen.
++
++## Zugehörige Issues
++
++- [ ] #$settings Systemeinstellungen in der Administration
++- [ ] #$audit Audit-Protokoll-Browser
++- [ ] #$reporting Reporting und CSV-Oberfläche
++- [ ] #$sales Verkaufsdetails und Belegansicht
++- [ ] #$permissions Berechtigungen zentralisieren
++- [ ] #$operations Backup, Restore und Produktionsvorbereitung
++- [ ] #$quality Pint und PHPStan
++- [ ] #$qa Demo-Daten und v1-Abnahme
++- [ ] #$posUx POS-Bedienung und Robustheit
++
++## Definition of Done
++
++- [ ] Alle v1-Funktionen sind über Browser/POS bedienbar.
++- [ ] Alle automatisierten Tests sind grün.
++- [ ] Foundation-, Modul-, Architektur- und Page-Checks sind grün.
++- [ ] Produktionsbetrieb und Backup/Restore sind dokumentiert.
++- [ ] Keine bekannten P0/P1-Fehler für den Probebetrieb.
++"@
++
++$epic = Ensure-Issue -Title "[EPIC] Kassensystem v1 abschließen" -Labels @("type:epic", "priority:P0", "area:foundation") -Body $epicBody
++
++Write-Host ""
++Write-Host "Issue-System ist eingerichtet."
++Write-Host "Epic: #$epic"
++Write-Host "Repository: https://github.com/$Repo/issues"

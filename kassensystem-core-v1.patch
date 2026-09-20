@@ -1,0 +1,3005 @@
+diff --git a/app/Modules/Audit/Models/AuditEvent.php b/app/Modules/Audit/Models/AuditEvent.php
+--- a/app/Modules/Audit/Models/AuditEvent.php
++++ b/app/Modules/Audit/Models/AuditEvent.php
+@@ -3,12 +3,24 @@
+ namespace App\Modules\Audit\Models;
+ 
+ use Illuminate\Database\Eloquent\Model;
++use LogicException;
+ 
+ final class AuditEvent extends Model
+ {
+     public const UPDATED_AT = null;
+ 
+     protected $guarded = [];
++
++    protected static function booted(): void
++    {
++        static::updating(static function (): never {
++            throw new LogicException('Audit events are immutable.');
++        });
++
++        static::deleting(static function (): never {
++            throw new LogicException('Audit events cannot be deleted.');
++        });
++    }
+ 
+     protected function casts(): array
+     {
+diff --git a/app/Modules/Audit/Queries/FindAuditEventsQuery.php b/app/Modules/Audit/Queries/FindAuditEventsQuery.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Audit/Queries/FindAuditEventsQuery.php
+@@ -0,0 +1,23 @@
++<?php
++
++namespace App\Modules\Audit\Queries;
++
++use App\Modules\Audit\Models\AuditEvent;
++use Illuminate\Contracts\Pagination\LengthAwarePaginator;
++
++final class FindAuditEventsQuery
++{
++    public function execute(
++        ?string $eventKey = null,
++        ?string $subjectType = null,
++        ?int $actorUserId = null,
++        int $perPage = 50,
++    ): LengthAwarePaginator {
++        return AuditEvent::query()
++            ->when($eventKey, fn ($query, $value) => $query->where('event_key', $value))
++            ->when($subjectType, fn ($query, $value) => $query->where('subject_type', $value))
++            ->when($actorUserId, fn ($query, $value) => $query->where('actor_user_id', $value))
++            ->latest('id')
++            ->paginate($perPage);
++    }
++}
+diff --git a/app/Modules/Audit/README.md b/app/Modules/Audit/README.md
+--- a/app/Modules/Audit/README.md
++++ b/app/Modules/Audit/README.md
+@@ -1,3 +1,10 @@
+ # Audit
+ 
+-Generated module. Add responsibilities, invariants and public exports here.
++Das Audit-Modul protokolliert fachlich relevante, nachvollziehbare Änderungen.
++
++## Regeln
++
++- Audit-Ereignisse werden nach dem Schreiben nicht geändert oder gelöscht.
++- `before`, `after` und `metadata` werden als JSON gespeichert.
++- sensible Schlüssel wie PIN, Passwort, Token und API-Key werden vor dem Speichern redigiert.
++- Benutzerinformationen werden als Snapshot gespeichert, damit spätere Profiländerungen historische Einträge nicht verändern.
+diff --git a/app/Modules/CashRegister/Actions/CancelCashSessionClosingAction.php b/app/Modules/CashRegister/Actions/CancelCashSessionClosingAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Actions/CancelCashSessionClosingAction.php
+@@ -0,0 +1,37 @@
++<?php
++
++namespace App\Modules\CashRegister\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\Identity\Models\User;
++use LogicException;
++
++final class CancelCashSessionClosingAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(CashSession $session, User $user): CashSession
++    {
++        if ($session->status !== CashSessionStatus::Closing) {
++            throw new LogicException('Cash session is not in closing state.');
++        }
++
++        $session->update([
++            'status' => CashSessionStatus::Open,
++            'closing_started_at' => null,
++        ]);
++
++        $this->audit->execute(
++            eventKey: 'cash_session.closing_cancelled',
++            actorUserId: $user->id,
++            actorUsername: $user->username,
++            actorDisplayName: $user->auditDisplayName(),
++            subjectType: CashSession::class,
++            subjectId: $session->id,
++        );
++
++        return $session->refresh();
++    }
++}
+diff --git a/app/Modules/CashRegister/Actions/CloseCashSessionAction.php b/app/Modules/CashRegister/Actions/CloseCashSessionAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Actions/CloseCashSessionAction.php
+@@ -0,0 +1,70 @@
++<?php
++
++namespace App\Modules\CashRegister\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\DB;
++use InvalidArgumentException;
++use LogicException;
++
++final class CloseCashSessionAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(
++        CashSession $session,
++        User $user,
++        int $countedCashCents,
++        ?string $comment = null,
++    ): CashSession {
++        if ($countedCashCents < 0) {
++            throw new InvalidArgumentException('Counted cash must not be negative.');
++        }
++
++        return DB::transaction(function () use ($session, $user, $countedCashCents, $comment): CashSession {
++            $locked = CashSession::query()->lockForUpdate()->findOrFail($session->id);
++
++            if ($locked->status !== CashSessionStatus::Closing) {
++                throw new LogicException('Cash session must be in closing state.');
++            }
++
++            $expected = $locked->expectedCashCents();
++            $difference = $countedCashCents - $expected;
++            $comment = $comment !== null ? trim($comment) : null;
++
++            if ($difference !== 0 && ($comment === null || $comment === '')) {
++                throw new InvalidArgumentException('A closing comment is required when cash differs from the expected amount.');
++            }
++
++            $locked->update([
++                'status' => CashSessionStatus::Closed,
++                'closed_by_user_id' => $user->id,
++                'closing_expected_cash_cents' => $expected,
++                'closing_counted_cash_cents' => $countedCashCents,
++                'closing_difference_cents' => $difference,
++                'closing_comment' => $comment,
++                'closed_at' => now(),
++            ]);
++
++            $this->audit->execute(
++                eventKey: 'cash_session.closed',
++                actorUserId: $user->id,
++                actorUsername: $user->username,
++                actorDisplayName: $user->auditDisplayName(),
++                subjectType: CashSession::class,
++                subjectId: $locked->id,
++                after: [
++                    'expected_cash_cents' => $expected,
++                    'counted_cash_cents' => $countedCashCents,
++                    'difference_cents' => $difference,
++                    'comment' => $comment,
++                ],
++            );
++
++            return $locked->refresh();
++        });
++    }
++}
+diff --git a/app/Modules/CashRegister/Actions/OpenCashSessionAction.php b/app/Modules/CashRegister/Actions/OpenCashSessionAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Actions/OpenCashSessionAction.php
+@@ -0,0 +1,68 @@
++<?php
++
++namespace App\Modules\CashRegister\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\DB;
++use LogicException;
++
++final class OpenCashSessionAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(Register $register, User $user, int $openingCashCents): CashSession
++    {
++        if ($openingCashCents < 0) {
++            throw new LogicException('Opening cash must not be negative.');
++        }
++
++        return DB::transaction(function () use ($register, $user, $openingCashCents): CashSession {
++            $lockedRegister = Register::query()->lockForUpdate()->findOrFail($register->id);
++
++            if (! $lockedRegister->active) {
++                throw new LogicException('Register is inactive.');
++            }
++
++            $hasActiveSession = CashSession::query()
++                ->where('register_id', $lockedRegister->id)
++                ->whereIn('status', [
++                    CashSessionStatus::Open->value,
++                    CashSessionStatus::Closing->value,
++                ])
++                ->exists();
++
++            if ($hasActiveSession) {
++                throw new LogicException('Register already has an active cash session.');
++            }
++
++            $session = CashSession::query()->create([
++                'register_id' => $lockedRegister->id,
++                'opened_by_user_id' => $user->id,
++                'status' => CashSessionStatus::Open,
++                'opening_cash_cents' => $openingCashCents,
++                'cash_sales_cents' => 0,
++                'opened_at' => now(),
++            ]);
++
++            $this->audit->execute(
++                eventKey: 'cash_session.opened',
++                actorUserId: $user->id,
++                actorUsername: $user->username,
++                actorDisplayName: $user->auditDisplayName(),
++                subjectType: CashSession::class,
++                subjectId: $session->id,
++                after: [
++                    'register_id' => $lockedRegister->id,
++                    'opening_cash_cents' => $openingCashCents,
++                    'status' => CashSessionStatus::Open->value,
++                ],
++            );
++
++            return $session;
++        });
++    }
++}
+diff --git a/app/Modules/CashRegister/Actions/RecordCashDepositAction.php b/app/Modules/CashRegister/Actions/RecordCashDepositAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Actions/RecordCashDepositAction.php
+@@ -0,0 +1,59 @@
++<?php
++
++namespace App\Modules\CashRegister\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\CashRegister\Enums\CashMovementType;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashMovement;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\DB;
++use InvalidArgumentException;
++use LogicException;
++
++final class RecordCashDepositAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(CashSession $session, User $user, int $amountCents, string $reason): CashMovement
++    {
++        $reason = trim($reason);
++
++        if ($amountCents <= 0 || $reason === '') {
++            throw new InvalidArgumentException('Deposit amount must be positive and a reason is required.');
++        }
++
++        return DB::transaction(function () use ($session, $user, $amountCents, $reason): CashMovement {
++            $locked = CashSession::query()->lockForUpdate()->findOrFail($session->id);
++
++            if ($locked->status !== CashSessionStatus::Open) {
++                throw new LogicException('Cash movements require an open cash session.');
++            }
++
++            $movement = CashMovement::query()->create([
++                'cash_session_id' => $locked->id,
++                'user_id' => $user->id,
++                'type' => CashMovementType::Deposit,
++                'amount_cents' => $amountCents,
++                'reason' => $reason,
++            ]);
++
++            $this->audit->execute(
++                eventKey: 'cash_movement.deposit',
++                actorUserId: $user->id,
++                actorUsername: $user->username,
++                actorDisplayName: $user->auditDisplayName(),
++                subjectType: CashMovement::class,
++                subjectId: $movement->id,
++                after: [
++                    'cash_session_id' => $locked->id,
++                    'amount_cents' => $amountCents,
++                    'reason' => $reason,
++                ],
++            );
++
++            return $movement;
++        });
++    }
++}
+diff --git a/app/Modules/CashRegister/Actions/RecordCashWithdrawalAction.php b/app/Modules/CashRegister/Actions/RecordCashWithdrawalAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Actions/RecordCashWithdrawalAction.php
+@@ -0,0 +1,63 @@
++<?php
++
++namespace App\Modules\CashRegister\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\CashRegister\Enums\CashMovementType;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashMovement;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\DB;
++use InvalidArgumentException;
++use LogicException;
++
++final class RecordCashWithdrawalAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(CashSession $session, User $user, int $amountCents, string $reason): CashMovement
++    {
++        $reason = trim($reason);
++
++        if ($amountCents <= 0 || $reason === '') {
++            throw new InvalidArgumentException('Withdrawal amount must be positive and a reason is required.');
++        }
++
++        return DB::transaction(function () use ($session, $user, $amountCents, $reason): CashMovement {
++            $locked = CashSession::query()->lockForUpdate()->findOrFail($session->id);
++
++            if ($locked->status !== CashSessionStatus::Open) {
++                throw new LogicException('Cash movements require an open cash session.');
++            }
++
++            if ($amountCents > $locked->expectedCashCents()) {
++                throw new LogicException('Withdrawal would make the expected cash balance negative.');
++            }
++
++            $movement = CashMovement::query()->create([
++                'cash_session_id' => $locked->id,
++                'user_id' => $user->id,
++                'type' => CashMovementType::Withdrawal,
++                'amount_cents' => $amountCents,
++                'reason' => $reason,
++            ]);
++
++            $this->audit->execute(
++                eventKey: 'cash_movement.withdrawal',
++                actorUserId: $user->id,
++                actorUsername: $user->username,
++                actorDisplayName: $user->auditDisplayName(),
++                subjectType: CashMovement::class,
++                subjectId: $movement->id,
++                after: [
++                    'cash_session_id' => $locked->id,
++                    'amount_cents' => $amountCents,
++                    'reason' => $reason,
++                ],
++            );
++
++            return $movement;
++        });
++    }
++}
+diff --git a/app/Modules/CashRegister/Actions/StartCashSessionClosingAction.php b/app/Modules/CashRegister/Actions/StartCashSessionClosingAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Actions/StartCashSessionClosingAction.php
+@@ -0,0 +1,42 @@
++<?php
++
++namespace App\Modules\CashRegister\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\DB;
++use LogicException;
++
++final class StartCashSessionClosingAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(CashSession $session, User $user): CashSession
++    {
++        return DB::transaction(function () use ($session, $user): CashSession {
++            $locked = CashSession::query()->lockForUpdate()->findOrFail($session->id);
++
++            if ($locked->status !== CashSessionStatus::Open) {
++                throw new LogicException('Only an open cash session can start closing.');
++            }
++
++            $locked->update([
++                'status' => CashSessionStatus::Closing,
++                'closing_started_at' => now(),
++            ]);
++
++            $this->audit->execute(
++                eventKey: 'cash_session.closing_started',
++                actorUserId: $user->id,
++                actorUsername: $user->username,
++                actorDisplayName: $user->auditDisplayName(),
++                subjectType: CashSession::class,
++                subjectId: $locked->id,
++            );
++
++            return $locked->refresh();
++        });
++    }
++}
+diff --git a/app/Modules/CashRegister/Enums/CashMovementType.php b/app/Modules/CashRegister/Enums/CashMovementType.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Enums/CashMovementType.php
+@@ -0,0 +1,9 @@
++<?php
++
++namespace App\Modules\CashRegister\Enums;
++
++enum CashMovementType: string
++{
++    case Deposit = 'deposit';
++    case Withdrawal = 'withdrawal';
++}
+diff --git a/app/Modules/CashRegister/Enums/CashSessionStatus.php b/app/Modules/CashRegister/Enums/CashSessionStatus.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Enums/CashSessionStatus.php
+@@ -0,0 +1,10 @@
++<?php
++
++namespace App\Modules\CashRegister\Enums;
++
++enum CashSessionStatus: string
++{
++    case Open = 'open';
++    case Closing = 'closing';
++    case Closed = 'closed';
++}
+diff --git a/app/Modules/CashRegister/Models/CashMovement.php b/app/Modules/CashRegister/Models/CashMovement.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Models/CashMovement.php
+@@ -0,0 +1,46 @@
++<?php
++
++namespace App\Modules\CashRegister\Models;
++
++use App\Modules\CashRegister\Enums\CashMovementType;
++use App\Modules\Identity\Models\User;
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++use LogicException;
++
++final class CashMovement extends Model
++{
++    public const UPDATED_AT = null;
++
++    protected $guarded = [];
++
++    protected function casts(): array
++    {
++        return [
++            'type' => CashMovementType::class,
++            'amount_cents' => 'integer',
++            'created_at' => 'datetime',
++        ];
++    }
++
++    protected static function booted(): void
++    {
++        static::updating(static function (): never {
++            throw new LogicException('Cash movements are immutable.');
++        });
++
++        static::deleting(static function (): never {
++            throw new LogicException('Cash movements cannot be deleted.');
++        });
++    }
++
++    public function cashSession(): BelongsTo
++    {
++        return $this->belongsTo(CashSession::class);
++    }
++
++    public function user(): BelongsTo
++    {
++        return $this->belongsTo(User::class);
++    }
++}
+diff --git a/app/Modules/CashRegister/Models/CashSession.php b/app/Modules/CashRegister/Models/CashSession.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Models/CashSession.php
+@@ -0,0 +1,82 @@
++<?php
++
++namespace App\Modules\CashRegister\Models;
++
++use App\Modules\CashRegister\Enums\CashMovementType;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\Identity\Models\User;
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++use Illuminate\Database\Eloquent\Relations\HasMany;
++use LogicException;
++
++final class CashSession extends Model
++{
++    protected $guarded = [];
++
++    protected function casts(): array
++    {
++        return [
++            'status' => CashSessionStatus::class,
++            'opening_cash_cents' => 'integer',
++            'cash_sales_cents' => 'integer',
++            'closing_expected_cash_cents' => 'integer',
++            'closing_counted_cash_cents' => 'integer',
++            'closing_difference_cents' => 'integer',
++            'opened_at' => 'datetime',
++            'closing_started_at' => 'datetime',
++            'closed_at' => 'datetime',
++        ];
++    }
++
++    protected static function booted(): void
++    {
++        static::updating(static function (CashSession $session): void {
++            if ($session->getOriginal('status') === CashSessionStatus::Closed->value) {
++                throw new LogicException('Closed cash sessions are immutable.');
++            }
++        });
++
++        static::deleting(static function (CashSession $session): void {
++            if ($session->status === CashSessionStatus::Closed) {
++                throw new LogicException('Closed cash sessions cannot be deleted.');
++            }
++        });
++    }
++
++    public function register(): BelongsTo
++    {
++        return $this->belongsTo(Register::class);
++    }
++
++    public function openedBy(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'opened_by_user_id');
++    }
++
++    public function closedBy(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'closed_by_user_id');
++    }
++
++    public function movements(): HasMany
++    {
++        return $this->hasMany(CashMovement::class);
++    }
++
++    public function expectedCashCents(): int
++    {
++        $deposits = (int) $this->movements()
++            ->where('type', CashMovementType::Deposit->value)
++            ->sum('amount_cents');
++
++        $withdrawals = (int) $this->movements()
++            ->where('type', CashMovementType::Withdrawal->value)
++            ->sum('amount_cents');
++
++        return $this->opening_cash_cents
++            + $this->cash_sales_cents
++            + $deposits
++            - $withdrawals;
++    }
++}
+diff --git a/app/Modules/CashRegister/Models/Register.php b/app/Modules/CashRegister/Models/Register.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Models/Register.php
+@@ -0,0 +1,21 @@
++<?php
++
++namespace App\Modules\CashRegister\Models;
++
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\HasMany;
++
++final class Register extends Model
++{
++    protected $guarded = [];
++
++    protected function casts(): array
++    {
++        return ['active' => 'boolean'];
++    }
++
++    public function cashSessions(): HasMany
++    {
++        return $this->hasMany(CashSession::class);
++    }
++}
+diff --git a/app/Modules/CashRegister/Queries/GetActiveCashSessionQuery.php b/app/Modules/CashRegister/Queries/GetActiveCashSessionQuery.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/Queries/GetActiveCashSessionQuery.php
+@@ -0,0 +1,22 @@
++<?php
++
++namespace App\Modules\CashRegister\Queries;
++
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\CashRegister\Models\Register;
++
++final class GetActiveCashSessionQuery
++{
++    public function execute(Register $register): ?CashSession
++    {
++        return CashSession::query()
++            ->where('register_id', $register->id)
++            ->whereIn('status', [
++                CashSessionStatus::Open->value,
++                CashSessionStatus::Closing->value,
++            ])
++            ->latest('id')
++            ->first();
++    }
++}
+diff --git a/app/Modules/CashRegister/README.md b/app/Modules/CashRegister/README.md
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/README.md
+@@ -0,0 +1,11 @@
++# CashRegister
++
++Verwaltet physische Kassenplätze, Kassenschichten und Bargeldbewegungen.
++
++## V1-Regeln
++
++- pro Kassenplatz darf höchstens eine offene oder im Abschluss befindliche Schicht existieren.
++- Startbestand, Einlagen, Entnahmen und Barumsatz ergeben den Sollbestand.
++- Einlagen und Entnahmen benötigen immer einen Grund.
++- eine Kassendifferenz ist erlaubt, benötigt aber einen Abschlusskommentar.
++- geschlossene Kassenschichten und Bargeldbewegungen werden nicht verändert oder gelöscht.
+diff --git a/app/Modules/CashRegister/database/migrations/2026_09_20_100200_create_registers_table.php b/app/Modules/CashRegister/database/migrations/2026_09_20_100200_create_registers_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/database/migrations/2026_09_20_100200_create_registers_table.php
+@@ -0,0 +1,24 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('registers', function (Blueprint $table) {
++            $table->id();
++            $table->string('code', 80)->unique();
++            $table->string('name', 120);
++            $table->boolean('active')->default(true)->index();
++            $table->timestamps();
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('registers');
++    }
++};
+diff --git a/app/Modules/CashRegister/database/migrations/2026_09_20_100210_create_cash_sessions_table.php b/app/Modules/CashRegister/database/migrations/2026_09_20_100210_create_cash_sessions_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/database/migrations/2026_09_20_100210_create_cash_sessions_table.php
+@@ -0,0 +1,39 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('cash_sessions', function (Blueprint $table) {
++            $table->id();
++            $table->foreignId('register_id')->constrained('registers')->restrictOnDelete();
++            $table->foreignId('opened_by_user_id')->constrained('users')->restrictOnDelete();
++            $table->foreignId('closed_by_user_id')->nullable()->constrained('users')->restrictOnDelete();
++
++            $table->string('status', 32)->index();
++            $table->unsignedInteger('opening_cash_cents');
++            $table->unsignedInteger('cash_sales_cents')->default(0);
++
++            $table->unsignedInteger('closing_expected_cash_cents')->nullable();
++            $table->unsignedInteger('closing_counted_cash_cents')->nullable();
++            $table->integer('closing_difference_cents')->nullable();
++            $table->text('closing_comment')->nullable();
++
++            $table->timestamp('opened_at');
++            $table->timestamp('closing_started_at')->nullable();
++            $table->timestamp('closed_at')->nullable();
++            $table->timestamps();
++
++            $table->index(['register_id', 'status']);
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('cash_sessions');
++    }
++};
+diff --git a/app/Modules/CashRegister/database/migrations/2026_09_20_100220_create_cash_movements_table.php b/app/Modules/CashRegister/database/migrations/2026_09_20_100220_create_cash_movements_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/database/migrations/2026_09_20_100220_create_cash_movements_table.php
+@@ -0,0 +1,28 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('cash_movements', function (Blueprint $table) {
++            $table->id();
++            $table->foreignId('cash_session_id')->constrained('cash_sessions')->restrictOnDelete();
++            $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
++            $table->string('type', 32)->index();
++            $table->unsignedInteger('amount_cents');
++            $table->string('reason', 500);
++            $table->timestamp('created_at')->useCurrent();
++
++            $table->index(['cash_session_id', 'type']);
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('cash_movements');
++    }
++};
+diff --git a/app/Modules/CashRegister/module.json b/app/Modules/CashRegister/module.json
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/CashRegister/module.json
+@@ -0,0 +1,6 @@
++{
++    "name": "CashRegister",
++    "description": "Kassenplätze, Kassenschichten und Bargeldbewegungen",
++    "depends_on": ["Identity", "Audit"],
++    "exports": []
++}
+diff --git a/app/Modules/Catalog/Actions/CreateCategoryAction.php b/app/Modules/Catalog/Actions/CreateCategoryAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/Actions/CreateCategoryAction.php
+@@ -0,0 +1,40 @@
++<?php
++
++namespace App\Modules\Catalog\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Catalog\Models\Category;
++use App\Modules\Identity\Models\User;
++use InvalidArgumentException;
++
++final class CreateCategoryAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(string $name, int $sortOrder = 0, ?User $actor = null): Category
++    {
++        $name = trim($name);
++
++        if ($name === '' || $sortOrder < 0) {
++            throw new InvalidArgumentException('Category name is required and sort order must not be negative.');
++        }
++
++        $category = Category::query()->create([
++            'name' => $name,
++            'active' => true,
++            'sort_order' => $sortOrder,
++        ]);
++
++        $this->audit->execute(
++            eventKey: 'category.created',
++            actorUserId: $actor?->id,
++            actorUsername: $actor?->username,
++            actorDisplayName: $actor?->auditDisplayName(),
++            subjectType: Category::class,
++            subjectId: $category->id,
++            after: $category->only(['name', 'active', 'sort_order']),
++        );
++
++        return $category;
++    }
++}
+diff --git a/app/Modules/Catalog/Actions/CreateProductAction.php b/app/Modules/Catalog/Actions/CreateProductAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/Actions/CreateProductAction.php
+@@ -0,0 +1,62 @@
++<?php
++
++namespace App\Modules\Catalog\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Catalog\Models\Category;
++use App\Modules\Catalog\Models\Product;
++use App\Modules\Identity\Models\User;
++use InvalidArgumentException;
++
++final class CreateProductAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(
++        Category $category,
++        string $name,
++        string $shortName,
++        int $priceCents,
++        int $sortOrder = 0,
++        ?User $actor = null,
++    ): Product {
++        $name = trim($name);
++        $shortName = trim($shortName);
++
++        if ($name === '' || $shortName === '') {
++            throw new InvalidArgumentException('Product name and short name are required.');
++        }
++
++        if ($priceCents < 0 || $sortOrder < 0) {
++            throw new InvalidArgumentException('Price and sort order must not be negative.');
++        }
++
++        $product = Product::query()->create([
++            'category_id' => $category->id,
++            'name' => $name,
++            'short_name' => $shortName,
++            'price_cents' => $priceCents,
++            'active' => true,
++            'sort_order' => $sortOrder,
++        ]);
++
++        $this->audit->execute(
++            eventKey: 'product.created',
++            actorUserId: $actor?->id,
++            actorUsername: $actor?->username,
++            actorDisplayName: $actor?->auditDisplayName(),
++            subjectType: Product::class,
++            subjectId: $product->id,
++            after: $product->only([
++                'category_id',
++                'name',
++                'short_name',
++                'price_cents',
++                'active',
++                'sort_order',
++            ]),
++        );
++
++        return $product;
++    }
++}
+diff --git a/app/Modules/Catalog/Actions/SetProductActiveAction.php b/app/Modules/Catalog/Actions/SetProductActiveAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/Actions/SetProductActiveAction.php
+@@ -0,0 +1,31 @@
++<?php
++
++namespace App\Modules\Catalog\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Catalog\Models\Product;
++use App\Modules\Identity\Models\User;
++
++final class SetProductActiveAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(Product $product, bool $active, ?User $actor = null): Product
++    {
++        $before = ['active' => $product->active];
++        $product->update(['active' => $active]);
++
++        $this->audit->execute(
++            eventKey: $active ? 'product.activated' : 'product.deactivated',
++            actorUserId: $actor?->id,
++            actorUsername: $actor?->username,
++            actorDisplayName: $actor?->auditDisplayName(),
++            subjectType: Product::class,
++            subjectId: $product->id,
++            before: $before,
++            after: ['active' => $product->active],
++        );
++
++        return $product->refresh();
++    }
++}
+diff --git a/app/Modules/Catalog/Actions/UpdateProductAction.php b/app/Modules/Catalog/Actions/UpdateProductAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/Actions/UpdateProductAction.php
+@@ -0,0 +1,68 @@
++<?php
++
++namespace App\Modules\Catalog\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Catalog\Models\Category;
++use App\Modules\Catalog\Models\Product;
++use App\Modules\Identity\Models\User;
++use InvalidArgumentException;
++
++final class UpdateProductAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(
++        Product $product,
++        Category $category,
++        string $name,
++        string $shortName,
++        int $priceCents,
++        int $sortOrder,
++        ?User $actor = null,
++    ): Product {
++        $name = trim($name);
++        $shortName = trim($shortName);
++
++        if ($name === '' || $shortName === '' || $priceCents < 0 || $sortOrder < 0) {
++            throw new InvalidArgumentException('Invalid product data.');
++        }
++
++        $before = $product->only([
++            'category_id',
++            'name',
++            'short_name',
++            'price_cents',
++            'active',
++            'sort_order',
++        ]);
++
++        $product->update([
++            'category_id' => $category->id,
++            'name' => $name,
++            'short_name' => $shortName,
++            'price_cents' => $priceCents,
++            'sort_order' => $sortOrder,
++        ]);
++
++        $this->audit->execute(
++            eventKey: 'product.updated',
++            actorUserId: $actor?->id,
++            actorUsername: $actor?->username,
++            actorDisplayName: $actor?->auditDisplayName(),
++            subjectType: Product::class,
++            subjectId: $product->id,
++            before: $before,
++            after: $product->fresh()->only([
++                'category_id',
++                'name',
++                'short_name',
++                'price_cents',
++                'active',
++                'sort_order',
++            ]),
++        );
++
++        return $product->refresh();
++    }
++}
+diff --git a/app/Modules/Catalog/Models/Category.php b/app/Modules/Catalog/Models/Category.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/Models/Category.php
+@@ -0,0 +1,21 @@
++<?php
++
++namespace App\Modules\Catalog\Models;
++
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\HasMany;
++
++final class Category extends Model
++{
++    protected $guarded = [];
++
++    protected function casts(): array
++    {
++        return ['active' => 'boolean'];
++    }
++
++    public function products(): HasMany
++    {
++        return $this->hasMany(Product::class)->orderBy('sort_order')->orderBy('id');
++    }
++}
+diff --git a/app/Modules/Catalog/Models/Product.php b/app/Modules/Catalog/Models/Product.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/Models/Product.php
+@@ -0,0 +1,24 @@
++<?php
++
++namespace App\Modules\Catalog\Models;
++
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++
++final class Product extends Model
++{
++    protected $guarded = [];
++
++    protected function casts(): array
++    {
++        return [
++            'price_cents' => 'integer',
++            'active' => 'boolean',
++        ];
++    }
++
++    public function category(): BelongsTo
++    {
++        return $this->belongsTo(Category::class);
++    }
++}
+diff --git a/app/Modules/Catalog/Queries/GetPosCatalogQuery.php b/app/Modules/Catalog/Queries/GetPosCatalogQuery.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/Queries/GetPosCatalogQuery.php
+@@ -0,0 +1,25 @@
++<?php
++
++namespace App\Modules\Catalog\Queries;
++
++use App\Modules\Catalog\Models\Category;
++use Illuminate\Database\Eloquent\Collection;
++
++final class GetPosCatalogQuery
++{
++    /** @return Collection<int, Category> */
++    public function execute(): Collection
++    {
++        return Category::query()
++            ->where('active', true)
++            ->with([
++                'products' => fn ($query) => $query
++                    ->where('active', true)
++                    ->orderBy('sort_order')
++                    ->orderBy('id'),
++            ])
++            ->orderBy('sort_order')
++            ->orderBy('id')
++            ->get();
++    }
++}
+diff --git a/app/Modules/Catalog/README.md b/app/Modules/Catalog/README.md
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/README.md
+@@ -0,0 +1,10 @@
++# Catalog
++
++Verwaltet Kategorien und Produkte für die Kassenoberfläche.
++
++## V1-Regeln
++
++- Geldbeträge werden als Integer in Cent gespeichert.
++- Preise dürfen `0` sein, aber niemals negativ.
++- Produkte und Kategorien werden deaktiviert statt gelöscht.
++- Die Reihenfolge der Kategorien und Produkte ist frei konfigurierbar.
+diff --git a/app/Modules/Catalog/database/migrations/2026_09_20_100100_create_categories_table.php b/app/Modules/Catalog/database/migrations/2026_09_20_100100_create_categories_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/database/migrations/2026_09_20_100100_create_categories_table.php
+@@ -0,0 +1,24 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('categories', function (Blueprint $table) {
++            $table->id();
++            $table->string('name', 120);
++            $table->boolean('active')->default(true)->index();
++            $table->unsignedInteger('sort_order')->default(0)->index();
++            $table->timestamps();
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('categories');
++    }
++};
+diff --git a/app/Modules/Catalog/database/migrations/2026_09_20_100110_create_products_table.php b/app/Modules/Catalog/database/migrations/2026_09_20_100110_create_products_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/database/migrations/2026_09_20_100110_create_products_table.php
+@@ -0,0 +1,29 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('products', function (Blueprint $table) {
++            $table->id();
++            $table->foreignId('category_id')->constrained('categories')->restrictOnDelete();
++            $table->string('name', 160);
++            $table->string('short_name', 80);
++            $table->unsignedInteger('price_cents');
++            $table->boolean('active')->default(true)->index();
++            $table->unsignedInteger('sort_order')->default(0)->index();
++            $table->timestamps();
++
++            $table->index(['category_id', 'active', 'sort_order']);
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('products');
++    }
++};
+diff --git a/app/Modules/Catalog/module.json b/app/Modules/Catalog/module.json
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Catalog/module.json
+@@ -0,0 +1,6 @@
++{
++    "name": "Catalog",
++    "description": "Produkt- und Kategorieverwaltung",
++    "depends_on": ["Identity", "Audit"],
++    "exports": []
++}
+diff --git a/app/Modules/Identity/Actions/AuthenticateWithPinAction.php b/app/Modules/Identity/Actions/AuthenticateWithPinAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Actions/AuthenticateWithPinAction.php
+@@ -0,0 +1,77 @@
++<?php
++
++namespace App\Modules\Identity\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Identity\Exceptions\InvalidPin;
++use App\Modules\Identity\Exceptions\PinRateLimited;
++use App\Modules\Identity\Exceptions\UserInactive;
++use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\Auth;
++use Illuminate\Support\Facades\Hash;
++use Illuminate\Support\Facades\RateLimiter;
++
++final class AuthenticateWithPinAction
++{
++    public function __construct(
++        private readonly WriteAuditEventAction $audit,
++    ) {}
++
++    public function execute(string $username, string $pin, ?string $ipAddress = null, ?string $userAgent = null): User
++    {
++        $username = strtolower(trim($username));
++        $key = 'pin-login:'.$username.'|'.($ipAddress ?: 'unknown');
++        $maxAttempts = (int) config('kassensystem.pin_max_attempts', 5);
++        $lockSeconds = (int) config('kassensystem.pin_lock_seconds', 60);
++
++        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
++            throw new PinRateLimited('Too many PIN attempts. Please try again later.');
++        }
++
++        $user = User::query()->where('username', $username)->first();
++
++        if ($user === null || ! Hash::check($pin, $user->pin_hash)) {
++            RateLimiter::hit($key, $lockSeconds);
++
++            $this->audit->execute(
++                eventKey: 'auth.login_failed',
++                actorUsername: $username ?: null,
++                metadata: ['reason' => 'invalid_credentials'],
++                ipAddress: $ipAddress,
++                userAgent: $userAgent,
++            );
++
++            throw new InvalidPin('Invalid username or PIN.');
++        }
++
++        if (! $user->active) {
++            $this->audit->execute(
++                eventKey: 'auth.login_failed',
++                actorUserId: $user->id,
++                actorUsername: $user->username,
++                actorDisplayName: $user->auditDisplayName(),
++                metadata: ['reason' => 'inactive_user'],
++                ipAddress: $ipAddress,
++                userAgent: $userAgent,
++            );
++
++            throw new UserInactive('User account is inactive.');
++        }
++
++        RateLimiter::clear($key);
++        Auth::login($user);
++
++        $user->forceFill(['last_login_at' => now()])->save();
++
++        $this->audit->execute(
++            eventKey: 'auth.login_succeeded',
++            actorUserId: $user->id,
++            actorUsername: $user->username,
++            actorDisplayName: $user->auditDisplayName(),
++            ipAddress: $ipAddress,
++            userAgent: $userAgent,
++        );
++
++        return $user->refresh();
++    }
++}
+diff --git a/app/Modules/Identity/Actions/ChangeUserRoleAction.php b/app/Modules/Identity/Actions/ChangeUserRoleAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Actions/ChangeUserRoleAction.php
+@@ -0,0 +1,47 @@
++<?php
++
++namespace App\Modules\Identity\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use LogicException;
++
++final class ChangeUserRoleAction
++{
++    public function __construct(
++        private readonly WriteAuditEventAction $audit,
++    ) {}
++
++    public function execute(User $user, UserRole $role, ?User $actor = null): User
++    {
++        if (
++            $user->active
++            && $user->role === UserRole::Administrator
++            && $role !== UserRole::Administrator
++            && User::query()
++                ->where('active', true)
++                ->where('role', UserRole::Administrator->value)
++                ->count() <= 1
++        ) {
++            throw new LogicException('The last active administrator cannot lose the administrator role.');
++        }
++
++        $before = ['role' => $user->role->value];
++
++        $user->update(['role' => $role]);
++
++        $this->audit->execute(
++            eventKey: 'user.role_changed',
++            actorUserId: $actor?->id,
++            actorUsername: $actor?->username,
++            actorDisplayName: $actor?->auditDisplayName(),
++            subjectType: User::class,
++            subjectId: $user->id,
++            before: $before,
++            after: ['role' => $user->role->value],
++        );
++
++        return $user->refresh();
++    }
++}
+diff --git a/app/Modules/Identity/Actions/CreateUserAction.php b/app/Modules/Identity/Actions/CreateUserAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Actions/CreateUserAction.php
+@@ -0,0 +1,85 @@
++<?php
++
++namespace App\Modules\Identity\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\Hash;
++use InvalidArgumentException;
++
++final class CreateUserAction
++{
++    public function __construct(
++        private readonly WriteAuditEventAction $audit,
++    ) {}
++
++    public function execute(
++        string $username,
++        string $pin,
++        string $firstName,
++        string $lastName,
++        UserRole $role = UserRole::Cashier,
++        ?string $displayName = null,
++        ?string $email = null,
++        ?string $phone = null,
++        ?User $actor = null,
++    ): User {
++        $username = strtolower(trim($username));
++        $firstName = trim($firstName);
++        $lastName = trim($lastName);
++
++        if ($username === '' || $firstName === '' || $lastName === '') {
++            throw new InvalidArgumentException('Username, first name and last name are required.');
++        }
++
++        $this->assertValidPin($pin);
++
++        if (User::query()->where('username', $username)->exists()) {
++            throw new InvalidArgumentException('Username is already in use.');
++        }
++
++        $user = User::query()->create([
++            'username' => $username,
++            'pin_hash' => Hash::make($pin),
++            'first_name' => $firstName,
++            'last_name' => $lastName,
++            'display_name' => $displayName !== null ? trim($displayName) : null,
++            'email' => $email !== null ? trim($email) : null,
++            'phone' => $phone !== null ? trim($phone) : null,
++            'role' => $role,
++            'active' => true,
++            'pin_changed_at' => now(),
++        ]);
++
++        $this->audit->execute(
++            eventKey: 'user.created',
++            actorUserId: $actor?->id,
++            actorUsername: $actor?->username,
++            actorDisplayName: $actor?->auditDisplayName(),
++            subjectType: User::class,
++            subjectId: $user->id,
++            after: [
++                'username' => $user->username,
++                'first_name' => $user->first_name,
++                'last_name' => $user->last_name,
++                'display_name' => $user->display_name,
++                'email' => $user->email,
++                'phone' => $user->phone,
++                'role' => $user->role->value,
++                'active' => $user->active,
++            ],
++        );
++
++        return $user;
++    }
++
++    private function assertValidPin(string $pin): void
++    {
++        $length = (int) config('kassensystem.pin_length', 6);
++
++        if (! preg_match('/^\d{'.$length.'}$/D', $pin)) {
++            throw new InvalidArgumentException("PIN must contain exactly {$length} digits.");
++        }
++    }
++}
+diff --git a/app/Modules/Identity/Actions/ResetUserPinAction.php b/app/Modules/Identity/Actions/ResetUserPinAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Actions/ResetUserPinAction.php
+@@ -0,0 +1,41 @@
++<?php
++
++namespace App\Modules\Identity\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\Hash;
++use InvalidArgumentException;
++
++final class ResetUserPinAction
++{
++    public function __construct(
++        private readonly WriteAuditEventAction $audit,
++    ) {}
++
++    public function execute(User $user, string $newPin, ?User $actor = null): User
++    {
++        $length = (int) config('kassensystem.pin_length', 6);
++
++        if (! preg_match('/^\d{'.$length.'}$/D', $newPin)) {
++            throw new InvalidArgumentException("PIN must contain exactly {$length} digits.");
++        }
++
++        $user->forceFill([
++            'pin_hash' => Hash::make($newPin),
++            'pin_changed_at' => now(),
++        ])->save();
++
++        $this->audit->execute(
++            eventKey: 'user.pin_reset',
++            actorUserId: $actor?->id,
++            actorUsername: $actor?->username,
++            actorDisplayName: $actor?->auditDisplayName(),
++            subjectType: User::class,
++            subjectId: $user->id,
++            metadata: ['username' => $user->username],
++        );
++
++        return $user->refresh();
++    }
++}
+diff --git a/app/Modules/Identity/Actions/SetUserActiveAction.php b/app/Modules/Identity/Actions/SetUserActiveAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Actions/SetUserActiveAction.php
+@@ -0,0 +1,47 @@
++<?php
++
++namespace App\Modules\Identity\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use LogicException;
++
++final class SetUserActiveAction
++{
++    public function __construct(
++        private readonly WriteAuditEventAction $audit,
++    ) {}
++
++    public function execute(User $user, bool $active, ?User $actor = null): User
++    {
++        if (
++            ! $active
++            && $user->active
++            && $user->role === UserRole::Administrator
++            && User::query()
++                ->where('active', true)
++                ->where('role', UserRole::Administrator->value)
++                ->count() <= 1
++        ) {
++            throw new LogicException('The last active administrator cannot be deactivated.');
++        }
++
++        $before = ['active' => $user->active];
++
++        $user->update(['active' => $active]);
++
++        $this->audit->execute(
++            eventKey: $active ? 'user.activated' : 'user.deactivated',
++            actorUserId: $actor?->id,
++            actorUsername: $actor?->username,
++            actorDisplayName: $actor?->auditDisplayName(),
++            subjectType: User::class,
++            subjectId: $user->id,
++            before: $before,
++            after: ['active' => $user->active],
++        );
++
++        return $user->refresh();
++    }
++}
+diff --git a/app/Modules/Identity/Enums/UserRole.php b/app/Modules/Identity/Enums/UserRole.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Enums/UserRole.php
+@@ -0,0 +1,10 @@
++<?php
++
++namespace App\Modules\Identity\Enums;
++
++enum UserRole: string
++{
++    case Cashier = 'cashier';
++    case Manager = 'manager';
++    case Administrator = 'administrator';
++}
+diff --git a/app/Modules/Identity/Exceptions/InvalidPin.php b/app/Modules/Identity/Exceptions/InvalidPin.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Exceptions/InvalidPin.php
+@@ -0,0 +1,7 @@
++<?php
++
++namespace App\Modules\Identity\Exceptions;
++
++use RuntimeException;
++
++final class InvalidPin extends RuntimeException {}
+diff --git a/app/Modules/Identity/Exceptions/PinRateLimited.php b/app/Modules/Identity/Exceptions/PinRateLimited.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Exceptions/PinRateLimited.php
+@@ -0,0 +1,7 @@
++<?php
++
++namespace App\Modules\Identity\Exceptions;
++
++use RuntimeException;
++
++final class PinRateLimited extends RuntimeException {}
+diff --git a/app/Modules/Identity/Exceptions/UserInactive.php b/app/Modules/Identity/Exceptions/UserInactive.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Exceptions/UserInactive.php
+@@ -0,0 +1,7 @@
++<?php
++
++namespace App\Modules\Identity\Exceptions;
++
++use RuntimeException;
++
++final class UserInactive extends RuntimeException {}
+diff --git a/app/Modules/Identity/Models/User.php b/app/Modules/Identity/Models/User.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Models/User.php
+@@ -0,0 +1,35 @@
++<?php
++
++namespace App\Modules\Identity\Models;
++
++use App\Modules\Identity\Enums\UserRole;
++use Illuminate\Foundation\Auth\User as Authenticatable;
++use Illuminate\Notifications\Notifiable;
++
++final class User extends Authenticatable
++{
++    use Notifiable;
++
++    protected $guarded = [];
++
++    protected $hidden = [
++        'pin_hash',
++    ];
++
++    protected function casts(): array
++    {
++        return [
++            'role' => UserRole::class,
++            'active' => 'boolean',
++            'last_login_at' => 'datetime',
++            'pin_changed_at' => 'datetime',
++        ];
++    }
++
++    public function auditDisplayName(): string
++    {
++        return $this->display_name
++            ?: trim($this->first_name.' '.$this->last_name)
++            ?: $this->username;
++    }
++}
+diff --git a/app/Modules/Identity/Queries/FindUsersQuery.php b/app/Modules/Identity/Queries/FindUsersQuery.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Queries/FindUsersQuery.php
+@@ -0,0 +1,33 @@
++<?php
++
++namespace App\Modules\Identity\Queries;
++
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use Illuminate\Contracts\Pagination\LengthAwarePaginator;
++
++final class FindUsersQuery
++{
++    public function execute(
++        ?string $search = null,
++        ?UserRole $role = null,
++        ?bool $active = null,
++        int $perPage = 50,
++    ): LengthAwarePaginator {
++        return User::query()
++            ->when($search, function ($query, string $value): void {
++                $query->where(function ($query) use ($value): void {
++                    $query
++                        ->where('username', 'like', "%{$value}%")
++                        ->orWhere('first_name', 'like', "%{$value}%")
++                        ->orWhere('last_name', 'like', "%{$value}%")
++                        ->orWhere('display_name', 'like', "%{$value}%");
++                });
++            })
++            ->when($role, fn ($query, UserRole $value) => $query->where('role', $value->value))
++            ->when($active !== null, fn ($query) => $query->where('active', $active))
++            ->orderBy('last_name')
++            ->orderBy('first_name')
++            ->paginate($perPage);
++    }
++}
+diff --git a/app/Modules/Identity/README.md b/app/Modules/Identity/README.md
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/README.md
+@@ -0,0 +1,11 @@
++# Identity
++
++Verantwortlich für Benutzerkonten, Rollen und PIN-Anmeldung.
++
++## V1-Regeln
++
++- Benutzer melden sich mit Benutzername und sechsstelliger PIN an.
++- PINs werden ausschließlich gehasht gespeichert.
++- Benutzer werden deaktiviert statt gelöscht.
++- Rollen: Kassierer, Leitung, Administrator.
++- Der letzte aktive Administrator darf nicht deaktiviert oder herabgestuft werden.
+diff --git a/app/Modules/Identity/database/migrations/2026_09_20_100000_create_users_table.php b/app/Modules/Identity/database/migrations/2026_09_20_100000_create_users_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/database/migrations/2026_09_20_100000_create_users_table.php
+@@ -0,0 +1,36 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('users', function (Blueprint $table) {
++            $table->id();
++            $table->string('username', 80)->unique();
++            $table->string('pin_hash');
++
++            $table->string('first_name', 100);
++            $table->string('last_name', 100);
++            $table->string('display_name', 150)->nullable();
++            $table->string('email')->nullable()->unique();
++            $table->string('phone', 50)->nullable();
++
++            $table->string('role', 32)->index();
++            $table->boolean('active')->default(true)->index();
++
++            $table->timestamp('last_login_at')->nullable();
++            $table->timestamp('pin_changed_at')->nullable();
++
++            $table->timestamps();
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('users');
++    }
++};
+diff --git a/app/Modules/Identity/module.json b/app/Modules/Identity/module.json
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/module.json
+@@ -0,0 +1,6 @@
++{
++    "name": "Identity",
++    "description": "Benutzer, Rollen, PIN-Authentifizierung und Zugriffssteuerung",
++    "depends_on": ["Audit"],
++    "exports": []
++}
+diff --git a/app/Modules/Sales/Actions/AddProductToSaleAction.php b/app/Modules/Sales/Actions/AddProductToSaleAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Actions/AddProductToSaleAction.php
+@@ -0,0 +1,75 @@
++<?php
++
++namespace App\Modules\Sales\Actions;
++
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\Catalog\Models\Product;
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Sale;
++use App\Modules\Sales\Models\SaleItem;
++use Illuminate\Support\Facades\DB;
++use LogicException;
++
++final class AddProductToSaleAction
++{
++    public function execute(Sale $sale, Product $product): Sale
++    {
++        return DB::transaction(function () use ($sale, $product): Sale {
++            $locked = Sale::query()->lockForUpdate()->findOrFail($sale->id);
++
++            if ($locked->status !== SaleStatus::Open) {
++                throw new LogicException('Only an open sale can be changed.');
++            }
++
++            $session = CashSession::query()->findOrFail($locked->cash_session_id);
++
++            if ($session->status !== CashSessionStatus::Open) {
++                throw new LogicException('Cash session is not open.');
++            }
++
++            $product = Product::query()->with('category')->findOrFail($product->id);
++
++            if (! $product->active || ! $product->category->active) {
++                throw new LogicException('Product is not available for sale.');
++            }
++
++            $item = SaleItem::query()
++                ->where('sale_id', $locked->id)
++                ->where('product_id', $product->id)
++                ->first();
++
++            if ($item === null) {
++                SaleItem::query()->create([
++                    'sale_id' => $locked->id,
++                    'product_id' => $product->id,
++                    'product_name' => $product->name,
++                    'unit_price_cents' => $product->price_cents,
++                    'quantity' => 1,
++                    'total_cents' => $product->price_cents,
++                ]);
++            } else {
++                $quantity = $item->quantity + 1;
++
++                $item->update([
++                    'quantity' => $quantity,
++                    'total_cents' => $quantity * $item->unit_price_cents,
++                ]);
++            }
++
++            $this->recalculate($locked);
++
++            return $locked->refresh()->load('items');
++        });
++    }
++
++    private function recalculate(Sale $sale): void
++    {
++        $total = (int) $sale->items()->sum('total_cents');
++
++        $sale->update([
++            'subtotal_cents' => $total,
++            'total_cents' => $total,
++        ]);
++    }
++}
+diff --git a/app/Modules/Sales/Actions/ChangeSaleItemQuantityAction.php b/app/Modules/Sales/Actions/ChangeSaleItemQuantityAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Actions/ChangeSaleItemQuantityAction.php
+@@ -0,0 +1,55 @@
++<?php
++
++namespace App\Modules\Sales\Actions;
++
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Sale;
++use App\Modules\Sales\Models\SaleItem;
++use Illuminate\Support\Facades\DB;
++use InvalidArgumentException;
++use LogicException;
++
++final class ChangeSaleItemQuantityAction
++{
++    public function execute(SaleItem $item, int $quantity): Sale
++    {
++        if ($quantity < 0) {
++            throw new InvalidArgumentException('Quantity must not be negative.');
++        }
++
++        return DB::transaction(function () use ($item, $quantity): Sale {
++            $lockedItem = SaleItem::query()->lockForUpdate()->findOrFail($item->id);
++            $sale = Sale::query()->lockForUpdate()->findOrFail($lockedItem->sale_id);
++
++            if ($sale->status !== SaleStatus::Open) {
++                throw new LogicException('Only an open sale can be changed.');
++            }
++
++            $session = CashSession::query()->findOrFail($sale->cash_session_id);
++
++            if ($session->status !== CashSessionStatus::Open) {
++                throw new LogicException('Cash session is not open.');
++            }
++
++            if ($quantity === 0) {
++                $lockedItem->delete();
++            } else {
++                $lockedItem->update([
++                    'quantity' => $quantity,
++                    'total_cents' => $quantity * $lockedItem->unit_price_cents,
++                ]);
++            }
++
++            $total = (int) $sale->items()->sum('total_cents');
++
++            $sale->update([
++                'subtotal_cents' => $total,
++                'total_cents' => $total,
++            ]);
++
++            return $sale->refresh()->load('items');
++        });
++    }
++}
+diff --git a/app/Modules/Sales/Actions/CompleteCashSaleAction.php b/app/Modules/Sales/Actions/CompleteCashSaleAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Actions/CompleteCashSaleAction.php
+@@ -0,0 +1,95 @@
++<?php
++
++namespace App\Modules\Sales\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\Sales\Enums\PaymentMethod;
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Payment;
++use App\Modules\Sales\Models\Sale;
++use App\Modules\Sales\Services\SaleNumberGenerator;
++use Illuminate\Support\Facades\DB;
++use InvalidArgumentException;
++use LogicException;
++
++final class CompleteCashSaleAction
++{
++    public function __construct(
++        private readonly SaleNumberGenerator $numberGenerator,
++        private readonly WriteAuditEventAction $audit,
++    ) {}
++
++    public function execute(Sale $sale, int $receivedCents): Sale
++    {
++        if ($receivedCents < 0) {
++            throw new InvalidArgumentException('Received cash must not be negative.');
++        }
++
++        return DB::transaction(function () use ($sale, $receivedCents): Sale {
++            $locked = Sale::query()->lockForUpdate()->findOrFail($sale->id);
++
++            if ($locked->status === SaleStatus::Completed) {
++                return $locked->load(['items', 'payment']);
++            }
++
++            $session = CashSession::query()
++                ->lockForUpdate()
++                ->findOrFail($locked->cash_session_id);
++
++            if ($session->status !== CashSessionStatus::Open) {
++                throw new LogicException('Cash session is not open.');
++            }
++
++            $total = (int) $locked->items()->sum('total_cents');
++
++            if ($receivedCents < $total) {
++                throw new InvalidArgumentException('Received cash is below the sale total.');
++            }
++
++            $number = $this->numberGenerator->next();
++
++            if ($total > 0) {
++                Payment::query()->create([
++                    'sale_id' => $locked->id,
++                    'method' => PaymentMethod::Cash,
++                    'amount_cents' => $total,
++                    'received_cents' => $receivedCents,
++                    'change_cents' => $receivedCents - $total,
++                    'completed_at' => now(),
++                ]);
++            }
++
++            $locked->update([
++                'number' => $number,
++                'status' => SaleStatus::Completed,
++                'subtotal_cents' => $total,
++                'total_cents' => $total,
++                'completed_at' => now(),
++            ]);
++
++            $session->increment('cash_sales_cents', $total);
++
++            $locked->refresh();
++
++            $this->audit->execute(
++                eventKey: 'sale.completed',
++                actorUserId: $locked->cashier_id,
++                actorUsername: $locked->cashier->username,
++                actorDisplayName: $locked->cashier->auditDisplayName(),
++                subjectType: Sale::class,
++                subjectId: $locked->id,
++                after: [
++                    'number' => $locked->number,
++                    'total_cents' => $total,
++                    'payment_method' => $total > 0 ? PaymentMethod::Cash->value : null,
++                    'received_cents' => $total > 0 ? $receivedCents : null,
++                    'change_cents' => $total > 0 ? $receivedCents - $total : null,
++                ],
++            );
++
++            return $locked->load(['items', 'payment']);
++        });
++    }
++}
+diff --git a/app/Modules/Sales/Actions/DiscardOpenSaleAction.php b/app/Modules/Sales/Actions/DiscardOpenSaleAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Actions/DiscardOpenSaleAction.php
+@@ -0,0 +1,43 @@
++<?php
++
++namespace App\Modules\Sales\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Identity\Models\User;
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Sale;
++use Illuminate\Support\Facades\DB;
++use LogicException;
++
++final class DiscardOpenSaleAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(Sale $sale, User $actor): void
++    {
++        DB::transaction(function () use ($sale, $actor): void {
++            $locked = Sale::query()->lockForUpdate()->findOrFail($sale->id);
++
++            if ($locked->status !== SaleStatus::Open) {
++                throw new LogicException('Only an open sale can be discarded.');
++            }
++
++            $metadata = [
++                'register_id' => $locked->register_id,
++                'cash_session_id' => $locked->cash_session_id,
++                'total_cents' => $locked->total_cents,
++            ];
++
++            $locked->items()->delete();
++            $locked->delete();
++
++            $this->audit->execute(
++                eventKey: 'sale.cart_discarded',
++                actorUserId: $actor->id,
++                actorUsername: $actor->username,
++                actorDisplayName: $actor->auditDisplayName(),
++                metadata: $metadata,
++            );
++        });
++    }
++}
+diff --git a/app/Modules/Sales/Actions/StartSaleAction.php b/app/Modules/Sales/Actions/StartSaleAction.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Actions/StartSaleAction.php
+@@ -0,0 +1,79 @@
++<?php
++
++namespace App\Modules\Sales\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Identity\Models\User;
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Sale;
++use Illuminate\Support\Facades\DB;
++use LogicException;
++
++final class StartSaleAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(Register $register, CashSession $cashSession, User $cashier): Sale
++    {
++        return DB::transaction(function () use ($register, $cashSession, $cashier): Sale {
++            Register::query()->lockForUpdate()->findOrFail($register->id);
++            $lockedSession = CashSession::query()->lockForUpdate()->findOrFail($cashSession->id);
++
++            if (
++                $lockedSession->register_id !== $register->id
++                || $lockedSession->status !== CashSessionStatus::Open
++            ) {
++                throw new LogicException('An open cash session for this register is required.');
++            }
++
++            if (! $cashier->active) {
++                throw new LogicException('Cashier is inactive.');
++            }
++
++            $existing = Sale::query()
++                ->where('register_id', $register->id)
++                ->where('status', SaleStatus::Open->value)
++                ->first();
++
++            if ($existing !== null) {
++                if ($existing->cash_session_id !== $lockedSession->id) {
++                    throw new LogicException('Register has an open sale from another cash session.');
++                }
++
++                if ($existing->cashier_id !== $cashier->id) {
++                    throw new LogicException('Open sale belongs to another cashier and must be completed or discarded first.');
++                }
++
++                return $existing;
++            }
++
++            $sale = Sale::query()->create([
++                'register_id' => $register->id,
++                'cash_session_id' => $lockedSession->id,
++                'cashier_id' => $cashier->id,
++                'status' => SaleStatus::Open,
++                'subtotal_cents' => 0,
++                'total_cents' => 0,
++                'started_at' => now(),
++            ]);
++
++            $this->audit->execute(
++                eventKey: 'sale.started',
++                actorUserId: $cashier->id,
++                actorUsername: $cashier->username,
++                actorDisplayName: $cashier->auditDisplayName(),
++                subjectType: Sale::class,
++                subjectId: $sale->id,
++                metadata: [
++                    'register_id' => $register->id,
++                    'cash_session_id' => $lockedSession->id,
++                ],
++            );
++
++            return $sale;
++        });
++    }
++}
+diff --git a/app/Modules/Sales/Enums/PaymentMethod.php b/app/Modules/Sales/Enums/PaymentMethod.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Enums/PaymentMethod.php
+@@ -0,0 +1,8 @@
++<?php
++
++namespace App\Modules\Sales\Enums;
++
++enum PaymentMethod: string
++{
++    case Cash = 'cash';
++}
+diff --git a/app/Modules/Sales/Enums/SaleStatus.php b/app/Modules/Sales/Enums/SaleStatus.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Enums/SaleStatus.php
+@@ -0,0 +1,9 @@
++<?php
++
++namespace App\Modules\Sales\Enums;
++
++enum SaleStatus: string
++{
++    case Open = 'open';
++    case Completed = 'completed';
++}
+diff --git a/app/Modules/Sales/Models/Payment.php b/app/Modules/Sales/Models/Payment.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Models/Payment.php
+@@ -0,0 +1,43 @@
++<?php
++
++namespace App\Modules\Sales\Models;
++
++use App\Modules\Sales\Enums\PaymentMethod;
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++use LogicException;
++
++final class Payment extends Model
++{
++    public const UPDATED_AT = null;
++
++    protected $guarded = [];
++
++    protected function casts(): array
++    {
++        return [
++            'method' => PaymentMethod::class,
++            'amount_cents' => 'integer',
++            'received_cents' => 'integer',
++            'change_cents' => 'integer',
++            'completed_at' => 'datetime',
++            'created_at' => 'datetime',
++        ];
++    }
++
++    protected static function booted(): void
++    {
++        static::updating(static function (): never {
++            throw new LogicException('Payments are immutable.');
++        });
++
++        static::deleting(static function (): never {
++            throw new LogicException('Payments cannot be deleted.');
++        });
++    }
++
++    public function sale(): BelongsTo
++    {
++        return $this->belongsTo(Sale::class);
++    }
++}
+diff --git a/app/Modules/Sales/Models/Sale.php b/app/Modules/Sales/Models/Sale.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Models/Sale.php
+@@ -0,0 +1,69 @@
++<?php
++
++namespace App\Modules\Sales\Models;
++
++use App\Modules\CashRegister\Models\CashSession;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Identity\Models\User;
++use App\Modules\Sales\Enums\SaleStatus;
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++use Illuminate\Database\Eloquent\Relations\HasMany;
++use Illuminate\Database\Eloquent\Relations\HasOne;
++use LogicException;
++
++final class Sale extends Model
++{
++    protected $guarded = [];
++
++    protected function casts(): array
++    {
++        return [
++            'status' => SaleStatus::class,
++            'subtotal_cents' => 'integer',
++            'total_cents' => 'integer',
++            'started_at' => 'datetime',
++            'completed_at' => 'datetime',
++        ];
++    }
++
++    protected static function booted(): void
++    {
++        static::updating(static function (Sale $sale): void {
++            if ($sale->getOriginal('status') === SaleStatus::Completed->value) {
++                throw new LogicException('Completed sales are immutable.');
++            }
++        });
++
++        static::deleting(static function (Sale $sale): void {
++            if ($sale->status === SaleStatus::Completed) {
++                throw new LogicException('Completed sales cannot be deleted.');
++            }
++        });
++    }
++
++    public function register(): BelongsTo
++    {
++        return $this->belongsTo(Register::class);
++    }
++
++    public function cashSession(): BelongsTo
++    {
++        return $this->belongsTo(CashSession::class);
++    }
++
++    public function cashier(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'cashier_id');
++    }
++
++    public function items(): HasMany
++    {
++        return $this->hasMany(SaleItem::class);
++    }
++
++    public function payment(): HasOne
++    {
++        return $this->hasOne(Payment::class);
++    }
++}
+diff --git a/app/Modules/Sales/Models/SaleItem.php b/app/Modules/Sales/Models/SaleItem.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Models/SaleItem.php
+@@ -0,0 +1,47 @@
++<?php
++
++namespace App\Modules\Sales\Models;
++
++use App\Modules\Catalog\Models\Product;
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++use LogicException;
++
++final class SaleItem extends Model
++{
++    protected $guarded = [];
++
++    protected static function booted(): void
++    {
++        static::updating(static function (SaleItem $item): void {
++            if ($item->sale()->where('status', \App\Modules\Sales\Enums\SaleStatus::Completed->value)->exists()) {
++                throw new LogicException('Items of completed sales are immutable.');
++            }
++        });
++
++        static::deleting(static function (SaleItem $item): void {
++            if ($item->sale()->where('status', \App\Modules\Sales\Enums\SaleStatus::Completed->value)->exists()) {
++                throw new LogicException('Items of completed sales cannot be deleted.');
++            }
++        });
++    }
++
++    protected function casts(): array
++    {
++        return [
++            'unit_price_cents' => 'integer',
++            'quantity' => 'integer',
++            'total_cents' => 'integer',
++        ];
++    }
++
++    public function sale(): BelongsTo
++    {
++        return $this->belongsTo(Sale::class);
++    }
++
++    public function product(): BelongsTo
++    {
++        return $this->belongsTo(Product::class);
++    }
++}
+diff --git a/app/Modules/Sales/Models/SaleNumberSequence.php b/app/Modules/Sales/Models/SaleNumberSequence.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Models/SaleNumberSequence.php
+@@ -0,0 +1,26 @@
++<?php
++
++namespace App\Modules\Sales\Models;
++
++use Illuminate\Database\Eloquent\Model;
++
++final class SaleNumberSequence extends Model
++{
++    public $timestamps = false;
++
++    protected $guarded = [];
++
++    protected $primaryKey = 'year';
++
++    public $incrementing = false;
++
++    protected $keyType = 'int';
++
++    protected function casts(): array
++    {
++        return [
++            'year' => 'integer',
++            'last_number' => 'integer',
++        ];
++    }
++}
+diff --git a/app/Modules/Sales/Queries/GetOpenSaleForRegisterQuery.php b/app/Modules/Sales/Queries/GetOpenSaleForRegisterQuery.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Queries/GetOpenSaleForRegisterQuery.php
+@@ -0,0 +1,20 @@
++<?php
++
++namespace App\Modules\Sales\Queries;
++
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Sale;
++
++final class GetOpenSaleForRegisterQuery
++{
++    public function execute(Register $register): ?Sale
++    {
++        return Sale::query()
++            ->with('items')
++            ->where('register_id', $register->id)
++            ->where('status', SaleStatus::Open->value)
++            ->latest('id')
++            ->first();
++    }
++}
+diff --git a/app/Modules/Sales/README.md b/app/Modules/Sales/README.md
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/README.md
+@@ -0,0 +1,13 @@
++# Sales
++
++Verwaltet offene Warenkörbe, Verkaufspositionen und abgeschlossene Bargeldverkäufe.
++
++## V1-Regeln
++
++- pro Kassenplatz darf höchstens ein offener Verkauf existieren.
++- abgeschlossene Verkäufe sind unveränderlich.
++- Produktname und Einzelpreis werden als Snapshot in der Verkaufsposition gespeichert.
++- Verkaufsnummern werden erst beim erfolgreichen Abschluss vergeben.
++- Bargeldzahlungen unterhalb des Gesamtbetrags sind nicht erlaubt.
++- ein 0-Euro-Verkauf wird ohne Payment abgeschlossen.
++- ein doppelter Abschluss erzeugt weder einen zweiten Verkauf noch eine zweite Zahlung.
+diff --git a/app/Modules/Sales/Services/SaleNumberGenerator.php b/app/Modules/Sales/Services/SaleNumberGenerator.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/Services/SaleNumberGenerator.php
+@@ -0,0 +1,25 @@
++<?php
++
++namespace App\Modules\Sales\Services;
++
++use App\Modules\Sales\Models\SaleNumberSequence;
++
++final class SaleNumberGenerator
++{
++    public function next(): string
++    {
++        $year = now(config('kassensystem.timezone', 'Europe/Berlin'))->year;
++
++        $sequence = SaleNumberSequence::query()
++            ->lockForUpdate()
++            ->firstOrCreate(
++                ['year' => $year],
++                ['last_number' => 0],
++            );
++
++        $sequence->increment('last_number');
++        $sequence->refresh();
++
++        return sprintf('%d-%06d', $year, $sequence->last_number);
++    }
++}
+diff --git a/app/Modules/Sales/database/migrations/2026_09_20_100300_create_sale_number_sequences_table.php b/app/Modules/Sales/database/migrations/2026_09_20_100300_create_sale_number_sequences_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/database/migrations/2026_09_20_100300_create_sale_number_sequences_table.php
+@@ -0,0 +1,21 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('sale_number_sequences', function (Blueprint $table) {
++            $table->unsignedSmallInteger('year')->primary();
++            $table->unsignedBigInteger('last_number')->default(0);
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('sale_number_sequences');
++    }
++};
+diff --git a/app/Modules/Sales/database/migrations/2026_09_20_100310_create_sales_table.php b/app/Modules/Sales/database/migrations/2026_09_20_100310_create_sales_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/database/migrations/2026_09_20_100310_create_sales_table.php
+@@ -0,0 +1,34 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('sales', function (Blueprint $table) {
++            $table->id();
++            $table->string('number', 32)->nullable()->unique();
++            $table->foreignId('register_id')->constrained('registers')->restrictOnDelete();
++            $table->foreignId('cash_session_id')->constrained('cash_sessions')->restrictOnDelete();
++            $table->foreignId('cashier_id')->constrained('users')->restrictOnDelete();
++            $table->string('status', 32)->index();
++            $table->unsignedInteger('subtotal_cents')->default(0);
++            $table->unsignedInteger('total_cents')->default(0);
++            $table->timestamp('started_at');
++            $table->timestamp('completed_at')->nullable();
++            $table->timestamps();
++
++            $table->index(['register_id', 'status']);
++            $table->index(['cash_session_id', 'status']);
++            $table->index('completed_at');
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('sales');
++    }
++};
+diff --git a/app/Modules/Sales/database/migrations/2026_09_20_100320_create_sale_items_table.php b/app/Modules/Sales/database/migrations/2026_09_20_100320_create_sale_items_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/database/migrations/2026_09_20_100320_create_sale_items_table.php
+@@ -0,0 +1,29 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('sale_items', function (Blueprint $table) {
++            $table->id();
++            $table->foreignId('sale_id')->constrained('sales')->cascadeOnDelete();
++            $table->foreignId('product_id')->constrained('products')->restrictOnDelete();
++            $table->string('product_name', 160);
++            $table->unsignedInteger('unit_price_cents');
++            $table->unsignedInteger('quantity');
++            $table->unsignedInteger('total_cents');
++            $table->timestamps();
++
++            $table->unique(['sale_id', 'product_id']);
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('sale_items');
++    }
++};
+diff --git a/app/Modules/Sales/database/migrations/2026_09_20_100330_create_payments_table.php b/app/Modules/Sales/database/migrations/2026_09_20_100330_create_payments_table.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/database/migrations/2026_09_20_100330_create_payments_table.php
+@@ -0,0 +1,27 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('payments', function (Blueprint $table) {
++            $table->id();
++            $table->foreignId('sale_id')->unique()->constrained('sales')->restrictOnDelete();
++            $table->string('method', 32);
++            $table->unsignedInteger('amount_cents');
++            $table->unsignedInteger('received_cents');
++            $table->unsignedInteger('change_cents');
++            $table->timestamp('completed_at');
++            $table->timestamp('created_at')->useCurrent();
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('payments');
++    }
++};
+diff --git a/app/Modules/Sales/module.json b/app/Modules/Sales/module.json
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Sales/module.json
+@@ -0,0 +1,6 @@
++{
++    "name": "Sales",
++    "description": "Warenkorb, Verkäufe, Positionen und Bargeldzahlungen",
++    "depends_on": ["Identity", "Catalog", "CashRegister", "Audit"],
++    "exports": []
++}
+diff --git a/config/auth.php b/config/auth.php
+new file mode 100644
+--- /dev/null
++++ b/config/auth.php
+@@ -0,0 +1,35 @@
++<?php
++
++use App\Modules\Identity\Models\User;
++
++return [
++    'defaults' => [
++        'guard' => env('AUTH_GUARD', 'web'),
++        'passwords' => 'users',
++    ],
++
++    'guards' => [
++        'web' => [
++            'driver' => 'session',
++            'provider' => 'users',
++        ],
++    ],
++
++    'providers' => [
++        'users' => [
++            'driver' => 'eloquent',
++            'model' => User::class,
++        ],
++    ],
++
++    'passwords' => [
++        'users' => [
++            'provider' => 'users',
++            'table' => 'password_reset_tokens',
++            'expire' => 60,
++            'throttle' => 60,
++        ],
++    ],
++
++    'password_timeout' => 10800,
++];
+diff --git a/config/kassensystem.php b/config/kassensystem.php
+new file mode 100644
+--- /dev/null
++++ b/config/kassensystem.php
+@@ -0,0 +1,9 @@
++<?php
++
++return [
++    'currency' => env('KASSENSYSTEM_CURRENCY', 'EUR'),
++    'timezone' => env('KASSENSYSTEM_TIMEZONE', 'Europe/Berlin'),
++    'pin_length' => (int) env('KASSENSYSTEM_PIN_LENGTH', 6),
++    'pin_max_attempts' => (int) env('KASSENSYSTEM_PIN_MAX_ATTEMPTS', 5),
++    'pin_lock_seconds' => (int) env('KASSENSYSTEM_PIN_LOCK_SECONDS', 60),
++];
+diff --git a/docs/KASSENSYSTEM_V1.md b/docs/KASSENSYSTEM_V1.md
+new file mode 100644
+--- /dev/null
++++ b/docs/KASSENSYSTEM_V1.md
+@@ -0,0 +1,33 @@
++# Kassensystem v1 – fachlicher Kern
++
++Dieser Stand bildet den Backend-Kern für die erste Version des Schulcafeteria-Kassensystems.
++
++## Enthalten
++
++- Audit mit Redaction sensibler Daten und Unveränderlichkeit.
++- Benutzer mit Rollen, PIN-Hashing, Aktivierung/Deaktivierung und PIN-Anmeldung.
++- Kategorien und Produkte mit Preisen in Cent und 0-Euro-Produkten.
++- Kassenplätze, Kassenschichten, Einlagen, Entnahmen und Soll-/Ist-Abschluss.
++- Warenkorb und Bargeldverkauf mit Preis-Snapshots, Rückgeld, Verkaufsnummer und Doppelabschluss-Schutz.
++
++## Bewusst noch nicht enthalten
++
++- POS- und Verwaltungsoberfläche.
++- Storno abgeschlossener Verkäufe.
++- Schülerguthaben und andere Zahlungsmethoden.
++- Lagerverwaltung.
++- QR- oder Druckbelege.
++- TSE.
++- Reporting/CSV.
++
++## Modulabhängigkeiten
++
++`Identity -> Audit`
++
++`Catalog -> Audit`
++
++`CashRegister -> Identity, Audit`
++
++`Sales -> Identity, Catalog, CashRegister, Audit`
++
++Die Kassenlogik kennt das Sales-Modul nicht. Der Barumsatz wird beim Abschluss eines Verkaufs auf der Kassenschicht fortgeschrieben. Dadurch bleibt der Modulgraph azyklisch.
+diff --git a/tests/Feature/Audit/WriteAuditEventActionTest.php b/tests/Feature/Audit/WriteAuditEventActionTest.php
+new file mode 100644
+--- /dev/null
++++ b/tests/Feature/Audit/WriteAuditEventActionTest.php
+@@ -0,0 +1,40 @@
++<?php
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Audit\Models\AuditEvent;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++
++uses(RefreshDatabase::class);
++
++it('writes and sanitizes an audit event', function () {
++    $event = app(WriteAuditEventAction::class)->execute(
++        eventKey: 'user.updated',
++        before: [
++            'username' => 'max',
++            'pin' => '123456',
++            'nested' => ['password' => 'secret'],
++        ],
++        metadata: ['token' => 'secret-token'],
++    );
++
++    expect($event->before)->toBe([
++        'username' => 'max',
++        'pin' => '[REDACTED]',
++        'nested' => ['password' => '[REDACTED]'],
++    ])->and($event->metadata)->toBe([
++        'token' => '[REDACTED]',
++    ])->and($event->created_at)->not->toBeNull();
++});
++
++it('keeps audit events immutable', function () {
++    $event = app(WriteAuditEventAction::class)->execute(eventKey: 'test.event');
++
++    expect(fn () => $event->update(['event_key' => 'changed']))
++        ->toThrow(LogicException::class, 'Audit events are immutable.');
++
++    expect(fn () => $event->delete())
++        ->toThrow(LogicException::class, 'Audit events cannot be deleted.');
++
++    expect(AuditEvent::query()->findOrFail($event->id)->event_key)
++        ->toBe('test.event');
++});
+diff --git a/tests/Feature/CashRegister/CashSessionTest.php b/tests/Feature/CashRegister/CashSessionTest.php
+new file mode 100644
+--- /dev/null
++++ b/tests/Feature/CashRegister/CashSessionTest.php
+@@ -0,0 +1,53 @@
++<?php
++
++use App\Modules\CashRegister\Actions\CloseCashSessionAction;
++use App\Modules\CashRegister\Actions\OpenCashSessionAction;
++use App\Modules\CashRegister\Actions\RecordCashDepositAction;
++use App\Modules\CashRegister\Actions\RecordCashWithdrawalAction;
++use App\Modules\CashRegister\Actions\StartCashSessionClosingAction;
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Identity\Actions\CreateUserAction;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++
++uses(RefreshDatabase::class);
++
++it('calculates cash closing with movements and requires a comment for differences', function () {
++    $cashier = app(CreateUserAction::class)->execute(
++        'cashier',
++        '123456',
++        'Casey',
++        'Cashier',
++    );
++
++    $register = Register::query()->create([
++        'code' => 'register-1',
++        'name' => 'Kasse 1',
++        'active' => true,
++    ]);
++
++    $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 5000);
++
++    app(RecordCashDepositAction::class)->execute($session, $cashier, 1000, 'Zusätzliches Wechselgeld');
++    app(RecordCashWithdrawalAction::class)->execute($session, $cashier, 500, 'Geld sicher verwahrt');
++
++    $session->update(['cash_sales_cents' => 2000]);
++
++    expect($session->refresh()->expectedCashCents())->toBe(7500);
++
++    $session = app(StartCashSessionClosingAction::class)->execute($session, $cashier);
++
++    expect(fn () => app(CloseCashSessionAction::class)->execute($session, $cashier, 7400))
++        ->toThrow(InvalidArgumentException::class);
++
++    $closed = app(CloseCashSessionAction::class)->execute(
++        $session,
++        $cashier,
++        7400,
++        'Ein Euro fehlt',
++    );
++
++    expect($closed->status)->toBe(CashSessionStatus::Closed)
++        ->and($closed->closing_expected_cash_cents)->toBe(7500)
++        ->and($closed->closing_difference_cents)->toBe(-100);
++});
+diff --git a/tests/Feature/Catalog/CatalogTest.php b/tests/Feature/Catalog/CatalogTest.php
+new file mode 100644
+--- /dev/null
++++ b/tests/Feature/Catalog/CatalogTest.php
+@@ -0,0 +1,55 @@
++<?php
++
++use App\Modules\Catalog\Actions\CreateCategoryAction;
++use App\Modules\Catalog\Actions\CreateProductAction;
++use App\Modules\Catalog\Actions\SetProductActiveAction;
++use App\Modules\Catalog\Queries\GetPosCatalogQuery;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++
++uses(RefreshDatabase::class);
++
++it('allows zero price products but rejects negative prices', function () {
++    $category = app(CreateCategoryAction::class)->execute('Getränke');
++
++    $free = app(CreateProductAction::class)->execute(
++        category: $category,
++        name: 'Wasser kostenlos',
++        shortName: 'Wasser',
++        priceCents: 0,
++    );
++
++    expect($free->price_cents)->toBe(0);
++
++    expect(fn () => app(CreateProductAction::class)->execute(
++        category: $category,
++        name: 'Ungültig',
++        shortName: 'Ungültig',
++        priceCents: -1,
++    ))->toThrow(InvalidArgumentException::class);
++});
++
++it('returns only active categories and products for the pos', function () {
++    $category = app(CreateCategoryAction::class)->execute('Snacks');
++
++    $active = app(CreateProductAction::class)->execute(
++        $category,
++        'Brezel',
++        'Brezel',
++        100,
++    );
++
++    $inactive = app(CreateProductAction::class)->execute(
++        $category,
++        'Alter Snack',
++        'Alt',
++        50,
++    );
++
++    app(SetProductActiveAction::class)->execute($inactive, false);
++
++    $catalog = app(GetPosCatalogQuery::class)->execute();
++
++    expect($catalog)->toHaveCount(1)
++        ->and($catalog->first()->products)->toHaveCount(1)
++        ->and($catalog->first()->products->first()->id)->toBe($active->id);
++});
+diff --git a/tests/Feature/Identity/UserManagementTest.php b/tests/Feature/Identity/UserManagementTest.php
+new file mode 100644
+--- /dev/null
++++ b/tests/Feature/Identity/UserManagementTest.php
+@@ -0,0 +1,58 @@
++<?php
++
++use App\Modules\Identity\Actions\ChangeUserRoleAction;
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Modules\Identity\Actions\ResetUserPinAction;
++use App\Modules\Identity\Actions\SetUserActiveAction;
++use App\Modules\Identity\Enums\UserRole;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++use Illuminate\Support\Facades\Hash;
++
++uses(RefreshDatabase::class);
++
++it('creates users with a hashed six digit pin', function () {
++    $user = app(CreateUserAction::class)->execute(
++        username: 'KASSE1',
++        pin: '123456',
++        firstName: 'Max',
++        lastName: 'Muster',
++    );
++
++    expect($user->username)->toBe('kasse1')
++        ->and($user->role)->toBe(UserRole::Cashier)
++        ->and($user->active)->toBeTrue()
++        ->and(Hash::check('123456', $user->pin_hash))->toBeTrue()
++        ->and($user->pin_hash)->not->toBe('123456');
++});
++
++it('does not allow removing the last active administrator', function () {
++    $admin = app(CreateUserAction::class)->execute(
++        username: 'admin',
++        pin: '123456',
++        firstName: 'Ada',
++        lastName: 'Admin',
++        role: UserRole::Administrator,
++    );
++
++    expect(fn () => app(SetUserActiveAction::class)->execute($admin, false))
++        ->toThrow(LogicException::class);
++
++    expect(fn () => app(ChangeUserRoleAction::class)->execute($admin, UserRole::Manager))
++        ->toThrow(LogicException::class);
++});
++
++it('can reset a pin without exposing it in the audit log', function () {
++    $user = app(CreateUserAction::class)->execute(
++        username: 'cashier',
++        pin: '123456',
++        firstName: 'Casey',
++        lastName: 'Cashier',
++    );
++
++    app(ResetUserPinAction::class)->execute($user, '654321');
++
++    expect(Hash::check('654321', $user->refresh()->pin_hash))->toBeTrue()
++        ->and(\App\Modules\Audit\Models\AuditEvent::query()
++            ->where('event_key', 'user.pin_reset')
++            ->exists())->toBeTrue();
++});
+diff --git a/tests/Feature/Sales/CompleteCashSaleFlowTest.php b/tests/Feature/Sales/CompleteCashSaleFlowTest.php
+new file mode 100644
+--- /dev/null
++++ b/tests/Feature/Sales/CompleteCashSaleFlowTest.php
+@@ -0,0 +1,156 @@
++<?php
++
++use App\Modules\CashRegister\Actions\OpenCashSessionAction;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Catalog\Actions\CreateCategoryAction;
++use App\Modules\Catalog\Actions\CreateProductAction;
++use App\Modules\Catalog\Actions\UpdateProductAction;
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Modules\Sales\Actions\AddProductToSaleAction;
++use App\Modules\Sales\Actions\CompleteCashSaleAction;
++use App\Modules\Sales\Actions\StartSaleAction;
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Payment;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++
++uses(RefreshDatabase::class);
++
++it('completes a cash sale with price snapshots and change', function () {
++    $cashier = app(CreateUserAction::class)->execute(
++        'cashier',
++        '123456',
++        'Casey',
++        'Cashier',
++    );
++
++    $register = Register::query()->create([
++        'code' => 'register-1',
++        'name' => 'Kasse 1',
++        'active' => true,
++    ]);
++
++    $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 5000);
++
++    $category = app(CreateCategoryAction::class)->execute('Backwaren');
++    $product = app(CreateProductAction::class)->execute(
++        $category,
++        'Brezel',
++        'Brezel',
++        100,
++    );
++
++    $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
++    $sale = app(AddProductToSaleAction::class)->execute($sale, $product);
++    $sale = app(AddProductToSaleAction::class)->execute($sale, $product);
++
++    app(UpdateProductAction::class)->execute(
++        $product,
++        $category,
++        'Brezel',
++        'Brezel',
++        120,
++        0,
++    );
++
++    $completed = app(CompleteCashSaleAction::class)->execute($sale, 500);
++
++    expect($completed->status)->toBe(SaleStatus::Completed)
++        ->and($completed->number)->toMatch('/^\d{4}-\d{6}$/')
++        ->and($completed->total_cents)->toBe(200)
++        ->and($completed->items->first()->unit_price_cents)->toBe(100)
++        ->and($completed->items->first()->quantity)->toBe(2)
++        ->and($completed->payment->received_cents)->toBe(500)
++        ->and($completed->payment->change_cents)->toBe(300)
++        ->and($session->refresh()->cash_sales_cents)->toBe(200);
++});
++
++it('is idempotent when the same sale is completed twice', function () {
++    $cashier = app(CreateUserAction::class)->execute(
++        'cashier',
++        '123456',
++        'Casey',
++        'Cashier',
++    );
++
++    $register = Register::query()->create([
++        'code' => 'register-1',
++        'name' => 'Kasse 1',
++        'active' => true,
++    ]);
++
++    $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 0);
++
++    $category = app(CreateCategoryAction::class)->execute('Snacks');
++    $product = app(CreateProductAction::class)->execute($category, 'Snack', 'Snack', 250);
++
++    $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
++    $sale = app(AddProductToSaleAction::class)->execute($sale, $product);
++
++    $first = app(CompleteCashSaleAction::class)->execute($sale, 500);
++    $second = app(CompleteCashSaleAction::class)->execute($sale, 500);
++
++    expect($second->id)->toBe($first->id)
++        ->and($second->number)->toBe($first->number)
++        ->and(Payment::query()->where('sale_id', $sale->id)->count())->toBe(1)
++        ->and($session->refresh()->cash_sales_cents)->toBe(250);
++});
++
++it('completes a zero price sale without a payment', function () {
++    $cashier = app(CreateUserAction::class)->execute(
++        'cashier',
++        '123456',
++        'Casey',
++        'Cashier',
++    );
++
++    $register = Register::query()->create([
++        'code' => 'register-1',
++        'name' => 'Kasse 1',
++        'active' => true,
++    ]);
++
++    $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 0);
++
++    $category = app(CreateCategoryAction::class)->execute('Kostenlos');
++    $product = app(CreateProductAction::class)->execute($category, 'Gratis', 'Gratis', 0);
++
++    $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
++    $sale = app(AddProductToSaleAction::class)->execute($sale, $product);
++
++    $completed = app(CompleteCashSaleAction::class)->execute($sale, 0);
++
++    expect($completed->status)->toBe(SaleStatus::Completed)
++        ->and($completed->total_cents)->toBe(0)
++        ->and($completed->payment)->toBeNull()
++        ->and($session->refresh()->cash_sales_cents)->toBe(0);
++});
++
++it('keeps completed sales and their items immutable', function () {
++    $cashier = app(CreateUserAction::class)->execute(
++        'cashier',
++        '123456',
++        'Casey',
++        'Cashier',
++    );
++
++    $register = Register::query()->create([
++        'code' => 'register-1',
++        'name' => 'Kasse 1',
++        'active' => true,
++    ]);
++
++    $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 0);
++    $category = app(CreateCategoryAction::class)->execute('Snacks');
++    $product = app(CreateProductAction::class)->execute($category, 'Snack', 'Snack', 250);
++
++    $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
++    $sale = app(AddProductToSaleAction::class)->execute($sale, $product);
++    $completed = app(CompleteCashSaleAction::class)->execute($sale, 500);
++    $item = $completed->items->first();
++
++    expect(fn () => $completed->update(['total_cents' => 999]))
++        ->toThrow(\LogicException::class);
++
++    expect(fn () => $item->update(['quantity' => 99]))
++        ->toThrow(\LogicException::class);
++});

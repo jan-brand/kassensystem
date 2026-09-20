@@ -1,0 +1,41 @@
+diff --git a/app/Modules/CashRegister/Models/CashSession.php b/app/Modules/CashRegister/Models/CashSession.php
+index a1f5ae3..f030c5e 100644
+--- a/app/Modules/CashRegister/Models/CashSession.php
++++ b/app/Modules/CashRegister/Models/CashSession.php
+@@ -32,7 +32,7 @@ final class CashSession extends Model
+     protected static function booted(): void
+     {
+         static::updating(static function (CashSession $session): void {
+-            if ($session->getOriginal('status') === CashSessionStatus::Closed->value) {
++            if ($session->getRawOriginal('status') === CashSessionStatus::Closed->value) {
+                 throw new LogicException('Closed cash sessions are immutable.');
+             }
+         });
+diff --git a/app/Modules/Sales/Models/Sale.php b/app/Modules/Sales/Models/Sale.php
+index a697353..754a057 100644
+--- a/app/Modules/Sales/Models/Sale.php
++++ b/app/Modules/Sales/Models/Sale.php
+@@ -30,7 +30,7 @@ final class Sale extends Model
+     protected static function booted(): void
+     {
+         static::updating(static function (Sale $sale): void {
+-            if ($sale->getOriginal('status') === SaleStatus::Completed->value) {
++            if ($sale->getRawOriginal('status') === SaleStatus::Completed->value) {
+                 throw new LogicException('Completed sales are immutable.');
+             }
+         });
+diff --git a/tests/Feature/CashRegister/CashSessionTest.php b/tests/Feature/CashRegister/CashSessionTest.php
+index 8ea97de..861b56e 100644
+--- a/tests/Feature/CashRegister/CashSessionTest.php
++++ b/tests/Feature/CashRegister/CashSessionTest.php
+@@ -50,4 +50,10 @@ it('calculates cash closing with movements and requires a comment for difference
+     expect($closed->status)->toBe(CashSessionStatus::Closed)
+         ->and($closed->closing_expected_cash_cents)->toBe(7500)
+         ->and($closed->closing_difference_cents)->toBe(-100);
++
++    expect(fn () => $closed->update(['closing_comment' => 'Nachträglich geändert']))
++        ->toThrow(LogicException::class);
++
++    expect(fn () => $closed->delete())
++        ->toThrow(LogicException::class);
+ });

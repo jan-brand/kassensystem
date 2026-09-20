@@ -1,0 +1,512 @@
+diff --git a/app/Modules/Reporting/Queries/GetCashSessionReportQuery.php b/app/Modules/Reporting/Queries/GetCashSessionReportQuery.php
+new file mode 100644
+index 0000000..b1bcd2b
+--- /dev/null
++++ b/app/Modules/Reporting/Queries/GetCashSessionReportQuery.php
+@@ -0,0 +1,30 @@
++<?php
++
++namespace App\Modules\Reporting\Queries;
++
++use App\Modules\CashRegister\Enums\CashSessionStatus;
++use App\Modules\CashRegister\Models\CashSession;
++use Carbon\CarbonImmutable;
++use Illuminate\Database\Eloquent\Collection;
++use InvalidArgumentException;
++
++final class GetCashSessionReportQuery
++{
++    /** @return Collection<int, CashSession> */
++    public function execute(string $date): Collection
++    {
++        $timezone = (string) config('kassensystem.timezone', 'Europe/Berlin');
++        $day = CarbonImmutable::createFromFormat('!Y-m-d', $date, $timezone);
++
++        if ($day === false || $day->format('Y-m-d') !== $date) {
++            throw new InvalidArgumentException('Date must use the format YYYY-MM-DD.');
++        }
++
++        return CashSession::query()
++            ->with(['register', 'openedBy', 'closedBy'])
++            ->where('status', CashSessionStatus::Closed->value)
++            ->whereBetween('closed_at', [$day->startOfDay(), $day->endOfDay()])
++            ->orderBy('closed_at')
++            ->get();
++    }
++}
+diff --git a/app/Modules/Reporting/Queries/GetDailySummaryQuery.php b/app/Modules/Reporting/Queries/GetDailySummaryQuery.php
+new file mode 100644
+index 0000000..c8918e3
+--- /dev/null
++++ b/app/Modules/Reporting/Queries/GetDailySummaryQuery.php
+@@ -0,0 +1,73 @@
++<?php
++
++namespace App\Modules\Reporting\Queries;
++
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Sale;
++use App\Modules\Sales\Models\SaleItem;
++use Carbon\CarbonImmutable;
++use InvalidArgumentException;
++
++final class GetDailySummaryQuery
++{
++    /**
++     * @return array{
++     *     date: string,
++     *     sales_count: int,
++     *     revenue_cents: int,
++     *     free_sales_count: int,
++     *     products: list<array{product_id: int, product_name: string, quantity: int, revenue_cents: int}>
++     * }
++     */
++    public function execute(string $date): array
++    {
++        $timezone = (string) config('kassensystem.timezone', 'Europe/Berlin');
++        $day = CarbonImmutable::createFromFormat('!Y-m-d', $date, $timezone);
++
++        if ($day === false || $day->format('Y-m-d') !== $date) {
++            throw new InvalidArgumentException('Date must use the format YYYY-MM-DD.');
++        }
++
++        $start = $day->startOfDay();
++        $end = $day->endOfDay();
++
++        $sales = Sale::query()
++            ->where('status', SaleStatus::Completed->value)
++            ->whereBetween('completed_at', [$start, $end]);
++
++        $salesCount = (clone $sales)->count();
++        $revenueCents = (int) (clone $sales)->sum('total_cents');
++        $freeSalesCount = (clone $sales)->where('total_cents', 0)->count();
++
++        $products = SaleItem::query()
++            ->select([
++                'sale_items.product_id',
++                'sale_items.product_name',
++            ])
++            ->selectRaw('SUM(sale_items.quantity) AS quantity')
++            ->selectRaw('SUM(sale_items.total_cents) AS revenue_cents')
++            ->join('sales', 'sales.id', '=', 'sale_items.sale_id')
++            ->where('sales.status', SaleStatus::Completed->value)
++            ->whereBetween('sales.completed_at', [$start, $end])
++            ->groupBy('sale_items.product_id', 'sale_items.product_name')
++            ->orderByDesc('quantity')
++            ->orderBy('sale_items.product_name')
++            ->get()
++            ->map(static fn (SaleItem $item): array => [
++                'product_id' => (int) $item->product_id,
++                'product_name' => (string) $item->product_name,
++                'quantity' => (int) $item->getAttribute('quantity'),
++                'revenue_cents' => (int) $item->getAttribute('revenue_cents'),
++            ])
++            ->values()
++            ->all();
++
++        return [
++            'date' => $date,
++            'sales_count' => $salesCount,
++            'revenue_cents' => $revenueCents,
++            'free_sales_count' => $freeSalesCount,
++            'products' => $products,
++        ];
++    }
++}
+diff --git a/app/Modules/Reporting/README.md b/app/Modules/Reporting/README.md
+new file mode 100644
+index 0000000..719ad1a
+--- /dev/null
++++ b/app/Modules/Reporting/README.md
+@@ -0,0 +1,5 @@
++# Reporting
++
++Liest abgeschlossene Verkäufe und Kassenschichten aus und stellt daraus Berichte zusammen.
++
++Der Berichtstag folgt `config('kassensystem.timezone')`. Kassenschichten bleiben davon unabhängig und dürfen über Mitternacht laufen.
+diff --git a/app/Modules/Reporting/Services/CsvExporter.php b/app/Modules/Reporting/Services/CsvExporter.php
+new file mode 100644
+index 0000000..8040f59
+--- /dev/null
++++ b/app/Modules/Reporting/Services/CsvExporter.php
+@@ -0,0 +1,38 @@
++<?php
++
++namespace App\Modules\Reporting\Services;
++
++use RuntimeException;
++
++final class CsvExporter
++{
++    /**
++     * @param list<string> $headers
++     * @param iterable<array<int, scalar|null>> $rows
++     */
++    public function export(array $headers, iterable $rows): string
++    {
++        $stream = fopen('php://temp', 'w+');
++
++        if ($stream === false) {
++            throw new RuntimeException('Unable to create CSV stream.');
++        }
++
++        fwrite($stream, "\xEF\xBB\xBF");
++        fputcsv($stream, $headers, ';', '"', '\\');
++
++        foreach ($rows as $row) {
++            fputcsv($stream, $row, ';', '"', '\\');
++        }
++
++        rewind($stream);
++        $contents = stream_get_contents($stream);
++        fclose($stream);
++
++        if ($contents === false) {
++            throw new RuntimeException('Unable to read CSV stream.');
++        }
++
++        return $contents;
++    }
++}
+diff --git a/app/Modules/Reporting/module.json b/app/Modules/Reporting/module.json
+new file mode 100644
+index 0000000..295fc79
+--- /dev/null
++++ b/app/Modules/Reporting/module.json
+@@ -0,0 +1,6 @@
++{
++    "name": "Reporting",
++    "description": "Umsatz-, Produkt- und Kassenschichtauswertungen",
++    "depends_on": ["Sales", "Catalog", "CashRegister", "Identity"],
++    "exports": []
++}
+diff --git a/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php b/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php
+new file mode 100644
+index 0000000..c3de9bf
+--- /dev/null
++++ b/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php
+@@ -0,0 +1,71 @@
++<?php
++
++namespace App\Modules\Settings\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Identity\Models\User;
++use App\Modules\Settings\Models\SystemSetting;
++use Illuminate\Support\Facades\DB;
++use InvalidArgumentException;
++
++final class UpdateSystemSettingsAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(
++        User $actor,
++        string $cafeteriaName,
++        ?string $logoPath = null,
++        bool $posShowShortNames = true,
++    ): SystemSetting {
++        $cafeteriaName = trim($cafeteriaName);
++        $logoPath = $logoPath !== null ? trim($logoPath) : null;
++
++        if ($cafeteriaName === '') {
++            throw new InvalidArgumentException('Cafeteria name must not be empty.');
++        }
++
++        if ($logoPath === '') {
++            $logoPath = null;
++        }
++
++        return DB::transaction(function () use ($actor, $cafeteriaName, $logoPath, $posShowShortNames): SystemSetting {
++            $settings = SystemSetting::query()->lockForUpdate()->find(1);
++            $before = $settings?->only([
++                'cafeteria_name',
++                'logo_path',
++                'pos_show_short_names',
++            ]) ?? [];
++
++            if ($settings === null) {
++                $settings = new SystemSetting();
++                $settings->id = 1;
++            }
++
++            $settings->fill([
++                'cafeteria_name' => $cafeteriaName,
++                'logo_path' => $logoPath,
++                'pos_show_short_names' => $posShowShortNames,
++                'updated_by_user_id' => $actor->id,
++            ]);
++            $settings->save();
++
++            $this->audit->execute(
++                eventKey: 'settings.updated',
++                actorUserId: $actor->id,
++                actorUsername: $actor->username,
++                actorDisplayName: $actor->auditDisplayName(),
++                subjectType: SystemSetting::class,
++                subjectId: $settings->id,
++                before: $before,
++                after: $settings->only([
++                    'cafeteria_name',
++                    'logo_path',
++                    'pos_show_short_names',
++                ]),
++            );
++
++            return $settings->refresh();
++        });
++    }
++}
+diff --git a/app/Modules/Settings/Models/SystemSetting.php b/app/Modules/Settings/Models/SystemSetting.php
+new file mode 100644
+index 0000000..5227766
+--- /dev/null
++++ b/app/Modules/Settings/Models/SystemSetting.php
+@@ -0,0 +1,24 @@
++<?php
++
++namespace App\Modules\Settings\Models;
++
++use App\Modules\Identity\Models\User;
++use Illuminate\Database\Eloquent\Model;
++use Illuminate\Database\Eloquent\Relations\BelongsTo;
++
++final class SystemSetting extends Model
++{
++    protected $guarded = [];
++
++    protected function casts(): array
++    {
++        return [
++            'pos_show_short_names' => 'boolean',
++        ];
++    }
++
++    public function updatedBy(): BelongsTo
++    {
++        return $this->belongsTo(User::class, 'updated_by_user_id');
++    }
++}
+diff --git a/app/Modules/Settings/Queries/GetSystemSettingsQuery.php b/app/Modules/Settings/Queries/GetSystemSettingsQuery.php
+new file mode 100644
+index 0000000..d0fd68c
+--- /dev/null
++++ b/app/Modules/Settings/Queries/GetSystemSettingsQuery.php
+@@ -0,0 +1,13 @@
++<?php
++
++namespace App\Modules\Settings\Queries;
++
++use App\Modules\Settings\Models\SystemSetting;
++
++final class GetSystemSettingsQuery
++{
++    public function execute(): ?SystemSetting
++    {
++        return SystemSetting::query()->find(1);
++    }
++}
+diff --git a/app/Modules/Settings/README.md b/app/Modules/Settings/README.md
+new file mode 100644
+index 0000000..e73da22
+--- /dev/null
++++ b/app/Modules/Settings/README.md
+@@ -0,0 +1,5 @@
++# Settings
++
++Verwaltet die veränderlichen Anwendungseinstellungen des Kassensystems.
++
++EUR und die Zeitzone `Europe/Berlin` bleiben in v1 technische Konfiguration in `config/kassensystem.php` und werden nicht über die normale Administrationsoberfläche geändert.
+diff --git a/app/Modules/Settings/database/migrations/2026_09_20_100400_create_system_settings_table.php b/app/Modules/Settings/database/migrations/2026_09_20_100400_create_system_settings_table.php
+new file mode 100644
+index 0000000..fa0f747
+--- /dev/null
++++ b/app/Modules/Settings/database/migrations/2026_09_20_100400_create_system_settings_table.php
+@@ -0,0 +1,25 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::create('system_settings', function (Blueprint $table) {
++            $table->id();
++            $table->string('cafeteria_name', 160);
++            $table->string('logo_path')->nullable();
++            $table->boolean('pos_show_short_names')->default(true);
++            $table->foreignId('updated_by_user_id')->nullable()->constrained('users')->nullOnDelete();
++            $table->timestamps();
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::dropIfExists('system_settings');
++    }
++};
+diff --git a/app/Modules/Settings/module.json b/app/Modules/Settings/module.json
+new file mode 100644
+index 0000000..031bb4f
+--- /dev/null
++++ b/app/Modules/Settings/module.json
+@@ -0,0 +1,6 @@
++{
++    "name": "Settings",
++    "description": "Anwendungsweite Einstellungen des Kassensystems",
++    "depends_on": ["Identity", "Audit"],
++    "exports": []
++}
+diff --git a/tests/Feature/Reporting/ReportingTest.php b/tests/Feature/Reporting/ReportingTest.php
+new file mode 100644
+index 0000000..8ae437d
+--- /dev/null
++++ b/tests/Feature/Reporting/ReportingTest.php
+@@ -0,0 +1,90 @@
++<?php
++
++use App\Modules\CashRegister\Actions\CloseCashSessionAction;
++use App\Modules\CashRegister\Actions\OpenCashSessionAction;
++use App\Modules\CashRegister\Actions\StartCashSessionClosingAction;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Catalog\Actions\CreateCategoryAction;
++use App\Modules\Catalog\Actions\CreateProductAction;
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Modules\Reporting\Queries\GetCashSessionReportQuery;
++use App\Modules\Reporting\Queries\GetDailySummaryQuery;
++use App\Modules\Reporting\Services\CsvExporter;
++use App\Modules\Sales\Actions\AddProductToSaleAction;
++use App\Modules\Sales\Actions\CompleteCashSaleAction;
++use App\Modules\Sales\Actions\StartSaleAction;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++use Illuminate\Support\Carbon;
++
++uses(RefreshDatabase::class);
++
++afterEach(function () {
++    Carbon::setTestNow();
++});
++
++it('builds a daily revenue and product summary using the configured local day', function () {
++    Carbon::setTestNow('2026-09-20 12:00:00');
++
++    $cashier = app(CreateUserAction::class)->execute('cashier', '123456', 'Casey', 'Cashier');
++    $register = Register::query()->create([
++        'code' => 'register-1',
++        'name' => 'Kasse 1',
++        'active' => true,
++    ]);
++    $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 1000);
++    $category = app(CreateCategoryAction::class)->execute('Snacks');
++    $paid = app(CreateProductAction::class)->execute($category, 'Brezel', 'Brezel', 100);
++    $free = app(CreateProductAction::class)->execute($category, 'Wasser gratis', 'Wasser', 0);
++
++    $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
++    $sale = app(AddProductToSaleAction::class)->execute($sale, $paid);
++    $sale = app(AddProductToSaleAction::class)->execute($sale, $paid);
++    app(CompleteCashSaleAction::class)->execute($sale, 500);
++
++    $freeSale = app(StartSaleAction::class)->execute($register, $session, $cashier);
++    $freeSale = app(AddProductToSaleAction::class)->execute($freeSale, $free);
++    app(CompleteCashSaleAction::class)->execute($freeSale, 0);
++
++    $summary = app(GetDailySummaryQuery::class)->execute('2026-09-20');
++
++    expect($summary['sales_count'])->toBe(2)
++        ->and($summary['revenue_cents'])->toBe(200)
++        ->and($summary['free_sales_count'])->toBe(1)
++        ->and($summary['products'])->toHaveCount(2)
++        ->and($summary['products'][0]['product_name'])->toBe('Brezel')
++        ->and($summary['products'][0]['quantity'])->toBe(2)
++        ->and($summary['products'][0]['revenue_cents'])->toBe(200);
++});
++
++it('returns cash sessions by their actual closing day', function () {
++    Carbon::setTestNow('2026-09-20 23:50:00');
++
++    $cashier = app(CreateUserAction::class)->execute('cashier', '123456', 'Casey', 'Cashier');
++    $register = Register::query()->create([
++        'code' => 'register-1',
++        'name' => 'Kasse 1',
++        'active' => true,
++    ]);
++    $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 1000);
++
++    Carbon::setTestNow('2026-09-21 00:10:00');
++    $session = app(StartCashSessionClosingAction::class)->execute($session, $cashier);
++    app(CloseCashSessionAction::class)->execute($session, $cashier, 1000);
++
++    expect(app(GetCashSessionReportQuery::class)->execute('2026-09-20'))->toHaveCount(0)
++        ->and(app(GetCashSessionReportQuery::class)->execute('2026-09-21'))->toHaveCount(1);
++});
++
++it('exports semicolon separated utf8 csv data', function () {
++    $csv = app(CsvExporter::class)->export(
++        ['Produkt', 'Menge', 'Umsatz Cent'],
++        [
++            ['Brezel', 2, 200],
++            ['Getränk; groß', 1, 150],
++        ],
++    );
++
++    expect($csv)->toStartWith("\xEF\xBB\xBFProdukt;Menge;")
++        ->and($csv)->toContain('Brezel;2;200')
++        ->and($csv)->toContain('"Getränk; groß";1;150');
++});
+diff --git a/tests/Feature/Settings/SystemSettingsTest.php b/tests/Feature/Settings/SystemSettingsTest.php
+new file mode 100644
+index 0000000..97e7dc1
+--- /dev/null
++++ b/tests/Feature/Settings/SystemSettingsTest.php
+@@ -0,0 +1,48 @@
++<?php
++
++use App\Modules\Audit\Models\AuditEvent;
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Settings\Actions\UpdateSystemSettingsAction;
++use App\Modules\Settings\Queries\GetSystemSettingsQuery;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++
++uses(RefreshDatabase::class);
++
++it('creates and updates the singleton system settings with audit events', function () {
++    $admin = app(CreateUserAction::class)->execute(
++        'admin',
++        '123456',
++        'Ada',
++        'Admin',
++        role: UserRole::Administrator,
++    );
++
++    $first = app(UpdateSystemSettingsAction::class)->execute(
++        $admin,
++        'Schulcafeteria',
++        'logos/cafeteria.png',
++        true,
++    );
++
++    $second = app(UpdateSystemSettingsAction::class)->execute(
++        $admin,
++        'Neue Schulcafeteria',
++        null,
++        false,
++    );
++
++    expect($first->id)->toBe(1)
++        ->and($second->id)->toBe(1)
++        ->and($second->cafeteria_name)->toBe('Neue Schulcafeteria')
++        ->and($second->logo_path)->toBeNull()
++        ->and($second->pos_show_short_names)->toBeFalse()
++        ->and($second->updated_by_user_id)->toBe($admin->id)
++        ->and(app(GetSystemSettingsQuery::class)->execute()?->id)->toBe(1)
++        ->and(AuditEvent::query()->where('event_key', 'settings.updated')->count())->toBe(2);
++});
++
++it('keeps currency and timezone as central technical configuration', function () {
++    expect(config('kassensystem.currency'))->toBe('EUR')
++        ->and(config('kassensystem.timezone'))->toBe('Europe/Berlin');
++});
