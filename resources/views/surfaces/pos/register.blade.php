@@ -8,19 +8,24 @@
 <div class="min-h-screen">
     <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3 lg:px-6">
-            <div class="min-w-0">
-                <p class="truncate text-sm font-semibold text-slate-500">
-                    {{ $settings?->cafeteria_name ?: config('app.name') }}
-                </p>
-                <div class="flex items-center gap-3">
-                    <h1 class="text-xl font-bold">{{ $register->name }}</h1>
-                    @if ($session)
-                        <span class="rounded-full px-2.5 py-1 text-xs font-bold {{ $session->status === CashSessionStatus::Open ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
-                            {{ $session->status === CashSessionStatus::Open ? 'Geöffnet' : 'Abschluss läuft' }}
-                        </span>
-                    @else
-                        <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-700">Geschlossen</span>
-                    @endif
+            <div class="flex min-w-0 items-center gap-3">
+                @if ($settings?->logo_path)
+                    <img src="{{ asset('storage/'.$settings->logo_path) }}" alt="Logo" class="h-10 w-10 shrink-0 rounded-xl object-contain ring-1 ring-slate-200">
+                @endif
+                <div class="min-w-0">
+                    <p class="truncate text-sm font-semibold text-slate-500">
+                        {{ $settings?->cafeteria_name ?: config('app.name') }}
+                    </p>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-xl font-bold">{{ $register->name }}</h1>
+                        @if ($session)
+                            <span class="rounded-full px-2.5 py-1 text-xs font-bold {{ $session->status === CashSessionStatus::Open ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+                                {{ $session->status === CashSessionStatus::Open ? 'Geöffnet' : 'Abschluss läuft' }}
+                            </span>
+                        @else
+                            <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-700">Geschlossen</span>
+                        @endif
+                    </div>
                 </div>
             </div>
 
@@ -261,7 +266,7 @@
                                 @disabled($foreignSale)
                                 class="flex min-h-32 flex-col justify-between rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <span class="font-bold leading-tight">{{ $product->short_name }}</span>
+                                <span class="font-bold leading-tight">{{ ($settings?->pos_show_short_names ?? true) ? $product->short_name : $product->name }}</span>
                                 <span class="mt-4 text-xl font-black">{{ Money::format($product->price_cents, $currency) }}</span>
                             </button>
                         @empty

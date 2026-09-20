@@ -1,0 +1,694 @@
+diff --git a/app/Modules/CashRegister/Actions/RenameRegisterAction.php b/app/Modules/CashRegister/Actions/RenameRegisterAction.php
+new file mode 100644
+index 0000000..d5e807a
+--- /dev/null
++++ b/app/Modules/CashRegister/Actions/RenameRegisterAction.php
+@@ -0,0 +1,57 @@
++<?php
++
++namespace App\Modules\CashRegister\Actions;
++
++use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Identity\Models\User;
++use Illuminate\Support\Facades\DB;
++use InvalidArgumentException;
++
++final class RenameRegisterAction
++{
++    public function __construct(private readonly WriteAuditEventAction $audit) {}
++
++    public function execute(Register $register, string $name, User $actor): Register
++    {
++        $name = trim($name);
++
++        if ($name === '') {
++            throw new InvalidArgumentException('Register name must not be empty.');
++        }
++
++        if (mb_strlen($name) > 120) {
++            throw new InvalidArgumentException('Register name must not be longer than 120 characters.');
++        }
++
++        return DB::transaction(function () use ($register, $name, $actor): Register {
++            $locked = Register::query()->lockForUpdate()->findOrFail($register->id);
++
++            if ($locked->name === $name) {
++                return $locked;
++            }
++
++            $before = [
++                'name' => $locked->name,
++            ];
++
++            $locked->name = $name;
++            $locked->save();
++
++            $this->audit->execute(
++                eventKey: 'register.updated',
++                actorUserId: $actor->id,
++                actorUsername: $actor->username,
++                actorDisplayName: $actor->auditDisplayName(),
++                subjectType: Register::class,
++                subjectId: $locked->id,
++                before: $before,
++                after: [
++                    'name' => $locked->name,
++                ],
++            );
++
++            return $locked->refresh();
++        });
++    }
++}
+diff --git a/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php b/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php
+index c3de9bf..1f542a8 100644
+--- a/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php
++++ b/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php
+@@ -25,6 +25,14 @@ final class UpdateSystemSettingsAction
+             throw new InvalidArgumentException('Cafeteria name must not be empty.');
+         }
+ 
++        if (mb_strlen($cafeteriaName) > 160) {
++            throw new InvalidArgumentException('Cafeteria name must not be longer than 160 characters.');
++        }
++
++        if ($logoPath !== null && mb_strlen($logoPath) > 255) {
++            throw new InvalidArgumentException('Logo path must not be longer than 255 characters.');
++        }
++
+         if ($logoPath === '') {
+             $logoPath = null;
+         }
+diff --git a/app/Modules/Settings/README.md b/app/Modules/Settings/README.md
+index e73da22..4f132a3 100644
+--- a/app/Modules/Settings/README.md
++++ b/app/Modules/Settings/README.md
+@@ -3,3 +3,7 @@ # Settings
+ Verwaltet die veränderlichen Anwendungseinstellungen des Kassensystems.
+ 
+ EUR und die Zeitzone `Europe/Berlin` bleiben in v1 technische Konfiguration in `config/kassensystem.php` und werden nicht über die normale Administrationsoberfläche geändert.
++
++## Administration
++
++Die Surface `administration.settings` bündelt die editierbaren v1-Einstellungen. Cafeteria-Name, Logo und POS-Darstellung werden über `UpdateSystemSettingsAction` gespeichert. Der Kassenname bleibt fachlich im Modul `CashRegister` und wird über `RenameRegisterAction` geändert. Währung und Zeitzone bleiben technische Konfiguration.
+diff --git a/app/Surfaces/Administration/Livewire/SettingsScreen.php b/app/Surfaces/Administration/Livewire/SettingsScreen.php
+new file mode 100644
+index 0000000..db37b97
+--- /dev/null
++++ b/app/Surfaces/Administration/Livewire/SettingsScreen.php
+@@ -0,0 +1,166 @@
++<?php
++
++namespace App\Surfaces\Administration\Livewire;
++
++use App\Modules\CashRegister\Actions\EnsureDefaultRegisterAction;
++use App\Modules\CashRegister\Actions\RenameRegisterAction;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Identity\Models\User;
++use App\Modules\Settings\Actions\UpdateSystemSettingsAction;
++use App\Modules\Settings\Queries\GetSystemSettingsQuery;
++use Illuminate\Contracts\View\View;
++use Illuminate\Support\Facades\Auth;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\Storage;
++use Livewire\Attributes\Layout;
++use Livewire\Component;
++use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
++use Livewire\WithFileUploads;
++use Throwable;
++
++#[Layout('layouts.administration')]
++final class SettingsScreen extends Component
++{
++    use WithFileUploads;
++
++    public string $cafeteriaName = '';
++
++    public string $registerName = '';
++
++    public bool $posShowShortNames = true;
++
++    public ?TemporaryUploadedFile $logoUpload = null;
++
++    public ?string $existingLogoPath = null;
++
++    public bool $removeLogo = false;
++
++    public ?string $notice = null;
++
++    public ?string $screenError = null;
++
++    public function mount(GetSystemSettingsQuery $settingsQuery): void
++    {
++        $settings = $settingsQuery->execute();
++        $register = Register::query()
++            ->where('active', true)
++            ->orderBy('id')
++            ->first();
++
++        $this->cafeteriaName = $settings?->cafeteria_name
++            ?? (string) config('app.name', 'Kassensystem');
++        $this->registerName = $register?->name
++            ?? (string) config('kassensystem.register_name', 'Kasse 1');
++        $this->posShowShortNames = $settings?->pos_show_short_names ?? true;
++        $this->existingLogoPath = $settings?->logo_path;
++    }
++
++    public function save(
++        UpdateSystemSettingsAction $updateSettings,
++        EnsureDefaultRegisterAction $ensureRegister,
++        RenameRegisterAction $renameRegister,
++    ): void {
++        $this->clearMessages();
++
++        $validated = $this->validate([
++            'cafeteriaName' => ['required', 'string', 'max:160'],
++            'registerName' => ['required', 'string', 'max:120'],
++            'posShowShortNames' => ['boolean'],
++            'logoUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
++            'removeLogo' => ['boolean'],
++        ], [
++            'cafeteriaName.required' => 'Bitte einen Namen für die Cafeteria eingeben.',
++            'cafeteriaName.max' => 'Der Cafeteria-Name darf höchstens 160 Zeichen lang sein.',
++            'registerName.required' => 'Bitte einen Namen für die Kasse eingeben.',
++            'registerName.max' => 'Der Kassenname darf höchstens 120 Zeichen lang sein.',
++            'logoUpload.image' => 'Das Logo muss eine Bilddatei sein.',
++            'logoUpload.mimes' => 'Erlaubt sind JPG, PNG und WebP.',
++            'logoUpload.max' => 'Das Logo darf höchstens 2 MB groß sein.',
++        ]);
++
++        $actor = $this->currentUser();
++        $oldLogoPath = $this->existingLogoPath;
++        $newLogoPath = null;
++        $logoPath = $this->removeLogo ? null : $oldLogoPath;
++
++        try {
++            if ($this->logoUpload !== null) {
++                $newLogoPath = $this->logoUpload->store('settings/logos', 'public');
++                $logoPath = $newLogoPath;
++            }
++
++            DB::transaction(function () use (
++                $validated,
++                $actor,
++                $updateSettings,
++                $ensureRegister,
++                $renameRegister,
++                $logoPath,
++            ): void {
++                $updateSettings->execute(
++                    actor: $actor,
++                    cafeteriaName: $validated['cafeteriaName'],
++                    logoPath: $logoPath,
++                    posShowShortNames: $validated['posShowShortNames'],
++                );
++
++                $register = Register::query()
++                    ->where('active', true)
++                    ->orderBy('id')
++                    ->first()
++                    ?? $ensureRegister->execute($actor);
++
++                $renameRegister->execute(
++                    register: $register,
++                    name: $validated['registerName'],
++                    actor: $actor,
++                );
++            });
++
++            if (
++                $oldLogoPath !== null
++                && $oldLogoPath !== $logoPath
++                && str_starts_with($oldLogoPath, 'settings/logos/')
++            ) {
++                Storage::disk('public')->delete($oldLogoPath);
++            }
++
++            $this->existingLogoPath = $logoPath;
++            $this->logoUpload = null;
++            $this->removeLogo = false;
++            $this->notice = 'Einstellungen wurden gespeichert.';
++        } catch (Throwable $e) {
++            if ($newLogoPath !== null) {
++                Storage::disk('public')->delete($newLogoPath);
++            }
++
++            report($e);
++            $this->screenError = 'Die Einstellungen konnten nicht gespeichert werden.';
++        }
++    }
++
++    public function render(GetSystemSettingsQuery $settingsQuery): View
++    {
++        $settings = $settingsQuery->execute()?->load('updatedBy');
++
++        return view('surfaces.administration.settings', [
++            'settings' => $settings,
++            'logoUrl' => $this->existingLogoPath !== null
++                ? Storage::disk('public')->url($this->existingLogoPath)
++                : null,
++            'currency' => (string) config('kassensystem.currency', 'EUR'),
++            'timezone' => (string) config('kassensystem.timezone', 'Europe/Berlin'),
++        ]);
++    }
++
++    private function currentUser(): User
++    {
++        return User::query()->findOrFail(Auth::id());
++    }
++
++    private function clearMessages(): void
++    {
++        $this->notice = null;
++        $this->screenError = null;
++    }
++}
+diff --git a/app/Surfaces/Pos/Livewire/LoginScreen.php b/app/Surfaces/Pos/Livewire/LoginScreen.php
+index 2598401..4c2d78a 100644
+--- a/app/Surfaces/Pos/Livewire/LoginScreen.php
++++ b/app/Surfaces/Pos/Livewire/LoginScreen.php
+@@ -6,6 +6,7 @@ use App\Modules\Identity\Actions\AuthenticateWithPinAction;
+ use App\Modules\Identity\Exceptions\InvalidPin;
+ use App\Modules\Identity\Exceptions\PinRateLimited;
+ use App\Modules\Identity\Exceptions\UserInactive;
++use App\Modules\Settings\Queries\GetSystemSettingsQuery;
+ use Illuminate\Contracts\View\View;
+ use Illuminate\Support\Facades\Auth;
+ use Illuminate\Support\Facades\Session;
+@@ -69,8 +70,10 @@ final class LoginScreen extends Component
+         $this->redirectRoute('pos.register', navigate: true);
+     }
+ 
+-    public function render(): View
++    public function render(GetSystemSettingsQuery $settingsQuery): View
+     {
+-        return view('surfaces.pos.login');
++        return view('surfaces.pos.login', [
++            'settings' => $settingsQuery->execute(),
++        ]);
+     }
+ }
+diff --git a/docs/KASSENSYSTEM_V1.md b/docs/KASSENSYSTEM_V1.md
+index 2422627..52bd819 100644
+--- a/docs/KASSENSYSTEM_V1.md
++++ b/docs/KASSENSYSTEM_V1.md
+@@ -44,3 +44,7 @@ ## POS-Kassenführung
+ - Erfassung des gezählten Bargeldbestands,
+ - Pflichtkommentar bei Kassendifferenz,
+ - unveränderlicher abgeschlossener Kassenschicht-Datensatz.
++
++### Systemeinstellungen
++
++Die Administration stellt eine Einstellungsseite für Cafeteria-/Systemname, Kassenname, optionales Logo und die Produktkachel-Darstellung bereit. Währung (`EUR`) und Zeitzone (`Europe/Berlin`) bleiben technische Konfiguration. Änderungen werden auditierbar gespeichert und direkt im POS verwendet.
+diff --git a/resources/navigation/administration.json b/resources/navigation/administration.json
+index eed9dfb..d974e53 100644
+--- a/resources/navigation/administration.json
++++ b/resources/navigation/administration.json
+@@ -3,6 +3,7 @@
+         {"label": "Übersicht", "route": "administration.dashboard", "permission": null},
+         {"label": "Katalog", "route": "administration.catalog", "permission": null},
+         {"label": "Kassierer", "route": "administration.cashiers", "permission": null},
+-        {"label": "Berichte", "route": "administration.reporting", "permission": null}
++        {"label": "Berichte", "route": "administration.reporting", "permission": null},
++        {"label": "Einstellungen", "route": "administration.settings", "permission": null}
+     ]
+ }
+diff --git a/resources/pages/administration/settings/page.json b/resources/pages/administration/settings/page.json
+new file mode 100644
+index 0000000..7d3674b
+--- /dev/null
++++ b/resources/pages/administration/settings/page.json
+@@ -0,0 +1,13 @@
++{
++    "name": "settings",
++    "surface": "administration",
++    "uri": "/settings",
++    "route_name": "administration.settings",
++    "permission": null,
++    "template": null,
++    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "handler": {
++        "type": "livewire",
++        "target": "App\\Surfaces\\Administration\\Livewire\\SettingsScreen"
++    }
++}
+diff --git a/resources/views/layouts/administration.blade.php b/resources/views/layouts/administration.blade.php
+index 7410b6f..1ee20fb 100644
+--- a/resources/views/layouts/administration.blade.php
++++ b/resources/views/layouts/administration.blade.php
+@@ -16,6 +16,7 @@
+             <a href="{{ route('administration.catalog') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Katalog</a>
+             <a href="{{ route('administration.cashiers') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Kassierer</a>
+             <a href="{{ route('administration.reporting') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Berichte</a>
++            <a href="{{ route('administration.settings') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Einstellungen</a>
+             <a href="{{ route('pos.register') }}" wire:navigate class="rounded-xl border border-slate-300 px-3 py-2">Zur Kasse</a>
+         </nav>
+     </div>
+diff --git a/resources/views/surfaces/administration/settings.blade.php b/resources/views/surfaces/administration/settings.blade.php
+new file mode 100644
+index 0000000..f7795dc
+--- /dev/null
++++ b/resources/views/surfaces/administration/settings.blade.php
+@@ -0,0 +1,143 @@
++<main class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
++    <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
++        <div>
++            <p class="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">Administration</p>
++            <h2 class="mt-1 text-3xl font-black">Systemeinstellungen</h2>
++            <p class="mt-2 max-w-2xl text-sm text-slate-600">
++                Diese Werte steuern die sichtbare Bezeichnung der Cafeteria, den Kassenplatz und die Darstellung im POS.
++            </p>
++        </div>
++    </div>
++
++    @if ($notice)
++        <div class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-bold text-emerald-900">
++            {{ $notice }}
++        </div>
++    @endif
++
++    @if ($screenError)
++        <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 font-bold text-red-900">
++            {{ $screenError }}
++        </div>
++    @endif
++
++    <form wire:submit="save" class="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
++        <div class="space-y-6">
++            <section class="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
++                <h3 class="text-lg font-black">Bezeichnungen</h3>
++                <p class="mt-1 text-sm text-slate-500">Die Änderungen werden direkt in der Kassenoberfläche verwendet.</p>
++
++                <div class="mt-5 grid gap-5 sm:grid-cols-2">
++                    <div>
++                        <label for="cafeteriaName" class="mb-2 block text-sm font-bold">Cafeteria-/Systemname</label>
++                        <input
++                            id="cafeteriaName"
++                            wire:model="cafeteriaName"
++                            maxlength="160"
++                            class="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
++                        >
++                        @error('cafeteriaName')<p class="mt-2 text-sm font-semibold text-red-700">{{ $message }}</p>@enderror
++                    </div>
++
++                    <div>
++                        <label for="registerName" class="mb-2 block text-sm font-bold">Kassenname</label>
++                        <input
++                            id="registerName"
++                            wire:model="registerName"
++                            maxlength="120"
++                            class="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
++                        >
++                        @error('registerName')<p class="mt-2 text-sm font-semibold text-red-700">{{ $message }}</p>@enderror
++                    </div>
++                </div>
++            </section>
++
++            <section class="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
++                <h3 class="text-lg font-black">POS-Darstellung</h3>
++                <label class="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-slate-50 p-4">
++                    <input wire:model="posShowShortNames" type="checkbox" class="mt-1 h-5 w-5 rounded border-slate-300">
++                    <span>
++                        <span class="block font-bold">Kurznamen auf Produktkacheln anzeigen</span>
++                        <span class="mt-1 block text-sm text-slate-600">
++                            Aktiv: z. B. „Schorle“. Deaktiviert: der vollständige Produktname wird angezeigt.
++                        </span>
++                    </span>
++                </label>
++            </section>
++
++            <section class="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
++                <h3 class="text-lg font-black">Logo</h3>
++                <p class="mt-1 text-sm text-slate-500">Optional. JPG, PNG oder WebP, maximal 2 MB.</p>
++
++                @if ($logoUrl && ! $removeLogo)
++                    <div class="mt-5 flex items-center gap-4 rounded-2xl border border-slate-200 p-4">
++                        <img src="{{ $logoUrl }}" alt="Aktuelles Logo" class="h-20 w-20 rounded-2xl object-contain ring-1 ring-slate-200">
++                        <div class="min-w-0">
++                            <p class="font-bold">Aktuelles Logo</p>
++                            <p class="mt-1 truncate text-xs text-slate-500">{{ $existingLogoPath }}</p>
++                        </div>
++                    </div>
++                @endif
++
++                <div class="mt-5">
++                    <input
++                        wire:model="logoUpload"
++                        type="file"
++                        accept="image/jpeg,image/png,image/webp"
++                        class="block w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm"
++                    >
++                    @error('logoUpload')<p class="mt-2 text-sm font-semibold text-red-700">{{ $message }}</p>@enderror
++                </div>
++
++                @if ($existingLogoPath)
++                    <label class="mt-4 flex items-center gap-3 text-sm font-semibold">
++                        <input wire:model="removeLogo" type="checkbox" class="h-4 w-4 rounded border-slate-300">
++                        Vorhandenes Logo entfernen
++                    </label>
++                @endif
++            </section>
++        </div>
++
++        <aside class="space-y-6">
++            <section class="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
++                <h3 class="font-black">Technische Vorgaben</h3>
++                <dl class="mt-4 space-y-4 text-sm">
++                    <div>
++                        <dt class="font-semibold text-slate-500">Währung</dt>
++                        <dd class="mt-1 text-lg font-black">{{ $currency }}</dd>
++                    </div>
++                    <div>
++                        <dt class="font-semibold text-slate-500">Zeitzone</dt>
++                        <dd class="mt-1 font-black">{{ $timezone }}</dd>
++                    </div>
++                </dl>
++                <p class="mt-4 text-xs leading-5 text-slate-500">
++                    Diese Werte bleiben bewusst in der technischen Konfiguration und können hier nicht geändert werden.
++                </p>
++            </section>
++
++            <section class="rounded-3xl bg-slate-950 p-6 text-white">
++                <h3 class="font-black">Speichern</h3>
++                <p class="mt-2 text-sm text-slate-300">Änderungen werden protokolliert und sind nach dem Speichern direkt im POS sichtbar.</p>
++                <button
++                    type="submit"
++                    wire:loading.attr="disabled"
++                    class="mt-5 w-full rounded-2xl bg-white px-4 py-3 font-black text-slate-950 disabled:cursor-wait disabled:opacity-60"
++                >
++                    <span wire:loading.remove wire:target="save">Einstellungen speichern</span>
++                    <span wire:loading wire:target="save">Speichert …</span>
++                </button>
++            </section>
++
++            @if ($settings)
++                <section class="rounded-3xl bg-white p-6 text-sm ring-1 ring-slate-200">
++                    <p class="font-bold text-slate-500">Zuletzt geändert</p>
++                    <p class="mt-2 font-black">{{ $settings->updated_at?->format('d.m.Y H:i') }}</p>
++                    @if ($settings->updatedBy)
++                        <p class="mt-1 text-slate-600">{{ $settings->updatedBy->auditDisplayName() }}</p>
++                    @endif
++                </section>
++            @endif
++        </aside>
++    </form>
++</main>
+diff --git a/resources/views/surfaces/pos/login.blade.php b/resources/views/surfaces/pos/login.blade.php
+index a626b68..ac35018 100644
+--- a/resources/views/surfaces/pos/login.blade.php
++++ b/resources/views/surfaces/pos/login.blade.php
+@@ -1,7 +1,10 @@
+ <div class="flex min-h-screen items-center justify-center px-4 py-10">
+     <div class="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl shadow-slate-200/70 ring-1 ring-slate-200">
+         <div class="mb-8">
+-            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Kassensystem</p>
++            @if ($settings?->logo_path)
++                <img src="{{ asset('storage/'.$settings->logo_path) }}" alt="Logo" class="mb-5 h-16 w-16 rounded-2xl object-contain ring-1 ring-slate-200">
++            @endif
++            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{{ $settings?->cafeteria_name ?: 'Kassensystem' }}</p>
+             <h1 class="mt-2 text-3xl font-bold tracking-tight">Anmelden</h1>
+             <p class="mt-2 text-sm text-slate-600">Mit Benutzername und 6-stelliger PIN anmelden.</p>
+         </div>
+diff --git a/resources/views/surfaces/pos/register.blade.php b/resources/views/surfaces/pos/register.blade.php
+index 0092eb7..0760e0c 100644
+--- a/resources/views/surfaces/pos/register.blade.php
++++ b/resources/views/surfaces/pos/register.blade.php
+@@ -8,19 +8,24 @@
+ <div class="min-h-screen">
+     <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+         <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3 lg:px-6">
+-            <div class="min-w-0">
+-                <p class="truncate text-sm font-semibold text-slate-500">
+-                    {{ $settings?->cafeteria_name ?: config('app.name') }}
+-                </p>
+-                <div class="flex items-center gap-3">
+-                    <h1 class="text-xl font-bold">{{ $register->name }}</h1>
+-                    @if ($session)
+-                        <span class="rounded-full px-2.5 py-1 text-xs font-bold {{ $session->status === CashSessionStatus::Open ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+-                            {{ $session->status === CashSessionStatus::Open ? 'Geöffnet' : 'Abschluss läuft' }}
+-                        </span>
+-                    @else
+-                        <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-700">Geschlossen</span>
+-                    @endif
++            <div class="flex min-w-0 items-center gap-3">
++                @if ($settings?->logo_path)
++                    <img src="{{ asset('storage/'.$settings->logo_path) }}" alt="Logo" class="h-10 w-10 shrink-0 rounded-xl object-contain ring-1 ring-slate-200">
++                @endif
++                <div class="min-w-0">
++                    <p class="truncate text-sm font-semibold text-slate-500">
++                        {{ $settings?->cafeteria_name ?: config('app.name') }}
++                    </p>
++                    <div class="flex items-center gap-3">
++                        <h1 class="text-xl font-bold">{{ $register->name }}</h1>
++                        @if ($session)
++                            <span class="rounded-full px-2.5 py-1 text-xs font-bold {{ $session->status === CashSessionStatus::Open ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
++                                {{ $session->status === CashSessionStatus::Open ? 'Geöffnet' : 'Abschluss läuft' }}
++                            </span>
++                        @else
++                            <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-700">Geschlossen</span>
++                        @endif
++                    </div>
+                 </div>
+             </div>
+ 
+@@ -261,7 +266,7 @@ <h2 class="font-bold">Offener Warenkorb eines anderen Benutzers</h2>
+                                 @disabled($foreignSale)
+                                 class="flex min-h-32 flex-col justify-between rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                             >
+-                                <span class="font-bold leading-tight">{{ $product->short_name }}</span>
++                                <span class="font-bold leading-tight">{{ ($settings?->pos_show_short_names ?? true) ? $product->short_name : $product->name }}</span>
+                                 <span class="mt-4 text-xl font-black">{{ Money::format($product->price_cents, $currency) }}</span>
+                             </button>
+                         @empty
+diff --git a/tests/Feature/Administration/SettingsAdministrationTest.php b/tests/Feature/Administration/SettingsAdministrationTest.php
+new file mode 100644
+index 0000000..3206e52
+--- /dev/null
++++ b/tests/Feature/Administration/SettingsAdministrationTest.php
+@@ -0,0 +1,125 @@
++<?php
++
++use App\Modules\Audit\Models\AuditEvent;
++use App\Modules\CashRegister\Models\Register;
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Settings\Actions\UpdateSystemSettingsAction;
++use App\Modules\Settings\Models\SystemSetting;
++use App\Surfaces\Administration\Livewire\SettingsScreen;
++use App\Surfaces\Pos\Livewire\LoginScreen;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++use Illuminate\Support\Facades\Auth;
++use Illuminate\Support\Facades\Route;
++use Illuminate\Support\Facades\Storage;
++use Livewire\Livewire;
++
++uses(RefreshDatabase::class);
++
++it('protects the settings route and allows administration roles', function () {
++    expect(Route::has('administration.settings'))->toBeTrue();
++
++    $this->get(route('administration.settings'))->assertRedirect(route('login'));
++
++    $cashier = app(CreateUserAction::class)->execute(
++        'cashier-settings',
++        '123456',
++        'Casey',
++        'Cashier',
++    );
++    $this->actingAs($cashier)->get(route('administration.settings'))->assertForbidden();
++
++    $manager = app(CreateUserAction::class)->execute(
++        'manager-settings',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $this->actingAs($manager)->get(route('administration.settings'))->assertOk();
++});
++
++it('saves visible system and register settings with audit events', function () {
++    $manager = app(CreateUserAction::class)->execute(
++        'manager-settings-save',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $this->actingAs($manager);
++
++    Livewire::test(SettingsScreen::class)
++        ->set('cafeteriaName', 'Schulcafeteria Nord')
++        ->set('registerName', 'Hauptkasse')
++        ->set('posShowShortNames', false)
++        ->call('save')
++        ->assertHasNoErrors()
++        ->assertSet('notice', 'Einstellungen wurden gespeichert.');
++
++    $settings = SystemSetting::query()->findOrFail(1);
++    $register = Register::query()->where('active', true)->firstOrFail();
++
++    expect($settings->cafeteria_name)->toBe('Schulcafeteria Nord')
++        ->and($settings->pos_show_short_names)->toBeFalse()
++        ->and($register->name)->toBe('Hauptkasse')
++        ->and(AuditEvent::query()->where('event_key', 'settings.updated')->count())->toBe(1)
++        ->and(AuditEvent::query()->where('event_key', 'register.updated')->count())->toBe(1);
++
++    Auth::logout();
++
++    Livewire::test(LoginScreen::class)
++        ->assertSee('Schulcafeteria Nord');
++});
++
++it('validates required names on the server', function () {
++    $manager = app(CreateUserAction::class)->execute(
++        'manager-settings-validation',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $this->actingAs($manager);
++
++    Livewire::test(SettingsScreen::class)
++        ->set('cafeteriaName', '')
++        ->set('registerName', '')
++        ->call('save')
++        ->assertHasErrors([
++            'cafeteriaName' => 'required',
++            'registerName' => 'required',
++        ]);
++
++    expect(SystemSetting::query()->count())->toBe(0);
++});
++
++it('can remove an application managed logo', function () {
++    Storage::fake('public');
++    Storage::disk('public')->put('settings/logos/old-logo.png', 'logo');
++
++    $manager = app(CreateUserAction::class)->execute(
++        'manager-settings-logo',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++
++    app(UpdateSystemSettingsAction::class)->execute(
++        actor: $manager,
++        cafeteriaName: 'Schulcafeteria',
++        logoPath: 'settings/logos/old-logo.png',
++        posShowShortNames: true,
++    );
++
++    $this->actingAs($manager);
++
++    Livewire::test(SettingsScreen::class)
++        ->set('removeLogo', true)
++        ->call('save')
++        ->assertHasNoErrors();
++
++    expect(SystemSetting::query()->findOrFail(1)->logo_path)->toBeNull();
++    Storage::disk('public')->assertMissing('settings/logos/old-logo.png');
++});

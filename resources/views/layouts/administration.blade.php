@@ -16,6 +16,7 @@
             <a href="{{ route('administration.catalog') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Katalog</a>
             <a href="{{ route('administration.cashiers') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Kassierer</a>
             <a href="{{ route('administration.reporting') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Berichte</a>
+            <a href="{{ route('administration.settings') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Einstellungen</a>
             <a href="{{ route('pos.register') }}" wire:navigate class="rounded-xl border border-slate-300 px-3 py-2">Zur Kasse</a>
         </nav>
     </div>

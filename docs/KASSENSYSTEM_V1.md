@@ -44,3 +44,7 @@ Die POS-Oberfläche unterstützt neben Verkäufen auch die laufende Bargeldführ
 - Erfassung des gezählten Bargeldbestands,
 - Pflichtkommentar bei Kassendifferenz,
 - unveränderlicher abgeschlossener Kassenschicht-Datensatz.
+
+### Systemeinstellungen
+
+Die Administration stellt eine Einstellungsseite für Cafeteria-/Systemname, Kassenname, optionales Logo und die Produktkachel-Darstellung bereit. Währung (`EUR`) und Zeitzone (`Europe/Berlin`) bleiben technische Konfiguration. Änderungen werden auditierbar gespeichert und direkt im POS verwendet.

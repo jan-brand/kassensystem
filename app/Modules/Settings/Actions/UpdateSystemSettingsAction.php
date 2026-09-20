@@ -25,6 +25,14 @@ final class UpdateSystemSettingsAction
             throw new InvalidArgumentException('Cafeteria name must not be empty.');
         }
 
+        if (mb_strlen($cafeteriaName) > 160) {
+            throw new InvalidArgumentException('Cafeteria name must not be longer than 160 characters.');
+        }
+
+        if ($logoPath !== null && mb_strlen($logoPath) > 255) {
+            throw new InvalidArgumentException('Logo path must not be longer than 255 characters.');
+        }
+
         if ($logoPath === '') {
             $logoPath = null;
         }

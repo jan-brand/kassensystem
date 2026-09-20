@@ -1,0 +1,13 @@
+{
+    "name": "settings",
+    "surface": "administration",
+    "uri": "/settings",
+    "route_name": "administration.settings",
+    "permission": null,
+    "template": null,
+    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\SettingsScreen"
+    }
+}

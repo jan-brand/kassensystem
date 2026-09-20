@@ -6,6 +6,7 @@ use App\Modules\Identity\Actions\AuthenticateWithPinAction;
 use App\Modules\Identity\Exceptions\InvalidPin;
 use App\Modules\Identity\Exceptions\PinRateLimited;
 use App\Modules\Identity\Exceptions\UserInactive;
+use App\Modules\Settings\Queries\GetSystemSettingsQuery;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
@@ -69,8 +70,10 @@ final class LoginScreen extends Component
         $this->redirectRoute('pos.register', navigate: true);
     }
 
-    public function render(): View
+    public function render(GetSystemSettingsQuery $settingsQuery): View
     {
-        return view('surfaces.pos.login');
+        return view('surfaces.pos.login', [
+            'settings' => $settingsQuery->execute(),
+        ]);
     }
 }

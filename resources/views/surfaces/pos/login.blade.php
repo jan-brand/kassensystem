@@ -1,7 +1,10 @@
 <div class="flex min-h-screen items-center justify-center px-4 py-10">
     <div class="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl shadow-slate-200/70 ring-1 ring-slate-200">
         <div class="mb-8">
-            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Kassensystem</p>
+            @if ($settings?->logo_path)
+                <img src="{{ asset('storage/'.$settings->logo_path) }}" alt="Logo" class="mb-5 h-16 w-16 rounded-2xl object-contain ring-1 ring-slate-200">
+            @endif
+            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{{ $settings?->cafeteria_name ?: 'Kassensystem' }}</p>
             <h1 class="mt-2 text-3xl font-bold tracking-tight">Anmelden</h1>
             <p class="mt-2 text-sm text-slate-600">Mit Benutzername und 6-stelliger PIN anmelden.</p>
         </div>
