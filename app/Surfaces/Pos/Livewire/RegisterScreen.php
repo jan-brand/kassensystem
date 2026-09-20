@@ -2,12 +2,17 @@
 
 namespace App\Surfaces\Pos\Livewire;
 
+use App\Modules\CashRegister\Actions\CancelCashSessionClosingAction;
+use App\Modules\CashRegister\Actions\CloseCashSessionAction;
 use App\Modules\CashRegister\Actions\EnsureDefaultRegisterAction;
 use App\Modules\CashRegister\Actions\OpenCashSessionAction;
+use App\Modules\CashRegister\Actions\RecordCashDepositAction;
+use App\Modules\CashRegister\Actions\RecordCashWithdrawalAction;
 use App\Modules\CashRegister\Enums\CashSessionStatus;
 use App\Modules\CashRegister\Models\CashSession;
 use App\Modules\CashRegister\Models\Register;
 use App\Modules\CashRegister\Queries\GetActiveCashSessionQuery;
+use App\Modules\CashRegister\Queries\GetCashSessionCashSummaryQuery;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Queries\GetPosCatalogQuery;
 use App\Modules\Identity\Models\User;
@@ -20,6 +25,7 @@ use App\Modules\Sales\Models\SaleItem;
 use App\Modules\Sales\Queries\GetOpenSaleForRegisterQuery;
 use App\Modules\Settings\Queries\GetSystemSettingsQuery;
 use App\Support\Money;
+use App\Surfaces\Pos\Actions\StartRegisterClosingAction;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -44,6 +50,18 @@ final class RegisterScreen extends Component
     public string $receivedAmount = '';
 
     public bool $paymentOpen = false;
+
+    public bool $cashMenuOpen = false;
+
+    public ?string $cashMovementMode = null;
+
+    public string $cashMovementAmount = '';
+
+    public string $cashMovementReason = '';
+
+    public string $closingCountedCash = '';
+
+    public string $closingComment = '';
 
     public ?string $notice = null;
 
@@ -78,6 +96,143 @@ final class RegisterScreen extends Component
 
             $this->openingCash = '0,00';
             $this->notice = 'Kasse wurde geöffnet.';
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
+    public function openCashMenu(): void
+    {
+        $this->clearMessages();
+
+        try {
+            $this->requireOpenCashSession();
+            $this->cashMenuOpen = true;
+            $this->cashMovementMode = null;
+            $this->cashMovementAmount = '';
+            $this->cashMovementReason = '';
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
+    public function closeCashMenu(): void
+    {
+        $this->cashMenuOpen = false;
+        $this->cashMovementMode = null;
+        $this->cashMovementAmount = '';
+        $this->cashMovementReason = '';
+    }
+
+    public function prepareCashMovement(string $mode): void
+    {
+        $this->clearMessages();
+
+        if (! in_array($mode, ['deposit', 'withdrawal'], true)) {
+            $this->screenError = 'Unbekannte Kassenbewegung.';
+
+            return;
+        }
+
+        try {
+            $this->requireOpenCashSession();
+            $this->cashMenuOpen = true;
+            $this->cashMovementMode = $mode;
+            $this->cashMovementAmount = '';
+            $this->cashMovementReason = '';
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
+    public function recordCashMovement(
+        RecordCashDepositAction $deposit,
+        RecordCashWithdrawalAction $withdrawal,
+    ): void {
+        $this->clearMessages();
+
+        try {
+            $session = $this->requireOpenCashSession();
+            $amountCents = Money::parseCents($this->cashMovementAmount);
+            $reason = trim($this->cashMovementReason);
+
+            if ($this->cashMovementMode === 'deposit') {
+                $deposit->execute($session, $this->currentUser(), $amountCents, $reason);
+                $this->notice = 'Einlage wurde erfasst.';
+            } elseif ($this->cashMovementMode === 'withdrawal') {
+                $withdrawal->execute($session, $this->currentUser(), $amountCents, $reason);
+                $this->notice = 'Entnahme wurde erfasst.';
+            } else {
+                throw new LogicException('Bitte wähle zuerst Einlage oder Entnahme aus.');
+            }
+
+            $this->closeCashMenu();
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
+    public function startCashClosing(StartRegisterClosingAction $startClosing): void
+    {
+        $this->clearMessages();
+
+        try {
+            $startClosing->execute($this->register(), $this->currentUser());
+
+            $this->cashMenuOpen = false;
+            $this->cashMovementMode = null;
+            $this->closingCountedCash = '';
+            $this->closingComment = '';
+            $this->notice = 'Kassenabschluss wurde gestartet.';
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
+    public function cancelCashClosing(CancelCashSessionClosingAction $cancelClosing): void
+    {
+        $this->clearMessages();
+
+        try {
+            $session = $this->activeCashSession();
+
+            if ($session === null) {
+                throw new LogicException('Es gibt keine aktive Kassenschicht.');
+            }
+
+            $cancelClosing->execute($session, $this->currentUser());
+            $this->closingCountedCash = '';
+            $this->closingComment = '';
+            $this->notice = 'Kassenabschluss wurde abgebrochen.';
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
+    public function closeCashSession(CloseCashSessionAction $closeSession): void
+    {
+        $this->clearMessages();
+
+        try {
+            $session = $this->activeCashSession();
+
+            if ($session === null) {
+                throw new LogicException('Es gibt keine aktive Kassenschicht.');
+            }
+
+            $closed = $closeSession->execute(
+                session: $session,
+                user: $this->currentUser(),
+                countedCashCents: Money::parseCents($this->closingCountedCash),
+                comment: $this->closingComment,
+            );
+
+            $difference = (int) ($closed->closing_difference_cents ?? 0);
+            $this->closingCountedCash = '';
+            $this->closingComment = '';
+            $this->notice = $difference === 0
+                ? 'Kasse wurde ohne Differenz abgeschlossen.'
+                : 'Kasse wurde mit dokumentierter Differenz abgeschlossen.';
         } catch (Throwable $exception) {
             $this->screenError = $this->friendlyMessage($exception);
         }
@@ -210,6 +365,18 @@ final class RegisterScreen extends Component
         $catalog = app(GetPosCatalogQuery::class)->execute();
         $settings = app(GetSystemSettingsQuery::class)->execute();
         $user = $this->currentUser();
+        $cashSummary = $session !== null
+            ? app(GetCashSessionCashSummaryQuery::class)->execute($session)
+            : null;
+        $recentMovements = $session !== null
+            ? $session->movements()->with('user')->latest('id')->limit(8)->get()
+            : collect();
+        $closingCountedCents = $session?->status === CashSessionStatus::Closing
+            ? $this->parseOptionalMoney($this->closingCountedCash)
+            : null;
+        $closingDifferenceCents = $closingCountedCents !== null && $cashSummary !== null
+            ? $closingCountedCents - $cashSummary['expected_cash_cents']
+            : null;
 
         $products = $catalog
             ->when(
@@ -238,6 +405,9 @@ final class RegisterScreen extends Component
             'products' => $products,
             'user' => $user,
             'settings' => $settings,
+            'cashSummary' => $cashSummary,
+            'recentMovements' => $recentMovements,
+            'closingDifferenceCents' => $closingDifferenceCents,
             'foreignSale' => $sale !== null && $sale->cashier_id !== $user->id,
             'currency' => (string) config('kassensystem.currency', 'EUR'),
         ]);
@@ -292,6 +462,24 @@ final class RegisterScreen extends Component
         }
 
         return $session;
+    }
+
+    private function activeCashSession(): ?CashSession
+    {
+        return app(GetActiveCashSessionQuery::class)->execute($this->register());
+    }
+
+    private function parseOptionalMoney(string $value): ?int
+    {
+        if (trim($value) === '') {
+            return null;
+        }
+
+        try {
+            return Money::parseCents($value);
+        } catch (InvalidArgumentException) {
+            return null;
+        }
     }
 
     private function saleForCurrentCashier(): ?Sale

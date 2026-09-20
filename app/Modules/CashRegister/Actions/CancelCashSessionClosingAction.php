@@ -6,6 +6,7 @@ use App\Modules\Audit\Actions\WriteAuditEventAction;
 use App\Modules\CashRegister\Enums\CashSessionStatus;
 use App\Modules\CashRegister\Models\CashSession;
 use App\Modules\Identity\Models\User;
+use Illuminate\Support\Facades\DB;
 use LogicException;
 
 final class CancelCashSessionClosingAction
@@ -14,24 +15,28 @@ final class CancelCashSessionClosingAction
 
     public function execute(CashSession $session, User $user): CashSession
     {
-        if ($session->status !== CashSessionStatus::Closing) {
-            throw new LogicException('Cash session is not in closing state.');
-        }
+        return DB::transaction(function () use ($session, $user): CashSession {
+            $locked = CashSession::query()->lockForUpdate()->findOrFail($session->id);
 
-        $session->update([
-            'status' => CashSessionStatus::Open,
-            'closing_started_at' => null,
-        ]);
+            if ($locked->status !== CashSessionStatus::Closing) {
+                throw new LogicException('Cash session is not in closing state.');
+            }
 
-        $this->audit->execute(
-            eventKey: 'cash_session.closing_cancelled',
-            actorUserId: $user->id,
-            actorUsername: $user->username,
-            actorDisplayName: $user->auditDisplayName(),
-            subjectType: CashSession::class,
-            subjectId: $session->id,
-        );
+            $locked->update([
+                'status' => CashSessionStatus::Open,
+                'closing_started_at' => null,
+            ]);
 
-        return $session->refresh();
+            $this->audit->execute(
+                eventKey: 'cash_session.closing_cancelled',
+                actorUserId: $user->id,
+                actorUsername: $user->username,
+                actorDisplayName: $user->auditDisplayName(),
+                subjectType: CashSession::class,
+                subjectId: $locked->id,
+            );
+
+            return $locked->refresh();
+        });
     }
 }
