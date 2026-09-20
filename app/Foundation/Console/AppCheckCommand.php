@@ -39,9 +39,14 @@ final class AppCheckCommand extends Command
             if (! in_array($page['surface'], $surfaceNames, true)) {
                 $problems[] = "Page {$page['name']} references missing surface {$page['surface']}.";
             }
-            $view = $page['handler']['target'] ?? '';
-            if (($page['handler']['type'] ?? 'view') === 'view' && ! is_file(resource_path('views/'.str_replace('.', '/', $view).'.blade.php'))) {
-                $problems[] = "Page {$page['name']} references missing view {$view}.";
+            $handlerType = $page['handler']['type'] ?? 'view';
+            $handlerTarget = $page['handler']['target'] ?? '';
+            if ($handlerType === 'view' && ! is_file(resource_path('views/'.str_replace('.', '/', $handlerTarget).'.blade.php'))) {
+                $problems[] = "Page {$page['name']} references missing view {$handlerTarget}.";
+            } elseif ($handlerType === 'livewire' && (! class_exists($handlerTarget) || ! is_subclass_of($handlerTarget, \Livewire\Component::class))) {
+                $problems[] = "Page {$page['name']} references invalid Livewire component {$handlerTarget}.";
+            } elseif (! in_array($handlerType, ['view', 'livewire'], true)) {
+                $problems[] = "Page {$page['name']} uses unsupported handler type {$handlerType}.";
             }
             if (($page['template'] ?? null) && ! in_array($page['template'], $templates, true)) {
                 $problems[] = "Page {$page['name']} references missing design template {$page['template']}.";

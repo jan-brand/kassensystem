@@ -1,0 +1,9 @@
+{
+    "items": [
+        {
+            "label": "Kasse",
+            "route": "pos.register",
+            "permission": null
+        }
+    ]
+}

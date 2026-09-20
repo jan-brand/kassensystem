@@ -1,0 +1,12 @@
+{
+    "name": "login",
+    "surface": "pos",
+    "uri": "/login",
+    "route_name": "login",
+    "permission": null,
+    "template": null,
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Pos\\Livewire\\LoginScreen"
+    }
+}

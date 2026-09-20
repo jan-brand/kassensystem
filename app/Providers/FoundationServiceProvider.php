@@ -56,6 +56,15 @@ final class FoundationServiceProvider extends ServiceProvider
                 $this->loadViewsFrom($views, strtolower($name));
             }
 
+            if ($this->app->runningInConsole()) {
+                foreach (glob($modulePath.'/Console/Commands/*.php') ?: [] as $commandFile) {
+                    $class = 'App\\Modules\\'.$name.'\\Console\\Commands\\'.pathinfo($commandFile, PATHINFO_FILENAME);
+                    if (class_exists($class)) {
+                        $this->commands([$class]);
+                    }
+                }
+            }
+
             $routes = $modulePath.'/routes/web.php';
             if (is_file($routes)) {
                 require $routes;
@@ -82,16 +91,40 @@ final class FoundationServiceProvider extends ServiceProvider
     private function registerManifestPages(ProjectRegistry $registry): void
     {
         $surfaces = [];
-        foreach ($registry->surfaces() as $surface) { $surfaces[$surface['name']] = $surface; }
+        foreach ($registry->surfaces() as $surface) {
+            $surfaces[$surface['name']] = $surface;
+        }
+
         foreach ($registry->pages() as $page) {
-            if (($page['handler']['type'] ?? 'view') !== 'view') { continue; }
             $surface = $surfaces[$page['surface'] ?? ''] ?? [];
-            $route = Route::middleware($surface['middleware'] ?? ['web']);
-            if ($domain = ($surface['domain'] ?? null)) { $route->domain($domain); }
-            if ($prefix = trim((string) ($surface['prefix'] ?? ''), '/')) { $route->prefix($prefix); }
+            $middleware = array_values(array_unique(array_merge(
+                $surface['middleware'] ?? ['web'],
+                $page['middleware'] ?? [],
+            )));
+            $route = Route::middleware($middleware);
+
+            if ($domain = ($surface['domain'] ?? null)) {
+                $route->domain($domain);
+            }
+            if ($prefix = trim((string) ($surface['prefix'] ?? ''), '/')) {
+                $route->prefix($prefix);
+            }
+
             $route->group(function () use ($page): void {
-                Route::view($page['uri'] ?? '/', $page['handler']['target'])
-                    ->name($page['route_name'] ?? $page['name']);
+                $type = $page['handler']['type'] ?? 'view';
+                $target = $page['handler']['target'] ?? '';
+                $uri = $page['uri'] ?? '/';
+                $name = $page['route_name'] ?? $page['name'];
+
+                if ($type === 'view') {
+                    Route::view($uri, $target)->name($name);
+
+                    return;
+                }
+
+                if ($type === 'livewire') {
+                    Route::get($uri, $target)->name($name);
+                }
             });
         }
     }

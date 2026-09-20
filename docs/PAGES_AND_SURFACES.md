@@ -54,3 +54,23 @@ php artisan route:unused
 ```
 
 `route:check` prüft doppelte oder fehlende Route-Namen innerhalb der Page-Manifeste. Laravel-eigene Routen bleiben weiterhin mit `php artisan route:list` sichtbar.
+
+## Dynamische Livewire-Seiten
+
+Neben statischen `view`-Handlern können Page-Manifeste einen `livewire`-Handler verwenden. Der `target` ist dann der vollständig qualifizierte Klassenname einer `Livewire\\Component`. Zusätzlich kann ein Page-Manifest ein eigenes `middleware`-Array definieren; diese Middleware wird mit der Middleware der Surface kombiniert.
+
+Beispiel:
+
+```json
+{
+  "name": "register",
+  "surface": "pos",
+  "uri": "/",
+  "route_name": "pos.register",
+  "middleware": ["auth"],
+  "handler": {
+    "type": "livewire",
+    "target": "App\\Surfaces\\Pos\\Livewire\\RegisterScreen"
+  }
+}
+```

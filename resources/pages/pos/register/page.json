@@ -1,0 +1,15 @@
+{
+    "name": "register",
+    "surface": "pos",
+    "uri": "/",
+    "route_name": "pos.register",
+    "permission": null,
+    "template": null,
+    "middleware": [
+        "auth"
+    ],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Pos\\Livewire\\RegisterScreen"
+    }
+}

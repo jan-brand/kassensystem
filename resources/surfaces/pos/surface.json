@@ -1,0 +1,10 @@
+{
+    "name": "pos",
+    "description": "Tablet-optimierte Kassenoberfläche",
+    "prefix": "pos",
+    "domain": null,
+    "middleware": [
+        "web"
+    ],
+    "layout": "pos"
+}
