@@ -1,0 +1,6 @@
+{
+    "name": "Audit",
+    "description": "Unveränderliche Protokollierung wichtiger Anwendungsvorgänge",
+    "depends_on": [],
+    "exports": []
+}

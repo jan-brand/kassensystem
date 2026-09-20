@@ -16,3 +16,6 @@
 /vendor
 .DS_Store
 Thumbs.db
+/database/*.sqlite
+/database/*.sqlite-shm
+/database/*.sqlite-wal
