@@ -23,6 +23,7 @@ use App\Support\Money;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -195,8 +196,8 @@ final class RegisterScreen extends Component
         }
 
         Auth::logout();
-        request()->session()->invalidate();
-        request()->session()->regenerateToken();
+        Session::invalidate();
+        Session::regenerateToken();
 
         $this->redirectRoute('login', navigate: true);
     }

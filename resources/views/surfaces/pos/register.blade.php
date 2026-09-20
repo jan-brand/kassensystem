@@ -1,5 +1,6 @@
 @php
     use App\Modules\CashRegister\Enums\CashSessionStatus;
+    use App\Modules\Identity\Enums\UserRole;
     use App\Support\Money;
 @endphp
 
@@ -27,6 +28,15 @@
                     <p class="text-sm font-bold">{{ $user->auditDisplayName() }}</p>
                     <p class="text-xs text-slate-500">{{ $user->username }}</p>
                 </div>
+                @if (in_array($user->role, [UserRole::Manager, UserRole::Administrator], true))
+                    <a
+                        href="{{ route('administration.dashboard') }}"
+                        wire:navigate
+                        class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold hover:bg-slate-50"
+                    >
+                        Administration
+                    </a>
+                @endif
                 <button
                     type="button"
                     wire:click="switchUser"

@@ -1,0 +1,8 @@
+{
+    "name": "administration",
+    "description": "Verwaltung des Kassensystems",
+    "prefix": "administration",
+    "domain": null,
+    "middleware": ["web"],
+    "layout": "administration"
+}

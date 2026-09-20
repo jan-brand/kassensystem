@@ -1,0 +1,13 @@
+{
+    "name": "reporting",
+    "surface": "administration",
+    "uri": "/reporting",
+    "route_name": "administration.reporting",
+    "permission": null,
+    "template": null,
+    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\ReportingScreen"
+    }
+}

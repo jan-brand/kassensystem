@@ -1,0 +1,13 @@
+{
+    "name": "catalog",
+    "surface": "administration",
+    "uri": "/catalog",
+    "route_name": "administration.catalog",
+    "permission": null,
+    "template": null,
+    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\CatalogScreen"
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "name": "dashboard",
+    "surface": "administration",
+    "uri": "/",
+    "route_name": "administration.dashboard",
+    "permission": null,
+    "template": null,
+    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\DashboardScreen"
+    }
+}
