@@ -1,0 +1,16 @@
+{
+    "name": "audit",
+    "surface": "administration",
+    "uri": "/audit",
+    "route_name": "administration.audit",
+    "permission": null,
+    "template": null,
+    "middleware": [
+        "auth",
+        "App\\Http\\Middleware\\EnsureAdministratorAccess"
+    ],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\AuditScreen"
+    }
+}

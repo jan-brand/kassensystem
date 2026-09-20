@@ -17,6 +17,9 @@
             <a href="{{ route('administration.cashiers') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Kassierer</a>
             <a href="{{ route('administration.reporting') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Berichte</a>
             <a href="{{ route('administration.settings') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Einstellungen</a>
+            @if(auth()->user()?->role === \App\Modules\Identity\Enums\UserRole::Administrator)
+                <a href="{{ route('administration.audit') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Audit</a>
+            @endif
             <a href="{{ route('pos.register') }}" wire:navigate class="rounded-xl border border-slate-300 px-3 py-2">Zur Kasse</a>
         </nav>
     </div>

@@ -35,7 +35,7 @@
         {
             "id": "V1-002",
             "title": "[FEATURE] Audit-Protokoll-Browser",
-            "status": "open",
+            "status": "closed",
             "priority": "P1",
             "type": "feature",
             "areas": [
@@ -46,7 +46,7 @@
             "body_file": ".github/backlog/02-audit.md",
             "github_number": null,
             "created_at": "2026-09-20",
-            "closed_at": null
+            "closed_at": "2026-09-20"
         },
         {
             "id": "V1-003",

@@ -4,6 +4,7 @@
         {"label": "Katalog", "route": "administration.catalog", "permission": null},
         {"label": "Kassierer", "route": "administration.cashiers", "permission": null},
         {"label": "Berichte", "route": "administration.reporting", "permission": null},
-        {"label": "Einstellungen", "route": "administration.settings", "permission": null}
+        {"label": "Einstellungen", "route": "administration.settings", "permission": null},
+        {"label": "Audit", "route": "administration.audit", "permission": null}
     ]
 }
