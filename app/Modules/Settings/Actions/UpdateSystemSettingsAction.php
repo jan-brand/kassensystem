@@ -1,0 +1,71 @@
+<?php
+
+namespace App\Modules\Settings\Actions;
+
+use App\Modules\Audit\Actions\WriteAuditEventAction;
+use App\Modules\Identity\Models\User;
+use App\Modules\Settings\Models\SystemSetting;
+use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
+
+final class UpdateSystemSettingsAction
+{
+    public function __construct(private readonly WriteAuditEventAction $audit) {}
+
+    public function execute(
+        User $actor,
+        string $cafeteriaName,
+        ?string $logoPath = null,
+        bool $posShowShortNames = true,
+    ): SystemSetting {
+        $cafeteriaName = trim($cafeteriaName);
+        $logoPath = $logoPath !== null ? trim($logoPath) : null;
+
+        if ($cafeteriaName === '') {
+            throw new InvalidArgumentException('Cafeteria name must not be empty.');
+        }
+
+        if ($logoPath === '') {
+            $logoPath = null;
+        }
+
+        return DB::transaction(function () use ($actor, $cafeteriaName, $logoPath, $posShowShortNames): SystemSetting {
+            $settings = SystemSetting::query()->lockForUpdate()->find(1);
+            $before = $settings?->only([
+                'cafeteria_name',
+                'logo_path',
+                'pos_show_short_names',
+            ]) ?? [];
+
+            if ($settings === null) {
+                $settings = new SystemSetting();
+                $settings->id = 1;
+            }
+
+            $settings->fill([
+                'cafeteria_name' => $cafeteriaName,
+                'logo_path' => $logoPath,
+                'pos_show_short_names' => $posShowShortNames,
+                'updated_by_user_id' => $actor->id,
+            ]);
+            $settings->save();
+
+            $this->audit->execute(
+                eventKey: 'settings.updated',
+                actorUserId: $actor->id,
+                actorUsername: $actor->username,
+                actorDisplayName: $actor->auditDisplayName(),
+                subjectType: SystemSetting::class,
+                subjectId: $settings->id,
+                before: $before,
+                after: $settings->only([
+                    'cafeteria_name',
+                    'logo_path',
+                    'pos_show_short_names',
+                ]),
+            );
+
+            return $settings->refresh();
+        });
+    }
+}

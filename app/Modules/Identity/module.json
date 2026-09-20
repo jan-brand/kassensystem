@@ -1,0 +1,6 @@
+{
+    "name": "Identity",
+    "description": "Benutzer, Rollen, PIN-Authentifizierung und Zugriffssteuerung",
+    "depends_on": ["Audit"],
+    "exports": []
+}

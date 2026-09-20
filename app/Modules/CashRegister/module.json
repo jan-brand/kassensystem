@@ -1,0 +1,6 @@
+{
+    "name": "CashRegister",
+    "description": "Kassenplätze, Kassenschichten und Bargeldbewegungen",
+    "depends_on": ["Identity", "Audit"],
+    "exports": []
+}

@@ -1,0 +1,6 @@
+{
+    "name": "Settings",
+    "description": "Anwendungsweite Einstellungen des Kassensystems",
+    "depends_on": ["Identity", "Audit"],
+    "exports": []
+}

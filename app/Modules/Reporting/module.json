@@ -1,0 +1,6 @@
+{
+    "name": "Reporting",
+    "description": "Umsatz-, Produkt- und Kassenschichtauswertungen",
+    "depends_on": ["Sales", "Catalog", "CashRegister", "Identity"],
+    "exports": []
+}

@@ -1,0 +1,82 @@
+<?php
+
+namespace App\Modules\CashRegister\Models;
+
+use App\Modules\CashRegister\Enums\CashMovementType;
+use App\Modules\CashRegister\Enums\CashSessionStatus;
+use App\Modules\Identity\Models\User;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use LogicException;
+
+final class CashSession extends Model
+{
+    protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return [
+            'status' => CashSessionStatus::class,
+            'opening_cash_cents' => 'integer',
+            'cash_sales_cents' => 'integer',
+            'closing_expected_cash_cents' => 'integer',
+            'closing_counted_cash_cents' => 'integer',
+            'closing_difference_cents' => 'integer',
+            'opened_at' => 'datetime',
+            'closing_started_at' => 'datetime',
+            'closed_at' => 'datetime',
+        ];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(static function (CashSession $session): void {
+            if ($session->getRawOriginal('status') === CashSessionStatus::Closed->value) {
+                throw new LogicException('Closed cash sessions are immutable.');
+            }
+        });
+
+        static::deleting(static function (CashSession $session): void {
+            if ($session->status === CashSessionStatus::Closed) {
+                throw new LogicException('Closed cash sessions cannot be deleted.');
+            }
+        });
+    }
+
+    public function register(): BelongsTo
+    {
+        return $this->belongsTo(Register::class);
+    }
+
+    public function openedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'opened_by_user_id');
+    }
+
+    public function closedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by_user_id');
+    }
+
+    public function movements(): HasMany
+    {
+        return $this->hasMany(CashMovement::class);
+    }
+
+    public function expectedCashCents(): int
+    {
+        $deposits = (int) $this->movements()
+            ->where('type', CashMovementType::Deposit->value)
+            ->sum('amount_cents');
+
+        $withdrawals = (int) $this->movements()
+            ->where('type', CashMovementType::Withdrawal->value)
+            ->sum('amount_cents');
+
+        return $this->opening_cash_cents
+            + $this->cash_sales_cents
+            + $deposits
+            - $withdrawals;
+    }
+}

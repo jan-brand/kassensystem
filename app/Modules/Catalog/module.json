@@ -1,0 +1,6 @@
+{
+    "name": "Catalog",
+    "description": "Produkt- und Kategorieverwaltung",
+    "depends_on": ["Identity", "Audit"],
+    "exports": []
+}
