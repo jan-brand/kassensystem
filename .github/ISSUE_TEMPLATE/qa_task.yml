@@ -1,0 +1,58 @@
+name: QA / Testaufgabe
+description: Abnahme, Testfall oder Qualitaetspruefung planen
+title: "[QA] "
+labels:
+  - "type:qa"
+  - "status:triage"
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - Gesamte v1
+        - POS
+        - Administration
+        - Benutzer / Rollen
+        - Kasse / Kassenschicht
+        - Verkauf
+        - Reporting
+        - Audit
+        - Betrieb / Deployment
+    validations:
+      required: true
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Testziel
+      description: Was soll nachgewiesen oder abgenommen werden?
+    validations:
+      required: true
+
+  - type: textarea
+    id: setup
+    attributes:
+      label: Voraussetzungen / Testdaten
+      description: Welche Rollen, Produkte, Kassenschichten oder Daten werden benoetigt?
+    validations:
+      required: false
+
+  - type: textarea
+    id: cases
+    attributes:
+      label: Testfaelle
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Abnahmekriterien
+      description: Wann gilt die QA-Aufgabe als bestanden?
+    validations:
+      required: true

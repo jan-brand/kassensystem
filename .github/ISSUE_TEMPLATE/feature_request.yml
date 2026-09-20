@@ -1,0 +1,91 @@
+name: Feature vorschlagen
+description: Neue Funktion oder fachliche Erweiterung vorschlagen
+title: "[FEATURE] "
+labels:
+  - "type:feature"
+  - "status:triage"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Beschreibe zuerst das Problem bzw. Ziel und danach die gewuenschte Loesung. So bleibt das Issue fachlich nachvollziehbar.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - POS
+        - Administration
+        - Identity / Benutzer
+        - Katalog
+        - Kasse / Kassenschicht
+        - Verkauf
+        - Reporting
+        - Audit
+        - Settings
+        - Foundation / Infrastruktur
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Bedarf
+      description: Welches konkrete Problem soll geloest werden?
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: Ziel
+      description: Welcher Zustand soll nach der Umsetzung erreicht sein?
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Umfang
+      description: Was gehoert zur Aufgabe, was bewusst nicht?
+      placeholder: |
+        Enthalten:
+        - ...
+
+        Nicht enthalten:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Akzeptanzkriterien
+      description: Messbare Kriterien fuer "fertig".
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+        - [ ] Tests ergaenzt
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Vorgeschlagene Prioritaet
+      options:
+        - P1 - fuer v1 wichtig
+        - P2 - sinnvoll nach den Kernfunktionen
+        - P3 - spaeter / Komfortfunktion
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Weitere Hinweise
+      description: Optional, z. B. UX-Ideen, Abhaengigkeiten oder Screenshots.
+    validations:
+      required: false

@@ -1,0 +1,73 @@
+name: Technische Aufgabe
+description: Refactoring, Infrastruktur, Architektur oder Wartung planen
+title: "[TECH] "
+labels:
+  - "type:tech"
+  - "status:triage"
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - Foundation / Architektur
+        - Identity / Berechtigungen
+        - Datenbank / Migrationen
+        - POS
+        - Administration
+        - Reporting
+        - Tests / QA
+        - CI / Tooling
+        - Deployment / Betrieb
+        - Dokumentation
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Aktueller Zustand
+      description: Was ist technisch unzureichend oder fehlt?
+    validations:
+      required: true
+
+  - type: textarea
+    id: target
+    attributes:
+      label: Zielzustand
+      description: Wie soll die technische Loesung danach aussehen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: plan
+    attributes:
+      label: Umsetzungshinweise
+      description: Geplanter Ansatz, betroffene Dateien/Module oder Migrationsrisiken.
+    validations:
+      required: false
+
+  - type: textarea
+    id: done
+    attributes:
+      label: Definition of Done
+      placeholder: |
+        - [ ] Implementierung abgeschlossen
+        - [ ] Tests angepasst/ergaenzt
+        - [ ] Architektur-/Foundation-Checks gruen
+        - [ ] Dokumentation aktualisiert
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Vorgeschlagene Prioritaet
+      options:
+        - P0 - sofort notwendig
+        - P1 - vor v1-Abnahme notwendig
+        - P2 - wichtig, aber nicht blockierend
+        - P3 - Wartung / spaeter
+    validations:
+      required: true

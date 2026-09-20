@@ -1,0 +1,114 @@
+name: Fehler melden
+description: Reproduzierbaren Fehler im Kassensystem melden
+title: "[BUG] "
+labels:
+  - "type:bug"
+  - "status:triage"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke fuer den Fehlerbericht. Bitte keine PINs, Zugangsdaten oder echten personenbezogenen Daten eintragen.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      description: Wo tritt der Fehler auf?
+      options:
+        - POS
+        - Administration
+        - Identity / Benutzer
+        - Katalog
+        - Kasse / Kassenschicht
+        - Verkauf
+        - Reporting
+        - Audit
+        - Settings
+        - Foundation / Infrastruktur
+        - Tests / CI
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Vorgeschlagene Prioritaet
+      description: Bitte nach Auswirkung einschaetzen. Die finale Priorisierung erfolgt im Backlog.
+      options:
+        - P0 - Betrieb blockiert / Datenintegritaet oder Sicherheit betroffen
+        - P1 - Wichtige Funktion unbenutzbar
+        - P2 - Einschraenkung mit Workaround
+        - P3 - Kleinigkeit / kosmetisch
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Kurzbeschreibung
+      description: Was funktioniert nicht?
+      placeholder: "Beim Abschluss einer Kassenschicht ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zum Reproduzieren
+      description: Bitte so konkret wie moeglich.
+      placeholder: |
+        1. Als ... anmelden
+        2. ... oeffnen
+        3. ... anklicken
+        4. Fehler tritt auf
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Tatsaechliches Verhalten
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Umgebung
+      description: Relevante technische Angaben, soweit bekannt.
+      placeholder: |
+        Branch/Commit:
+        Browser/Geraet:
+        PHP:
+        Laravel:
+        Datenbank:
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Fehlermeldungen oder Logs
+      description: Nur relevante Ausschnitte einfuegen. Secrets und personenbezogene Daten vorher entfernen.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checkliste
+      options:
+        - label: Ich habe keine PINs, Passwoerter, Tokens oder sonstigen Secrets eingefuegt.
+          required: true
+        - label: Ich habe geprueft, ob bereits ein gleiches oder sehr aehnliches Issue existiert.
+          required: true

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Sicherheitsluecke vertraulich melden
+    url: https://github.com/jan-brand/kassensystem/security/advisories/new
+    about: Bitte Sicherheitsluecken nicht als oeffentliches Issue melden.

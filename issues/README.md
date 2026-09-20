@@ -40,3 +40,13 @@ scripts\issues\issues.cmd list --all
 
 Damit bleibt der komplette Arbeitsstand lokal versioniert. GitHub kann spaeter als Spiegel
 hinzukommen; die lokale Entwicklung haengt nicht davon ab.
+
+## GitHub Issue Templates
+
+Wenn GitHub erreichbar ist, stehen unter `.github/ISSUE_TEMPLATE/` strukturierte Formulare fuer
+Fehler, Features, technische Aufgaben und QA-Aufgaben bereit. Diese Formulare sind fuer neue
+GitHub-Issues gedacht; das lokale Offline-System bleibt die verbindliche Arbeitsgrundlage fuer
+den Entwicklungsablauf.
+
+Sicherheitsluecken sollen nicht als oeffentliches Issue angelegt werden. Das GitHub-Formular
+verweist deshalb auf die vertraulichen Security Advisories des Repositories.
