@@ -51,7 +51,7 @@
         {
             "id": "V1-003",
             "title": "[FEATURE] Reporting und CSV-Oberflaeche fertigstellen",
-            "status": "closed",
+            "status": "in-progress",
             "priority": "P1",
             "type": "feature",
             "areas": [
@@ -62,7 +62,7 @@
             "body_file": ".github/backlog/03-reporting.md",
             "github_number": null,
             "created_at": "2026-09-20",
-            "closed_at": "2026-09-20"
+            "closed_at": null
         },
         {
             "id": "V1-004",

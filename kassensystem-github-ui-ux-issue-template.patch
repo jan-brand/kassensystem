@@ -1,0 +1,174 @@
+diff --git a/.github/ISSUE_TEMPLATE/ui_ux.yml b/.github/ISSUE_TEMPLATE/ui_ux.yml
+new file mode 100644
+index 0000000..da059eb
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/ui_ux.yml
+@@ -0,0 +1,168 @@
++name: UI / UX verbessern
++description: Bedienung, Darstellung oder Nutzerfuehrung des Kassensystems verbessern
++title: "[UI/UX] "
++labels:
++  - "type:feature"
++  - "status:triage"
++body:
++  - type: markdown
++    attributes:
++      value: |
++        Dieses Template ist fuer konkrete UI-/UX-Verbesserungen gedacht.
++        Bitte beschreibe zuerst das beobachtete Nutzungsproblem und erst danach einen Loesungsvorschlag.
++        Keine PINs, Zugangsdaten oder echten personenbezogenen Daten eintragen.
++
++  - type: dropdown
++    id: surface
++    attributes:
++      label: Oberflaeche / Bereich
++      description: Wo soll die UI/UX verbessert werden?
++      options:
++        - POS / Kassenansicht
++        - POS / Login
++        - POS / Kassenmenue
++        - POS / Zahlung
++        - Administration / Uebersicht
++        - Administration / Katalog
++        - Administration / Kassierer
++        - Administration / Reporting
++        - Administration / Audit
++        - Administration / Einstellungen
++        - Globale Navigation / Layout
++        - Responsive / Tablet
++        - Barrierefreiheit
++        - Sonstiges
++    validations:
++      required: true
++
++  - type: textarea
++    id: problem
++    attributes:
++      label: Beobachtetes Problem
++      description: Was ist fuer den Benutzer langsam, unklar, fehleranfaellig oder unnoetig kompliziert?
++      placeholder: |
++        Beispiel: Beim Bezahlen auf dem Tablet ist der Button fuer den Abschluss zu weit vom Gesamtbetrag entfernt.
++        Dadurch muss der Blick zwischen zwei Bereichen wechseln.
++    validations:
++      required: true
++
++  - type: dropdown
++    id: user_role
++    attributes:
++      label: Betroffene Rolle
++      options:
++        - Kassierer
++        - Manager
++        - Administrator
++        - Mehrere Rollen
++        - Nicht rollenspezifisch
++    validations:
++      required: true
++
++  - type: textarea
++    id: context
++    attributes:
++      label: Nutzungskontext
++      description: Auf welchem Geraet und in welcher Situation tritt das Problem auf?
++      placeholder: |
++        Geraet: 10-Zoll-Tablet
++        Eingabe: Touch
++        Ausrichtung: Querformat
++        Situation: Stosszeit / schnelle Bedienung
++    validations:
++      required: true
++
++  - type: textarea
++    id: desired_experience
++    attributes:
++      label: Gewuenschtes Nutzererlebnis
++      description: Was soll sich fuer den Benutzer konkret besser anfuehlen oder schneller erledigen lassen?
++      placeholder: |
++        - wichtige Aktion ohne Scrollen erreichbar
++        - Gesamtbetrag und Zahlungsaktion visuell zusammengefasst
++        - Rueckmeldung nach Aktion eindeutig
++    validations:
++      required: true
++
++  - type: textarea
++    id: proposal
++    attributes:
++      label: Loesungsidee
++      description: Optionaler Vorschlag. Das Issue darf auch ohne fertige Designloesung angelegt werden.
++      placeholder: |
++        Beispiel: Zahlungsbereich sticky am rechten Rand; Gesamtbetrag direkt oberhalb des Primaerbuttons.
++    validations:
++      required: false
++
++  - type: textarea
++    id: states
++    attributes:
++      label: Zustaende und Interaktionen
++      description: Welche Zustaende muessen bei der Umsetzung beruecksichtigt werden?
++      placeholder: |
++        - Normalzustand
++        - Laden / Aktion laeuft
++        - Validierungsfehler
++        - Leerzustand
++        - Erfolg
++        - Gesperrt / nicht berechtigt
++    validations:
++      required: false
++
++  - type: textarea
++    id: responsive_accessibility
++    attributes:
++      label: Responsive / Barrierefreiheit
++      description: Anforderungen an Touch-Ziele, Tastatur, Kontrast, Fokus, kleine Displays oder Screenreader.
++      placeholder: |
++        - primaere Touch-Ziele ausreichend gross
++        - Fokus sichtbar
++        - keine Information nur ueber Farbe transportieren
++        - Tablet Hoch- und Querformat pruefen
++    validations:
++      required: false
++
++  - type: textarea
++    id: acceptance
++    attributes:
++      label: Akzeptanzkriterien
++      description: Messbare Kriterien fuer die fertige UI/UX-Aenderung.
++      placeholder: |
++        - [ ] Hauptaktion ist auf dem Zielgeraet ohne Scrollen erreichbar.
++        - [ ] Lade-, Fehler- und Erfolgszustand sind eindeutig dargestellt.
++        - [ ] Bedienung funktioniert per Touch und Tastatur.
++        - [ ] Responsive Darstellung wurde auf Tablet und Desktop geprueft.
++        - [ ] Bestehende Funktions- und UI-Tests bleiben gruen bzw. werden ergaenzt.
++    validations:
++      required: true
++
++  - type: textarea
++    id: references
++    attributes:
++      label: Screenshots / Skizzen / Referenzen
++      description: Optional. Keine vertraulichen Daten oder produktiven Benutzerinformationen hochladen.
++    validations:
++      required: false
++
++  - type: dropdown
++    id: priority
++    attributes:
++      label: Vorgeschlagene Prioritaet
++      options:
++        - P1 - behindert einen wichtigen Arbeitsablauf deutlich
++        - P2 - relevante Verbesserung fuer Bedienbarkeit oder Geschwindigkeit
++        - P3 - kosmetische oder kleinere Komfortverbesserung
++    validations:
++      required: true
++
++  - type: checkboxes
++    id: checks
++    attributes:
++      label: Checkliste
++      options:
++        - label: Das Issue beschreibt ein konkretes Nutzungsproblem und nicht nur eine optische Vorliebe.
++          required: true
++        - label: Ich habe keine PINs, Passwoerter, Tokens oder personenbezogenen Echtdaten eingefuegt.
++          required: true
++        - label: Ich habe geprueft, ob bereits ein gleiches oder sehr aehnliches UI/UX-Issue existiert.
++          required: true

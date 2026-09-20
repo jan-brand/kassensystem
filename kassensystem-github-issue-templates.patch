@@ -1,0 +1,389 @@
+diff --git a/.github/ISSUE_TEMPLATE/bug_report.yml b/.github/ISSUE_TEMPLATE/bug_report.yml
+new file mode 100644
+index 0000000..bd4b0bc
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/bug_report.yml
+@@ -0,0 +1,114 @@
++name: Fehler melden
++description: Reproduzierbaren Fehler im Kassensystem melden
++title: "[BUG] "
++labels:
++  - "type:bug"
++  - "status:triage"
++body:
++  - type: markdown
++    attributes:
++      value: |
++        Danke fuer den Fehlerbericht. Bitte keine PINs, Zugangsdaten oder echten personenbezogenen Daten eintragen.
++
++  - type: dropdown
++    id: area
++    attributes:
++      label: Bereich
++      description: Wo tritt der Fehler auf?
++      options:
++        - POS
++        - Administration
++        - Identity / Benutzer
++        - Katalog
++        - Kasse / Kassenschicht
++        - Verkauf
++        - Reporting
++        - Audit
++        - Settings
++        - Foundation / Infrastruktur
++        - Tests / CI
++        - Sonstiges
++    validations:
++      required: true
++
++  - type: dropdown
++    id: priority
++    attributes:
++      label: Vorgeschlagene Prioritaet
++      description: Bitte nach Auswirkung einschaetzen. Die finale Priorisierung erfolgt im Backlog.
++      options:
++        - P0 - Betrieb blockiert / Datenintegritaet oder Sicherheit betroffen
++        - P1 - Wichtige Funktion unbenutzbar
++        - P2 - Einschraenkung mit Workaround
++        - P3 - Kleinigkeit / kosmetisch
++    validations:
++      required: true
++
++  - type: textarea
++    id: summary
++    attributes:
++      label: Kurzbeschreibung
++      description: Was funktioniert nicht?
++      placeholder: "Beim Abschluss einer Kassenschicht ..."
++    validations:
++      required: true
++
++  - type: textarea
++    id: steps
++    attributes:
++      label: Schritte zum Reproduzieren
++      description: Bitte so konkret wie moeglich.
++      placeholder: |
++        1. Als ... anmelden
++        2. ... oeffnen
++        3. ... anklicken
++        4. Fehler tritt auf
++    validations:
++      required: true
++
++  - type: textarea
++    id: expected
++    attributes:
++      label: Erwartetes Verhalten
++    validations:
++      required: true
++
++  - type: textarea
++    id: actual
++    attributes:
++      label: Tatsaechliches Verhalten
++    validations:
++      required: true
++
++  - type: textarea
++    id: environment
++    attributes:
++      label: Umgebung
++      description: Relevante technische Angaben, soweit bekannt.
++      placeholder: |
++        Branch/Commit:
++        Browser/Geraet:
++        PHP:
++        Laravel:
++        Datenbank:
++    validations:
++      required: false
++
++  - type: textarea
++    id: logs
++    attributes:
++      label: Fehlermeldungen oder Logs
++      description: Nur relevante Ausschnitte einfuegen. Secrets und personenbezogene Daten vorher entfernen.
++      render: shell
++    validations:
++      required: false
++
++  - type: checkboxes
++    id: checks
++    attributes:
++      label: Checkliste
++      options:
++        - label: Ich habe keine PINs, Passwoerter, Tokens oder sonstigen Secrets eingefuegt.
++          required: true
++        - label: Ich habe geprueft, ob bereits ein gleiches oder sehr aehnliches Issue existiert.
++          required: true
+diff --git a/.github/ISSUE_TEMPLATE/config.yml b/.github/ISSUE_TEMPLATE/config.yml
+new file mode 100644
+index 0000000..e5eef96
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/config.yml
+@@ -0,0 +1,5 @@
++blank_issues_enabled: false
++contact_links:
++  - name: Sicherheitsluecke vertraulich melden
++    url: https://github.com/jan-brand/kassensystem/security/advisories/new
++    about: Bitte Sicherheitsluecken nicht als oeffentliches Issue melden.
+diff --git a/.github/ISSUE_TEMPLATE/feature_request.yml b/.github/ISSUE_TEMPLATE/feature_request.yml
+new file mode 100644
+index 0000000..a9f183e
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/feature_request.yml
+@@ -0,0 +1,91 @@
++name: Feature vorschlagen
++description: Neue Funktion oder fachliche Erweiterung vorschlagen
++title: "[FEATURE] "
++labels:
++  - "type:feature"
++  - "status:triage"
++body:
++  - type: markdown
++    attributes:
++      value: |
++        Beschreibe zuerst das Problem bzw. Ziel und danach die gewuenschte Loesung. So bleibt das Issue fachlich nachvollziehbar.
++
++  - type: dropdown
++    id: area
++    attributes:
++      label: Bereich
++      options:
++        - POS
++        - Administration
++        - Identity / Benutzer
++        - Katalog
++        - Kasse / Kassenschicht
++        - Verkauf
++        - Reporting
++        - Audit
++        - Settings
++        - Foundation / Infrastruktur
++        - Sonstiges
++    validations:
++      required: true
++
++  - type: textarea
++    id: problem
++    attributes:
++      label: Problem / Bedarf
++      description: Welches konkrete Problem soll geloest werden?
++    validations:
++      required: true
++
++  - type: textarea
++    id: goal
++    attributes:
++      label: Ziel
++      description: Welcher Zustand soll nach der Umsetzung erreicht sein?
++    validations:
++      required: true
++
++  - type: textarea
++    id: scope
++    attributes:
++      label: Umfang
++      description: Was gehoert zur Aufgabe, was bewusst nicht?
++      placeholder: |
++        Enthalten:
++        - ...
++
++        Nicht enthalten:
++        - ...
++    validations:
++      required: true
++
++  - type: textarea
++    id: acceptance
++    attributes:
++      label: Akzeptanzkriterien
++      description: Messbare Kriterien fuer "fertig".
++      placeholder: |
++        - [ ] ...
++        - [ ] ...
++        - [ ] Tests ergaenzt
++    validations:
++      required: true
++
++  - type: dropdown
++    id: priority
++    attributes:
++      label: Vorgeschlagene Prioritaet
++      options:
++        - P1 - fuer v1 wichtig
++        - P2 - sinnvoll nach den Kernfunktionen
++        - P3 - spaeter / Komfortfunktion
++    validations:
++      required: true
++
++  - type: textarea
++    id: notes
++    attributes:
++      label: Weitere Hinweise
++      description: Optional, z. B. UX-Ideen, Abhaengigkeiten oder Screenshots.
++    validations:
++      required: false
+diff --git a/.github/ISSUE_TEMPLATE/qa_task.yml b/.github/ISSUE_TEMPLATE/qa_task.yml
+new file mode 100644
+index 0000000..b0bc380
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/qa_task.yml
+@@ -0,0 +1,58 @@
++name: QA / Testaufgabe
++description: Abnahme, Testfall oder Qualitaetspruefung planen
++title: "[QA] "
++labels:
++  - "type:qa"
++  - "status:triage"
++body:
++  - type: dropdown
++    id: area
++    attributes:
++      label: Bereich
++      options:
++        - Gesamte v1
++        - POS
++        - Administration
++        - Benutzer / Rollen
++        - Kasse / Kassenschicht
++        - Verkauf
++        - Reporting
++        - Audit
++        - Betrieb / Deployment
++    validations:
++      required: true
++
++  - type: textarea
++    id: objective
++    attributes:
++      label: Testziel
++      description: Was soll nachgewiesen oder abgenommen werden?
++    validations:
++      required: true
++
++  - type: textarea
++    id: setup
++    attributes:
++      label: Voraussetzungen / Testdaten
++      description: Welche Rollen, Produkte, Kassenschichten oder Daten werden benoetigt?
++    validations:
++      required: false
++
++  - type: textarea
++    id: cases
++    attributes:
++      label: Testfaelle
++      placeholder: |
++        - [ ] ...
++        - [ ] ...
++        - [ ] ...
++    validations:
++      required: true
++
++  - type: textarea
++    id: expected
++    attributes:
++      label: Abnahmekriterien
++      description: Wann gilt die QA-Aufgabe als bestanden?
++    validations:
++      required: true
+diff --git a/.github/ISSUE_TEMPLATE/technical_task.yml b/.github/ISSUE_TEMPLATE/technical_task.yml
+new file mode 100644
+index 0000000..5cdb1dd
+--- /dev/null
++++ b/.github/ISSUE_TEMPLATE/technical_task.yml
+@@ -0,0 +1,73 @@
++name: Technische Aufgabe
++description: Refactoring, Infrastruktur, Architektur oder Wartung planen
++title: "[TECH] "
++labels:
++  - "type:tech"
++  - "status:triage"
++body:
++  - type: dropdown
++    id: area
++    attributes:
++      label: Bereich
++      options:
++        - Foundation / Architektur
++        - Identity / Berechtigungen
++        - Datenbank / Migrationen
++        - POS
++        - Administration
++        - Reporting
++        - Tests / QA
++        - CI / Tooling
++        - Deployment / Betrieb
++        - Dokumentation
++        - Sonstiges
++    validations:
++      required: true
++
++  - type: textarea
++    id: current
++    attributes:
++      label: Aktueller Zustand
++      description: Was ist technisch unzureichend oder fehlt?
++    validations:
++      required: true
++
++  - type: textarea
++    id: target
++    attributes:
++      label: Zielzustand
++      description: Wie soll die technische Loesung danach aussehen?
++    validations:
++      required: true
++
++  - type: textarea
++    id: plan
++    attributes:
++      label: Umsetzungshinweise
++      description: Geplanter Ansatz, betroffene Dateien/Module oder Migrationsrisiken.
++    validations:
++      required: false
++
++  - type: textarea
++    id: done
++    attributes:
++      label: Definition of Done
++      placeholder: |
++        - [ ] Implementierung abgeschlossen
++        - [ ] Tests angepasst/ergaenzt
++        - [ ] Architektur-/Foundation-Checks gruen
++        - [ ] Dokumentation aktualisiert
++    validations:
++      required: true
++
++  - type: dropdown
++    id: priority
++    attributes:
++      label: Vorgeschlagene Prioritaet
++      options:
++        - P0 - sofort notwendig
++        - P1 - vor v1-Abnahme notwendig
++        - P2 - wichtig, aber nicht blockierend
++        - P3 - Wartung / spaeter
++    validations:
++      required: true
+diff --git a/issues/README.md b/issues/README.md
+index f5d4cd6..73d16a1 100644
+--- a/issues/README.md
++++ b/issues/README.md
+@@ -40,3 +40,13 @@ scripts\issues\issues.cmd list --all
+ 
+ Damit bleibt der komplette Arbeitsstand lokal versioniert. GitHub kann spaeter als Spiegel
+ hinzukommen; die lokale Entwicklung haengt nicht davon ab.
++
++## GitHub Issue Templates
++
++Wenn GitHub erreichbar ist, stehen unter `.github/ISSUE_TEMPLATE/` strukturierte Formulare fuer
++Fehler, Features, technische Aufgaben und QA-Aufgaben bereit. Diese Formulare sind fuer neue
++GitHub-Issues gedacht; das lokale Offline-System bleibt die verbindliche Arbeitsgrundlage fuer
++den Entwicklungsablauf.
++
++Sicherheitsluecken sollen nicht als oeffentliches Issue angelegt werden. Das GitHub-Formular
++verweist deshalb auf die vertraulichen Security Advisories des Repositories.

@@ -1,0 +1,14 @@
+diff --git a/tests/Feature/Administration/AuditAdministrationTest.php b/tests/Feature/Administration/AuditAdministrationTest.php
+index 6712788..9ccf722 100644
+--- a/tests/Feature/Administration/AuditAdministrationTest.php
++++ b/tests/Feature/Administration/AuditAdministrationTest.php
+@@ -78,7 +78,8 @@ it('filters audit events by event actor subject and date range', function () {
+         ->call('applyFilters')
+         ->assertHasNoErrors()
+         ->assertSee('product.updated')
+-        ->assertDontSee('sale.completed');
++        ->assertSee('1 Treffer')
++        ->assertDontSee('Andere Kasse');
+ });
+ 
+ it('shows redacted audit payloads in a read only detail view', function () {

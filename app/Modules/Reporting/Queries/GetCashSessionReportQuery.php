@@ -21,7 +21,7 @@ final class GetCashSessionReportQuery
         }
 
         return CashSession::query()
-            ->with(['register', 'openedBy', 'closedBy'])
+            ->with(['register', 'openedBy', 'closedBy', 'movements.user'])
             ->where('status', CashSessionStatus::Closed->value)
             ->whereBetween('closed_at', [$day->startOfDay(), $day->endOfDay()])
             ->orderBy('closed_at')
