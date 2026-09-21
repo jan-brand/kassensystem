@@ -4,11 +4,10 @@ namespace App\Surfaces\Administration\Livewire;
 
 use App\Modules\Audit\Models\AuditEvent;
 use App\Modules\Audit\Queries\SearchAuditEventsQuery;
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Enums\Permission;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -35,15 +34,7 @@ final class AuditScreen extends Component
 
     public function boot(): void
     {
-        $user = Auth::user();
-
-        if (
-            ! $user instanceof User
-            || ! $user->active
-            || $user->role !== UserRole::Administrator
-        ) {
-            abort(403);
-        }
+        Gate::authorize(Permission::AuditView->value);
     }
 
     public function applyFilters(): void

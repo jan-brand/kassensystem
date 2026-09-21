@@ -3,11 +3,11 @@
     "surface": "administration",
     "uri": "/audit",
     "route_name": "administration.audit",
-    "permission": null,
+    "permission": "audit.view",
     "template": null,
     "middleware": [
         "auth",
-        "App\\Http\\Middleware\\EnsureAdministratorAccess"
+        "can:audit.view"
     ],
     "handler": {
         "type": "livewire",

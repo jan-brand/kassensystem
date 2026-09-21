@@ -1,0 +1,848 @@
+diff --git a/.github/backlog/09-pos-finalization.md b/.github/backlog/09-pos-finalization.md
+index 133b634..8b02faa 100644
+--- a/.github/backlog/09-pos-finalization.md
++++ b/.github/backlog/09-pos-finalization.md
+@@ -1,15 +1,22 @@
+ ## Ziel
+-Den POS fuer den taeglichen Touch-/Tablet-Betrieb abrunden.
++Den POS fuer den taeglichen Tablet- und Smartphone-Betrieb abrunden und auf echten Touch-Geraeten testen.
+ 
+ ## Umfang
+-- Produktreihenfolge/Favoriten pruefen
+-- Suche und Fokusverhalten verbessern
+-- Rueckgeld- und Abschlussanzeigen optimieren
+-- Doppelklick-/Mehrfachrequest-Verhalten pruefen
++- responsive POS-Oberflaeche fuer Smartphone, Tablet und Desktop
++- mobiler Warenkorb als Bottom-Sheet mit fester Summen-/Bezahlleiste
++- grosse Touch-Ziele und robuste Hoch-/Querformat-Nutzung
++- Suche und horizontale Kategoriennavigation fuer kleine Displays
++- Rueckgeld-, Zahlungs- und Kassenabschlussdialoge fuer mobile Viewports
++- Mehrfachklick-/Mehrfachrequest-Verhalten absichern
++- lokale Smartphone-Tests ueber das Mobile-LAN-Werkzeug
++- mobile Administration mindestens voll navigierbar halten
+ - Touch- und Tastaturbedienung testen
+ 
+ ## Akzeptanzkriterien
+-- [ ] Kernablauf ist auf Tablet ohne unnoetige Dialoge bedienbar.
++- [ ] Kernablauf ist auf Smartphone und Tablet ohne unnoetige Dialoge bedienbar.
++- [ ] Warenkorb und Bezahlen sind auf kleinen Displays jederzeit erreichbar.
+ - [ ] Mehrfachklicks erzeugen keine Doppelverkaeufe oder Doppelbuchungen.
+-- [ ] Fehler werden verstaendlich angezeigt.
++- [ ] Fehler und Ladezustände werden verstaendlich angezeigt.
++- [ ] Administration ist auf dem Smartphone navigierbar.
+ - [ ] Regressionstests fuer kritische POS-Aktionen vorhanden.
++- [ ] Realer Test auf einem Smartphone im lokalen Netz ist dokumentiert.
+diff --git a/app/Surfaces/Pos/Livewire/RegisterScreen.php b/app/Surfaces/Pos/Livewire/RegisterScreen.php
+index 7e9b27c..d287a3f 100644
+--- a/app/Surfaces/Pos/Livewire/RegisterScreen.php
++++ b/app/Surfaces/Pos/Livewire/RegisterScreen.php
+@@ -53,6 +53,8 @@ final class RegisterScreen extends Component
+ 
+     public bool $paymentOpen = false;
+ 
++    public bool $mobileCartOpen = false;
++
+     public bool $cashMenuOpen = false;
+ 
+     public ?string $cashMovementMode = null;
+@@ -90,6 +92,16 @@ final class RegisterScreen extends Component
+         $this->selectedCategoryId = $categoryId;
+     }
+ 
++    public function openMobileCart(): void
++    {
++        $this->mobileCartOpen = true;
++    }
++
++    public function closeMobileCart(): void
++    {
++        $this->mobileCartOpen = false;
++    }
++
+     public function openCashSession(OpenCashSessionAction $openSession): void
+     {
+         Gate::authorize(Permission::CashSessionsOpen->value);
+@@ -116,6 +128,7 @@ final class RegisterScreen extends Component
+ 
+         try {
+             $this->requireOpenCashSession();
++            $this->mobileCartOpen = false;
+             $this->cashMenuOpen = true;
+             $this->cashMovementMode = null;
+             $this->cashMovementAmount = '';
+@@ -192,6 +205,7 @@ final class RegisterScreen extends Component
+         try {
+             $startClosing->execute($this->register(), $this->currentUser());
+ 
++            $this->mobileCartOpen = false;
+             $this->cashMenuOpen = false;
+             $this->cashMovementMode = null;
+             $this->closingCountedCash = '';
+@@ -299,6 +313,7 @@ final class RegisterScreen extends Component
+                 throw new LogicException('Der Warenkorb ist leer.');
+             }
+ 
++            $this->mobileCartOpen = false;
+             $this->paymentOpen = true;
+             $this->receivedAmount = Money::decimal($sale->total_cents);
+         } catch (Throwable $exception) {
+@@ -333,6 +348,7 @@ final class RegisterScreen extends Component
+             $this->lastSaleNumber = $completed->number;
+             $this->lastSaleTotalCents = $completed->total_cents;
+             $this->lastChangeCents = $completed->payment?->change_cents ?? 0;
++            $this->mobileCartOpen = false;
+             $this->paymentOpen = false;
+             $this->receivedAmount = '';
+             $this->notice = 'Verkauf abgeschlossen.';
+@@ -355,6 +371,7 @@ final class RegisterScreen extends Component
+             }
+ 
+             $discard->execute($sale, $this->currentUser());
++            $this->mobileCartOpen = false;
+             $this->paymentOpen = false;
+             $this->receivedAmount = '';
+             $this->notice = 'Warenkorb wurde verworfen.';
+@@ -402,6 +419,9 @@ final class RegisterScreen extends Component
+         $closingDifferenceCents = $closingCountedCents !== null && $cashSummary !== null
+             ? $closingCountedCents - $cashSummary['expected_cash_cents']
+             : null;
++        $cartItemCount = $sale !== null
++            ? (int) $sale->items()->sum('quantity')
++            : 0;
+ 
+         $products = $catalog
+             ->when(
+@@ -433,6 +453,7 @@ final class RegisterScreen extends Component
+             'cashSummary' => $cashSummary,
+             'recentMovements' => $recentMovements,
+             'closingDifferenceCents' => $closingDifferenceCents,
++            'cartItemCount' => $cartItemCount,
+             'foreignSale' => $sale !== null && $sale->cashier_id !== $user->id,
+             'currency' => (string) config('kassensystem.currency', 'EUR'),
+         ]);
+diff --git a/docs/MARIADB_SMOKE_TEST.md b/docs/MARIADB_SMOKE_TEST.md
+new file mode 100644
+index 0000000..993c793
+--- /dev/null
++++ b/docs/MARIADB_SMOKE_TEST.md
+@@ -0,0 +1,66 @@
++# MariaDB-/MySQL-Smoke-Test
++
++V1 soll lokal mit SQLite entwickelt werden können und später auf MySQL/MariaDB
++portabel bleiben. Der Smoke-Test prüft deshalb die komplette Migration gegen eine
++separate temporäre Datenbank, ohne die normale Entwicklungsdatenbank zu verändern.
++
++## XAMPP unter Windows
++
++Zuerst sicherstellen, dass MySQL/MariaDB im XAMPP Control Panel läuft.
++
++In einer normalen CMD:
++
++```bat
++cd C:\xampp\htdocs\kassensystem
++scripts\production\mariadb-smoke.cmd
++```
++
++Die XAMPP-Standardkonfiguration verwendet häufig `root` ohne Passwort. Wenn lokal
++ein Passwort gesetzt ist, wird es nicht als Kommandozeilenargument übergeben:
++
++```bat
++set KASSENSYSTEM_SMOKE_DB_PASSWORD=DEIN_PASSWORT
++scripts\production\mariadb-smoke.cmd --user=root
++set KASSENSYSTEM_SMOKE_DB_PASSWORD=
++```
++
++Andere Serverdaten:
++
++```bat
++scripts\production\mariadb-smoke.cmd --host=127.0.0.1 --port=3306 --user=root
++```
++
++## Was der Test macht
++
++1. Verbindung zum Datenbankserver aufbauen.
++2. Zufällige Datenbank `kassensystem_smoke_*` anlegen.
++3. `php artisan migrate:fresh --force --no-interaction` mit isolierten
++   MySQL-Umgebungswerten ausführen.
++4. `php artisan migrate:status` prüfen.
++5. Zentrale v1-Tabellen kontrollieren.
++6. Temporäre Datenbank wieder löschen.
++
++Die normale `.env`, die lokale SQLite-Datenbank und vorhandene Datenbanken werden
++nicht verändert.
++
++`--keep` lässt die Testdatenbank zu Diagnosezwecken bestehen. Diese Option sollte
++nur bewusst verwendet werden.
++
++## Erfolgsbild
++
++Am Ende muss stehen:
++
++```text
++[OK] Verbindung zum Datenbankserver
++[OK] Temporäre Datenbank erstellt
++[OK] Migrationen
++[OK] Migrationsstatus
++[OK] Kernschema vollständig
++[OK] Temporäre Datenbank wieder entfernt
++
++Smoke-Test erfolgreich.
++```
++
++Damit ist die technische MySQL-/MariaDB-Migrationskompatibilität für den getesteten
++Stand bestätigt. Ein späteres Produktionsdeployment benötigt trotzdem ein echtes
++Backup und einen eigenen Preflight.
+diff --git a/docs/MOBILE_POS.md b/docs/MOBILE_POS.md
+new file mode 100644
+index 0000000..e762278
+--- /dev/null
++++ b/docs/MOBILE_POS.md
+@@ -0,0 +1,66 @@
++# POS auf Smartphone und Tablet
++
++Der POS verwendet für Desktop, Tablet und Smartphone dieselbe Livewire-Oberfläche.
++Es gibt keine separate mobile Fachlogik.
++
++## Responsive Verhalten
++
++### Smartphone
++
++- Produktbereich nutzt die gesamte Breite.
++- Kategorien bleiben horizontal scrollbar.
++- Suche bleibt direkt über den Produkten.
++- Eine feste Leiste am unteren Bildschirmrand zeigt Artikelanzahl und Gesamtbetrag.
++- Der Warenkorb öffnet als Bottom-Sheet.
++- Bezahlen ist aus der festen Leiste und aus dem Warenkorb erreichbar.
++- Kassenmenü, Zahlung und Abschlussdialoge öffnen mobil als Bottom-Sheet.
++- Safe-Area-Abstände für Geräte mit Home-Indikator/Notch werden berücksichtigt.
++
++### Tablet/Desktop
++
++Ab `xl` bleibt der Warenkorb dauerhaft rechts neben dem Produktbereich sichtbar.
++Damit bleibt die bisherige Tablet-/Desktop-Arbeitsweise erhalten.
++
++## Touch-Regeln
++
++- häufige Aktionen verwenden große Touch-Ziele;
++- Produktkacheln reagieren auf Touch ohne Hover-Abhängigkeit;
++- Mengensteuerung hat mindestens etwa 44 px große Bedienelemente;
++- kritische Livewire-Aktionen deaktivieren ihre Buttons während eines Requests;
++- der eigentliche Schutz vor Doppelbuchungen bleibt zusätzlich im Backend.
++
++## Reale Abnahme über das lokale Netz
++
++Vor dem Test:
++
++```bat
++npm run build
++scripts\mobile\mobile.cmd doctor
++scripts\mobile\mobile.cmd start
++```
++
++Auf dem Smartphone die vom Script ausgegebene `/pos`-Adresse öffnen.
++
++## Mobile Testmatrix
++
++Jeder Release Candidate wird mindestens mit folgenden Abläufen auf einem echten
++Smartphone geprüft:
++
++1. Anmelden.
++2. Kasse öffnen.
++3. Kategorie wechseln und Produkt suchen.
++4. Mehrere Produkte schnell nacheinander hinzufügen.
++5. Warenkorb öffnen.
++6. Menge erhöhen und verringern.
++7. Warenkorb schließen und weiterverkaufen.
++8. Bezahlen, gegebenen Betrag erfassen und Rückgeld prüfen.
++9. Nächsten Verkauf starten.
++10. Einlage und Entnahme buchen.
++11. Kassenabschluss starten, abbrechen und erneut starten.
++12. Kasse mit und ohne Differenz schließen.
++13. Benutzer wechseln.
++14. Administration öffnen und mobile Navigation prüfen.
++
++Zusätzlich Hoch- und Querformat testen. Bei iOS/Android sollte der Browser nicht
++durch horizontales Overflow zoomen oder wichtige Aktionen unter der Browserleiste
++verdecken.
+diff --git a/resources/views/layouts/administration.blade.php b/resources/views/layouts/administration.blade.php
+index c11e72f..b94cf23 100644
+--- a/resources/views/layouts/administration.blade.php
++++ b/resources/views/layouts/administration.blade.php
+@@ -2,41 +2,81 @@
+ <html lang="de">
+ <head>
+     <meta charset="utf-8">
+-    <meta name="viewport" content="width=device-width, initial-scale=1">
++    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
++    <meta name="theme-color" content="#ffffff">
+     <title>Administration · {{ config('app.name') }}</title>
+     @vite(['resources/css/app.css', 'resources/js/app.js'])
+     @livewireStyles
+ </head>
+-<body class="min-h-screen bg-slate-100 text-slate-950">
+-<header class="border-b border-slate-200 bg-white">
+-    <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+-        <div><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Kassensystem</p><h1 class="text-xl font-black">Administration</h1></div>
+-        <nav class="flex flex-wrap gap-2 text-sm font-bold">
+-            @can('administration.access')
+-                <a href="{{ route('administration.dashboard') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Übersicht</a>
+-            @endcan
+-            @can('catalog.manage')
+-                <a href="{{ route('administration.catalog') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Katalog</a>
+-            @endcan
+-            @can('users.cashiers.manage')
+-                <a href="{{ route('administration.cashiers') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Kassierer</a>
+-            @endcan
+-            @can('sales.view')
+-                <a href="{{ route('administration.sales') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Verkäufe</a>
+-            @endcan
+-            @can('reports.view')
+-                <a href="{{ route('administration.reporting') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Berichte</a>
+-            @endcan
+-            @can('settings.manage')
+-                <a href="{{ route('administration.settings') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Einstellungen</a>
+-            @endcan
+-            @can('audit.view')
+-                <a href="{{ route('administration.audit') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Audit</a>
+-            @endcan
+-            @can('pos.access')
+-                <a href="{{ route('pos.register') }}" wire:navigate class="rounded-xl border border-slate-300 px-3 py-2">Zur Kasse</a>
+-            @endcan
+-        </nav>
++<body class="min-h-[100dvh] bg-slate-100 text-slate-950">
++<header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur" style="padding-top: env(safe-area-inset-top);">
++    <div class="mx-auto max-w-7xl px-4 py-3 sm:px-6">
++        <div class="flex items-center justify-between gap-3">
++            <div class="min-w-0">
++                <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Kassensystem</p>
++                <h1 class="truncate text-lg font-black sm:text-xl">Administration</h1>
++            </div>
++
++            <nav class="hidden flex-wrap items-center justify-end gap-1.5 text-sm font-bold md:flex">
++                @can('administration.access')
++                    <a href="{{ route('administration.dashboard') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Übersicht</a>
++                @endcan
++                @can('catalog.manage')
++                    <a href="{{ route('administration.catalog') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Katalog</a>
++                @endcan
++                @can('users.cashiers.manage')
++                    <a href="{{ route('administration.cashiers') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Kassierer</a>
++                @endcan
++                @can('sales.view')
++                    <a href="{{ route('administration.sales') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Verkäufe</a>
++                @endcan
++                @can('reports.view')
++                    <a href="{{ route('administration.reporting') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Berichte</a>
++                @endcan
++                @can('settings.manage')
++                    <a href="{{ route('administration.settings') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Einstellungen</a>
++                @endcan
++                @can('audit.view')
++                    <a href="{{ route('administration.audit') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Audit</a>
++                @endcan
++                @can('pos.access')
++                    <a href="{{ route('pos.register') }}" wire:navigate class="rounded-xl border border-slate-300 px-3 py-2 hover:bg-slate-50">Zur Kasse</a>
++                @endcan
++            </nav>
++
++            <details class="relative md:hidden">
++                <summary class="cursor-pointer list-none rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-black shadow-sm">
++                    Menü
++                </summary>
++                <nav class="absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-sm font-bold shadow-xl">
++                    @can('administration.access')
++                        <a href="{{ route('administration.dashboard') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Übersicht</a>
++                    @endcan
++                    @can('catalog.manage')
++                        <a href="{{ route('administration.catalog') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Katalog</a>
++                    @endcan
++                    @can('users.cashiers.manage')
++                        <a href="{{ route('administration.cashiers') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Kassierer</a>
++                    @endcan
++                    @can('sales.view')
++                        <a href="{{ route('administration.sales') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Verkäufe</a>
++                    @endcan
++                    @can('reports.view')
++                        <a href="{{ route('administration.reporting') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Berichte</a>
++                    @endcan
++                    @can('settings.manage')
++                        <a href="{{ route('administration.settings') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Einstellungen</a>
++                    @endcan
++                    @can('audit.view')
++                        <a href="{{ route('administration.audit') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Audit</a>
++                    @endcan
++                    @can('pos.access')
++                        <div class="my-1 border-t border-slate-200"></div>
++                        <a href="{{ route('pos.register') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Zur Kasse</a>
++                    @endcan
++                </nav>
++            </details>
++        </div>
+     </div>
+ </header>
+ {{ $slot }}
+diff --git a/resources/views/layouts/pos.blade.php b/resources/views/layouts/pos.blade.php
+index e1d2175..4404f71 100644
+--- a/resources/views/layouts/pos.blade.php
++++ b/resources/views/layouts/pos.blade.php
+@@ -2,13 +2,14 @@
+ <html lang="de">
+ <head>
+     <meta charset="utf-8">
+-    <meta name="viewport" content="width=device-width, initial-scale=1">
++    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+     <meta name="color-scheme" content="light">
++    <meta name="theme-color" content="#0f172a">
+     <title>{{ config('app.name') }}</title>
+     @vite(['resources/css/app.css', 'resources/js/app.js'])
+     @livewireStyles
+ </head>
+-<body class="min-h-screen bg-slate-100 text-slate-950 antialiased">
++<body class="min-h-[100dvh] bg-slate-100 text-slate-950 antialiased">
+     {{ $slot }}
+     @livewireScripts
+ </body>
+diff --git a/scripts/production/mariadb-smoke.cmd b/scripts/production/mariadb-smoke.cmd
+new file mode 100644
+index 0000000..0dce18d
+--- /dev/null
++++ b/scripts/production/mariadb-smoke.cmd
+@@ -0,0 +1,8 @@
++@echo off
++setlocal
++cd /d "%~dp0\..\.."
++
++php "%~dp0mariadb-smoke.php" %*
++set EXITCODE=%ERRORLEVEL%
++
++endlocal & exit /b %EXITCODE%
+diff --git a/scripts/production/mariadb-smoke.php b/scripts/production/mariadb-smoke.php
+new file mode 100644
+index 0000000..829fe29
+--- /dev/null
++++ b/scripts/production/mariadb-smoke.php
+@@ -0,0 +1,309 @@
++<?php
++
++declare(strict_types=1);
++
++$projectRoot = dirname(__DIR__, 2);
++chdir($projectRoot);
++
++$options = parseOptions(array_slice($argv, 1));
++
++if (isset($options['help'])) {
++    help();
++    exit(0);
++}
++
++$host = stringOption($options, 'host', '127.0.0.1');
++$port = intOption($options, 'port', 3306);
++$user = stringOption($options, 'user', 'root');
++$prefix = stringOption($options, 'prefix', 'kassensystem_smoke_');
++$keep = isset($options['keep']);
++$password = getenv('KASSENSYSTEM_SMOKE_DB_PASSWORD');
++
++if ($password === false) {
++    $password = '';
++}
++
++assertSafeIdentifierPrefix($prefix);
++
++if (! extension_loaded('pdo_mysql')) {
++    fail('Die PHP-Erweiterung pdo_mysql ist nicht geladen.');
++}
++
++$database = $prefix.date('Ymd_His').'_'.bin2hex(random_bytes(3));
++assertSafeIdentifier($database);
++
++echo "Kassensystem MariaDB/MySQL Smoke-Test".PHP_EOL;
++echo str_repeat('=', 39).PHP_EOL;
++echo "Server:    {$host}:{$port}".PHP_EOL;
++echo "Benutzer:  {$user}".PHP_EOL;
++echo "Datenbank: {$database}".PHP_EOL;
++echo "Passwort:  ".($password === '' ? 'leer' : 'über Umgebungsvariable gesetzt').PHP_EOL;
++echo PHP_EOL;
++
++$server = null;
++$databaseCreated = false;
++
++try {
++    $server = new PDO(
++        "mysql:host={$host};port={$port};charset=utf8mb4",
++        $user,
++        $password,
++        [
++            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
++            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
++        ],
++    );
++
++    echo "[OK] Verbindung zum Datenbankserver".PHP_EOL;
++
++    $server->exec(sprintf(
++        'CREATE DATABASE `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',
++        $database,
++    ));
++    $databaseCreated = true;
++
++    echo "[OK] Temporäre Datenbank erstellt".PHP_EOL;
++
++    $environment = array_merge(
++        is_array(getenv()) ? getenv() : [],
++        [
++            'APP_ENV' => 'testing',
++            'APP_DEBUG' => 'false',
++            'DB_CONNECTION' => 'mysql',
++            'DB_HOST' => $host,
++            'DB_PORT' => (string) $port,
++            'DB_DATABASE' => $database,
++            'DB_USERNAME' => $user,
++            'DB_PASSWORD' => $password,
++            'DB_CHARSET' => 'utf8mb4',
++            'DB_COLLATION' => 'utf8mb4_unicode_ci',
++            'CACHE_STORE' => 'array',
++            'SESSION_DRIVER' => 'array',
++            'QUEUE_CONNECTION' => 'sync',
++            'FOUNDATION_DASHBOARD' => 'false',
++        ],
++    );
++
++    runArtisan(
++        ['migrate:fresh', '--force', '--no-interaction'],
++        $environment,
++        'Migrationen',
++    );
++
++    runArtisan(
++        ['migrate:status', '--no-interaction'],
++        $environment,
++        'Migrationsstatus',
++    );
++
++    $databaseConnection = new PDO(
++        "mysql:host={$host};port={$port};dbname={$database};charset=utf8mb4",
++        $user,
++        $password,
++        [
++            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
++            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
++        ],
++    );
++
++    $requiredTables = [
++        'users',
++        'audit_events',
++        'categories',
++        'products',
++        'registers',
++        'cash_sessions',
++        'cash_movements',
++        'sales',
++        'sale_items',
++        'payments',
++        'sale_number_sequences',
++        'system_settings',
++    ];
++
++    foreach ($requiredTables as $table) {
++        $statement = $databaseConnection->prepare(
++            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = ? AND table_name = ?',
++        );
++        $statement->execute([$database, $table]);
++
++        if ((int) $statement->fetchColumn() !== 1) {
++            throw new RuntimeException("Erwartete Tabelle fehlt: {$table}");
++        }
++    }
++
++    echo '[OK] Kernschema vollständig ('.count($requiredTables).' Tabellen geprüft)'.PHP_EOL;
++
++    if ($keep) {
++        echo PHP_EOL;
++        echo "[HINWEIS] --keep gesetzt: Datenbank {$database} bleibt bestehen.".PHP_EOL;
++        echo "Manuell löschen, sobald sie nicht mehr benötigt wird.".PHP_EOL;
++        $databaseCreated = false;
++    } else {
++        $server->exec("DROP DATABASE `{$database}`");
++        $databaseCreated = false;
++        echo '[OK] Temporäre Datenbank wieder entfernt'.PHP_EOL;
++    }
++
++    echo PHP_EOL.'Smoke-Test erfolgreich.'.PHP_EOL;
++    exit(0);
++} catch (Throwable $exception) {
++    fwrite(STDERR, PHP_EOL.'[FEHLER] '.$exception->getMessage().PHP_EOL);
++
++    if ($databaseCreated && $server instanceof PDO) {
++        try {
++            $server->exec("DROP DATABASE `{$database}`");
++            fwrite(STDERR, "[CLEANUP] Temporäre Datenbank wurde entfernt.".PHP_EOL);
++        } catch (Throwable $cleanupException) {
++            fwrite(
++                STDERR,
++                "[WARNUNG] Temporäre Datenbank konnte nicht automatisch entfernt werden: "
++                .$cleanupException->getMessage().PHP_EOL,
++            );
++        }
++    }
++
++    exit(1);
++}
++
++function runArtisan(array $arguments, array $environment, string $label): void
++{
++    $command = array_merge([PHP_BINARY, 'artisan'], $arguments);
++
++    $descriptorSpec = [
++        0 => STDIN,
++        1 => STDOUT,
++        2 => STDERR,
++    ];
++
++    $process = proc_open(
++        $command,
++        $descriptorSpec,
++        $pipes,
++        getcwd() ?: null,
++        $environment,
++    );
++
++    if (! is_resource($process)) {
++        throw new RuntimeException("{$label}: Prozess konnte nicht gestartet werden.");
++    }
++
++    $exitCode = proc_close($process);
++
++    if ($exitCode !== 0) {
++        throw new RuntimeException("{$label} fehlgeschlagen (Exit-Code {$exitCode}).");
++    }
++
++    echo "[OK] {$label}".PHP_EOL;
++}
++
++function parseOptions(array $arguments): array
++{
++    $options = [];
++
++    foreach ($arguments as $argument) {
++        if ($argument === '--help' || $argument === '-h') {
++            $options['help'] = true;
++            continue;
++        }
++
++        if ($argument === '--keep') {
++            $options['keep'] = true;
++            continue;
++        }
++
++        if (! str_starts_with($argument, '--') || ! str_contains($argument, '=')) {
++            fail("Unbekanntes Argument: {$argument}");
++        }
++
++        [$key, $value] = explode('=', substr($argument, 2), 2);
++
++        if (! in_array($key, ['host', 'port', 'user', 'prefix'], true)) {
++            fail("Unbekannte Option: --{$key}");
++        }
++
++        $options[$key] = $value;
++    }
++
++    return $options;
++}
++
++function stringOption(array $options, string $key, string $default): string
++{
++    $value = trim((string) ($options[$key] ?? $default));
++
++    if ($value === '') {
++        fail("--{$key} darf nicht leer sein.");
++    }
++
++    return $value;
++}
++
++function intOption(array $options, string $key, int $default): int
++{
++    $value = (string) ($options[$key] ?? $default);
++
++    if (! ctype_digit($value)) {
++        fail("--{$key} muss eine Zahl sein.");
++    }
++
++    $number = (int) $value;
++
++    if ($number < 1 || $number > 65535) {
++        fail("--{$key} ist außerhalb des gültigen Portbereichs.");
++    }
++
++    return $number;
++}
++
++function assertSafeIdentifierPrefix(string $prefix): void
++{
++    if (! preg_match('/^[A-Za-z][A-Za-z0-9_]{2,40}$/D', $prefix)) {
++        fail('Der Datenbankpräfix darf nur Buchstaben, Ziffern und Unterstriche enthalten.');
++    }
++}
++
++function assertSafeIdentifier(string $identifier): void
++{
++    if (! preg_match('/^[A-Za-z][A-Za-z0-9_]{2,63}$/D', $identifier)) {
++        fail('Unsicherer Datenbankname.');
++    }
++}
++
++function help(): void
++{
++    echo <<<'TXT'
++Kassensystem MariaDB/MySQL Smoke-Test
++
++Erzeugt eine zufällige temporäre Datenbank, führt alle Laravel-Migrationen darauf
++aus, prüft das Kernschema und löscht die Datenbank anschließend wieder.
++
++Verwendung:
++  scripts\production\mariadb-smoke.cmd
++  scripts\production\mariadb-smoke.cmd --host=127.0.0.1 --port=3306 --user=root
++  scripts\production\mariadb-smoke.cmd --keep
++  scripts\production\mariadb-smoke.cmd --help
++
++Passwort:
++  Das Passwort wird absichtlich nicht als Kommandozeilenargument akzeptiert.
++  Falls nötig, vorher in derselben CMD setzen:
++
++    set KASSENSYSTEM_SMOKE_DB_PASSWORD=DEIN_PASSWORT
++
++  Danach den Smoke-Test starten und die Variable wieder entfernen:
++
++    set KASSENSYSTEM_SMOKE_DB_PASSWORD=
++
++Sicherheit:
++  - Es wird ausschließlich eine neu erzeugte Datenbank mit dem Präfix
++    "kassensystem_smoke_" verwendet.
++  - Die aktuell konfigurierte SQLite-/Produktionsdatenbank wird nicht migriert.
++  - Ohne --keep wird die temporäre Datenbank nach dem Test gelöscht.
++TXT;
++}
++
++function fail(string $message): never
++{
++    fwrite(STDERR, 'ERROR: '.$message.PHP_EOL);
++    exit(1);
++}
+diff --git a/tests/Feature/Pos/MobilePosFlowTest.php b/tests/Feature/Pos/MobilePosFlowTest.php
+new file mode 100644
+index 0000000..75d178b
+--- /dev/null
++++ b/tests/Feature/Pos/MobilePosFlowTest.php
+@@ -0,0 +1,109 @@
++<?php
++
++use App\Modules\Catalog\Models\Category;
++use App\Modules\Catalog\Models\Product;
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Modules\Sales\Enums\SaleStatus;
++use App\Modules\Sales\Models\Payment;
++use App\Modules\Sales\Models\Sale;
++use App\Surfaces\Pos\Livewire\RegisterScreen;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++use Livewire\Livewire;
++
++uses(RefreshDatabase::class);
++
++function mobilePosFixture(string $username): array
++{
++    $user = app(CreateUserAction::class)->execute(
++        username: $username,
++        pin: '123456',
++        firstName: 'Mobile',
++        lastName: 'Cashier',
++    );
++
++    $category = Category::query()->create([
++        'name' => 'Mobil',
++        'active' => true,
++        'sort_order' => 10,
++    ]);
++
++    $product = Product::query()->create([
++        'category_id' => $category->id,
++        'name' => 'Testprodukt Mobil',
++        'short_name' => 'Mobil',
++        'price_cents' => 150,
++        'active' => true,
++        'sort_order' => 10,
++    ]);
++
++    return [$user, $product];
++}
++
++it('keeps one open sale while repeated touch adds aggregate the quantity', function () {
++    [$user, $product] = mobilePosFixture('mobile-repeat');
++    $this->actingAs($user);
++
++    Livewire::test(RegisterScreen::class)
++        ->call('openCashSession')
++        ->call('addProduct', $product->id)
++        ->call('addProduct', $product->id)
++        ->call('addProduct', $product->id)
++        ->call('openMobileCart')
++        ->assertSet('mobileCartOpen', true)
++        ->assertSeeHtml('data-pos-mobile-cart')
++        ->call('closeMobileCart')
++        ->assertSet('mobileCartOpen', false);
++
++    $sale = Sale::query()->with('items')->sole();
++
++    expect(Sale::query()->count())->toBe(1)
++        ->and($sale->status)->toBe(SaleStatus::Open)
++        ->and($sale->items)->toHaveCount(1)
++        ->and($sale->items->first()->quantity)->toBe(3)
++        ->and($sale->total_cents)->toBe(450);
++});
++
++it('closes the mobile cart when payment starts and completes only one payment', function () {
++    [$user, $product] = mobilePosFixture('mobile-payment');
++    $this->actingAs($user);
++
++    $component = Livewire::test(RegisterScreen::class)
++        ->call('openCashSession')
++        ->call('addProduct', $product->id)
++        ->call('openMobileCart')
++        ->assertSet('mobileCartOpen', true)
++        ->call('showPayment')
++        ->assertSet('mobileCartOpen', false)
++        ->assertSet('paymentOpen', true)
++        ->set('receivedAmount', '2,00')
++        ->call('completeSale')
++        ->assertSet('mobileCartOpen', false)
++        ->assertSet('paymentOpen', false)
++        ->assertSet('screenError', null);
++
++    $sale = Sale::query()->sole();
++
++    expect($sale->status)->toBe(SaleStatus::Completed)
++        ->and(Payment::query()->where('sale_id', $sale->id)->count())->toBe(1)
++        ->and(Payment::query()->where('sale_id', $sale->id)->value('change_cents'))->toBe(50);
++
++    $component
++        ->call('completeSale')
++        ->assertSet('screenError', 'Es gibt keinen offenen Verkauf.');
++
++    expect(Sale::query()->count())->toBe(1)
++        ->and(Payment::query()->count())->toBe(1);
++});
++
++it('renders the mobile action bar for an open register', function () {
++    [$user, $product] = mobilePosFixture('mobile-render');
++    $this->actingAs($user);
++
++    Livewire::test(RegisterScreen::class)
++        ->call('openCashSession')
++        ->call('addProduct', $product->id)
++        ->assertSeeHtml('data-pos-mobile-bar')
++        ->assertSee('1 Artikel')
++        ->assertSee('1,50 €')
++        ->assertSee('Bezahlen');
++});

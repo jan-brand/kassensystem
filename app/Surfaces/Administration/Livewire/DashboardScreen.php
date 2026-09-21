@@ -3,17 +3,24 @@
 namespace App\Surfaces\Administration\Livewire;
 
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Identity\Models\User;
 use App\Modules\Reporting\Queries\GetDailySummaryQuery;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 #[Layout('layouts.administration')]
 final class DashboardScreen extends Component
 {
+    public function boot(): void
+    {
+        Gate::authorize(Permission::AdministrationAccess->value);
+    }
+
     public function render(GetDailySummaryQuery $dailySummary): View
     {
         $date = CarbonImmutable::now((string) config('kassensystem.timezone', 'Europe/Berlin'))

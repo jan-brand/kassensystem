@@ -3,9 +3,9 @@
     "surface": "administration",
     "uri": "/reporting",
     "route_name": "administration.reporting",
-    "permission": null,
+    "permission": "reports.view",
     "template": null,
-    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
+    "middleware": ["auth", "can:reports.view"],
     "handler": {
         "type": "livewire",
         "target": "App\\Surfaces\\Administration\\Livewire\\ReportingScreen"

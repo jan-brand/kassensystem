@@ -5,6 +5,7 @@ namespace App\Surfaces\Administration\Livewire;
 use App\Modules\CashRegister\Actions\EnsureDefaultRegisterAction;
 use App\Modules\CashRegister\Actions\RenameRegisterAction;
 use App\Modules\CashRegister\Models\Register;
+use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Models\User;
 use App\Modules\Settings\Actions\UpdateSystemSettingsAction;
 use App\Modules\Settings\Queries\GetSystemSettingsQuery;
@@ -12,6 +13,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -38,6 +40,11 @@ final class SettingsScreen extends Component
     public ?string $notice = null;
 
     public ?string $screenError = null;
+
+    public function boot(): void
+    {
+        Gate::authorize(Permission::SettingsManage->value);
+    }
 
     public function mount(GetSystemSettingsQuery $settingsQuery): void
     {

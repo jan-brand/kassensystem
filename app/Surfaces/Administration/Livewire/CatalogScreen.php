@@ -9,10 +9,12 @@ use App\Modules\Catalog\Actions\UpdateCategoryAction;
 use App\Modules\Catalog\Actions\UpdateProductAction;
 use App\Modules\Catalog\Models\Category;
 use App\Modules\Catalog\Models\Product;
+use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Models\User;
 use App\Support\Money;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -43,6 +45,11 @@ final class CatalogScreen extends Component
 
     public ?string $notice = null;
     public ?string $screenError = null;
+
+    public function boot(): void
+    {
+        Gate::authorize(Permission::CatalogManage->value);
+    }
 
     public function createCategory(CreateCategoryAction $action): void
     {

@@ -1,0 +1,975 @@
+diff --git a/.env.example b/.env.example
+index 237c978..5255d79 100644
+--- a/.env.example
++++ b/.env.example
+@@ -47,3 +47,5 @@ KASSENSYSTEM_TIMEZONE=Europe/Berlin
+ KASSENSYSTEM_PIN_LENGTH=6
+ KASSENSYSTEM_PIN_MAX_ATTEMPTS=5
+ KASSENSYSTEM_PIN_LOCK_SECONDS=60
++KASSENSYSTEM_MYSQL_DUMP_BINARY=mysqldump
++KASSENSYSTEM_MYSQL_CLIENT_BINARY=mysql
+diff --git a/.gitignore b/.gitignore
+index 4e475ce..7d4f2c2 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -19,3 +19,4 @@ Thumbs.db
+ /database/*.sqlite
+ /database/*.sqlite-shm
+ /database/*.sqlite-wal
++/storage/app/backups/
+diff --git a/app/Foundation/Production/DatabaseBackupService.php b/app/Foundation/Production/DatabaseBackupService.php
+new file mode 100644
+index 0000000..0535bdd
+--- /dev/null
++++ b/app/Foundation/Production/DatabaseBackupService.php
+@@ -0,0 +1,246 @@
++<?php
++
++namespace App\Foundation\Production;
++
++use Illuminate\Database\Connection;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\File;
++use RuntimeException;
++use Symfony\Component\Process\Process;
++
++final class DatabaseBackupService
++{
++    public function create(?string $connectionName = null, ?string $targetPath = null): string
++    {
++        $connectionName ??= (string) config('database.default');
++        $connection = DB::connection($connectionName);
++        $driver = $connection->getDriverName();
++        $target = $targetPath !== null
++            ? $this->absolutePath($targetPath)
++            : $this->defaultTargetPath($connectionName, $driver);
++
++        $this->assertBackupTargetIsPrivate($target);
++        File::ensureDirectoryExists(dirname($target));
++
++        if (File::exists($target)) {
++            throw new RuntimeException('Backup target already exists: '.$target);
++        }
++
++        match ($driver) {
++            'sqlite' => $this->backupSqlite($connection, $target),
++            'mysql' => $this->backupMysql($connection, $target),
++            default => throw new RuntimeException("Unsupported backup driver: {$driver}"),
++        };
++
++        if (! File::exists($target) || File::size($target) === 0) {
++            throw new RuntimeException('Backup file was not created or is empty.');
++        }
++
++        return $target;
++    }
++
++    public function restore(string $backupPath, ?string $connectionName = null): void
++    {
++        $connectionName ??= (string) config('database.default');
++        $backup = $this->absolutePath($backupPath);
++
++        if (! File::isFile($backup) || File::size($backup) === 0) {
++            throw new RuntimeException('Backup file does not exist or is empty: '.$backup);
++        }
++
++        $connection = DB::connection($connectionName);
++
++        match ($connection->getDriverName()) {
++            'sqlite' => $this->restoreSqlite($connectionName, $connection, $backup),
++            'mysql' => $this->restoreMysql($connectionName, $connection, $backup),
++            default => throw new RuntimeException('Unsupported restore driver: '.$connection->getDriverName()),
++        };
++    }
++
++    private function backupSqlite(Connection $connection, string $target): void
++    {
++        $source = $this->sqliteDatabasePath($connection);
++
++        if (! File::isFile($source)) {
++            throw new RuntimeException('SQLite database file does not exist: '.$source);
++        }
++
++        $targetForSqlite = str_replace('\\', '/', $target);
++        $escapedTarget = str_replace("'", "''", $targetForSqlite);
++        $connection->unprepared("VACUUM INTO '{$escapedTarget}'");
++    }
++
++    private function restoreSqlite(string $connectionName, Connection $connection, string $backup): void
++    {
++        $database = $this->sqliteDatabasePath($connection);
++
++        if ($this->normalisePath($database) === $this->normalisePath($backup)) {
++            throw new RuntimeException('Backup file and active SQLite database must be different files.');
++        }
++
++        DB::purge($connectionName);
++        File::delete([$database.'-wal', $database.'-shm']);
++        File::ensureDirectoryExists(dirname($database));
++
++        if (! File::copy($backup, $database)) {
++            throw new RuntimeException('Unable to restore SQLite database file.');
++        }
++
++        DB::reconnect($connectionName);
++        DB::connection($connectionName)->select('SELECT 1');
++    }
++
++    private function backupMysql(Connection $connection, string $target): void
++    {
++        $config = $connection->getConfig();
++        $database = (string) ($config['database'] ?? '');
++
++        if ($database === '') {
++            throw new RuntimeException('MySQL database name is missing.');
++        }
++
++        $command = [
++            (string) config('kassensystem.mysql_dump_binary', 'mysqldump'),
++            '--single-transaction',
++            '--quick',
++            '--triggers',
++            '--default-character-set=utf8mb4',
++            '--host='.(string) ($config['host'] ?? '127.0.0.1'),
++            '--port='.(string) ($config['port'] ?? '3306'),
++            '--user='.(string) ($config['username'] ?? ''),
++            '--result-file='.$target,
++            $database,
++        ];
++
++        $process = new Process(
++            $command,
++            base_path(),
++            ['MYSQL_PWD' => (string) ($config['password'] ?? '')],
++            null,
++            300,
++        );
++        $process->run();
++
++        if (! $process->isSuccessful()) {
++            File::delete($target);
++            throw new RuntimeException('mysqldump failed: '.$this->processError($process));
++        }
++    }
++
++    private function restoreMysql(string $connectionName, Connection $connection, string $backup): void
++    {
++        $config = $connection->getConfig();
++        $database = (string) ($config['database'] ?? '');
++
++        if ($database === '') {
++            throw new RuntimeException('MySQL database name is missing.');
++        }
++
++        $input = fopen($backup, 'rb');
++
++        if ($input === false) {
++            throw new RuntimeException('Unable to open MySQL backup for restore.');
++        }
++
++        try {
++            $process = new Process(
++                [
++                    (string) config('kassensystem.mysql_client_binary', 'mysql'),
++                    '--default-character-set=utf8mb4',
++                    '--host='.(string) ($config['host'] ?? '127.0.0.1'),
++                    '--port='.(string) ($config['port'] ?? '3306'),
++                    '--user='.(string) ($config['username'] ?? ''),
++                    $database,
++                ],
++                base_path(),
++                ['MYSQL_PWD' => (string) ($config['password'] ?? '')],
++                $input,
++                300,
++            );
++            $process->run();
++        } finally {
++            fclose($input);
++        }
++
++        if (! $process->isSuccessful()) {
++            throw new RuntimeException('mysql restore failed: '.$this->processError($process));
++        }
++
++        DB::purge($connectionName);
++        DB::reconnect($connectionName);
++        DB::connection($connectionName)->select('SELECT 1');
++    }
++
++    private function sqliteDatabasePath(Connection $connection): string
++    {
++        $database = (string) $connection->getConfig('database');
++
++        if ($database === '' || $database === ':memory:' || str_contains($database, 'mode=memory')) {
++            throw new RuntimeException('In-memory SQLite databases cannot be backed up or restored.');
++        }
++
++        return $this->absolutePath($database);
++    }
++
++    private function defaultTargetPath(string $connectionName, string $driver): string
++    {
++        $directory = trim((string) config('kassensystem.backup_directory'));
++
++        if ($directory === '') {
++            $directory = storage_path('app/backups/database');
++        }
++
++        $extension = $driver === 'mysql' ? 'sql' : 'sqlite';
++        $filename = now()->format('Ymd_His_u').'-'.$connectionName.'.'.$extension;
++
++        return rtrim($this->absolutePath($directory), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$filename;
++    }
++
++    private function absolutePath(string $path): string
++    {
++        $path = trim($path);
++
++        if ($path === '') {
++            throw new RuntimeException('A file path must not be empty.');
++        }
++
++        if ($this->isAbsolutePath($path)) {
++            return $path;
++        }
++
++        return base_path($path);
++    }
++
++    private function isAbsolutePath(string $path): bool
++    {
++        return str_starts_with($path, '/')
++            || str_starts_with($path, '\\')
++            || preg_match('/^[A-Za-z]:[\\\/]/', $path) === 1;
++    }
++
++    private function assertBackupTargetIsPrivate(string $target): void
++    {
++        $public = rtrim($this->normalisePath(public_path()), '/').'/';
++        $normalisedTarget = $this->normalisePath($target);
++
++        if (str_starts_with($normalisedTarget, $public)) {
++            throw new RuntimeException('Database backups must not be written below the public directory.');
++        }
++    }
++
++    private function normalisePath(string $path): string
++    {
++        return strtolower(str_replace('\\', '/', $path));
++    }
++
++    private function processError(Process $process): string
++    {
++        $message = trim($process->getErrorOutput());
++
++        if ($message === '') {
++            $message = trim($process->getOutput());
++        }
++
++        return $message !== '' ? $message : 'process exited with code '.(string) $process->getExitCode();
++    }
++}
+diff --git a/app/Foundation/Production/ProductionCheckService.php b/app/Foundation/Production/ProductionCheckService.php
+new file mode 100644
+index 0000000..d1544fe
+--- /dev/null
++++ b/app/Foundation/Production/ProductionCheckService.php
+@@ -0,0 +1,162 @@
++<?php
++
++namespace App\Foundation\Production;
++
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\File;
++use Throwable;
++
++final class ProductionCheckService
++{
++    /**
++     * @return list<array{name: string, status: 'pass'|'warn'|'fail', message: string}>
++     */
++    public function run(): array
++    {
++        $results = [];
++
++        $results[] = $this->result(
++            'Environment',
++            app()->environment('production') ? 'pass' : 'fail',
++            'APP_ENV must be production for the production deployment.',
++        );
++        $results[] = $this->result(
++            'Debug mode',
++            config('app.debug') === false ? 'pass' : 'fail',
++            config('app.debug') === false ? 'APP_DEBUG is disabled.' : 'APP_DEBUG must be false.',
++        );
++        $results[] = $this->result(
++            'Application key',
++            trim((string) config('app.key')) !== '' ? 'pass' : 'fail',
++            trim((string) config('app.key')) !== '' ? 'APP_KEY is configured.' : 'APP_KEY is missing.',
++        );
++
++        $url = (string) config('app.url');
++        $host = strtolower((string) parse_url($url, PHP_URL_HOST));
++        $localHost = $host === '' || in_array($host, ['localhost', '127.0.0.1', '::1'], true);
++        $results[] = $this->result(
++            'Application URL',
++            $localHost ? 'fail' : (str_starts_with(strtolower($url), 'https://') ? 'pass' : 'warn'),
++            $localHost ? 'APP_URL still points to a local address.' : (str_starts_with(strtolower($url), 'https://') ? 'APP_URL uses HTTPS.' : 'APP_URL is non-local but does not use HTTPS.'),
++        );
++
++        $results = array_merge($results, $this->databaseChecks());
++
++        foreach ([
++            'Storage logs' => storage_path('logs'),
++            'Storage framework' => storage_path('framework'),
++            'Private storage' => storage_path('app/private'),
++        ] as $name => $path) {
++            $results[] = $this->result(
++                $name,
++                is_dir($path) && is_writable($path) ? 'pass' : 'fail',
++                is_dir($path) && is_writable($path) ? 'Directory is writable.' : 'Directory is missing or not writable: '.$path,
++            );
++        }
++
++        $storageLink = public_path('storage');
++        $results[] = $this->result(
++            'Public storage link',
++            is_dir($storageLink) || is_link($storageLink) ? 'pass' : 'fail',
++            is_dir($storageLink) || is_link($storageLink) ? 'public/storage is available.' : 'Run php artisan storage:link.',
++        );
++
++        $results[] = $this->result(
++            'Currency',
++            config('kassensystem.currency') === 'EUR' ? 'pass' : 'fail',
++            'Kassensystem currency must be EUR in v1.',
++        );
++        $results[] = $this->result(
++            'Timezone',
++            config('kassensystem.timezone') === 'Europe/Berlin' ? 'pass' : 'fail',
++            'Kassensystem timezone must be Europe/Berlin in v1.',
++        );
++
++        $gitignore = File::exists(base_path('.gitignore')) ? File::get(base_path('.gitignore')) : '';
++        $results[] = $this->result(
++            'Secret safeguards',
++            str_contains($gitignore, '/.env') && str_contains($gitignore, '/storage/app/backups/') ? 'pass' : 'fail',
++            'The repository must ignore environment files and database backups.',
++        );
++
++        return $results;
++    }
++
++    /** @return list<array{name: string, status: 'pass'|'warn'|'fail', message: string}> */
++    private function databaseChecks(): array
++    {
++        try {
++            $connectionName = (string) config('database.default');
++            $connection = DB::connection($connectionName);
++            $connection->select('SELECT 1');
++            $driver = $connection->getDriverName();
++            $results = [
++                $this->result('Database connectivity', 'pass', 'Database connection is available.'),
++                $this->result(
++                    'Production database driver',
++                    $driver === 'mysql' ? 'pass' : 'fail',
++                    $driver === 'mysql' ? 'MySQL/MariaDB driver is active.' : 'Production requires the mysql driver; active driver: '.$driver,
++                ),
++            ];
++
++            if ($driver === 'mysql') {
++                $version = $connection->selectOne('SELECT VERSION() AS version');
++                $results[] = $this->result(
++                    'Database server',
++                    'pass',
++                    'Server version: '.(string) ($version->version ?? 'unknown'),
++                );
++            }
++
++            $results[] = $this->migrationCheck($connectionName);
++
++            return $results;
++        } catch (Throwable) {
++            return [
++                $this->result('Database connectivity', 'fail', 'Database connection failed. Check the production DB settings.'),
++            ];
++        }
++    }
++
++    /** @return array{name: string, status: 'pass'|'warn'|'fail', message: string} */
++    private function migrationCheck(string $connectionName): array
++    {
++        try {
++            $connection = DB::connection($connectionName);
++
++            if (! $connection->getSchemaBuilder()->hasTable('migrations')) {
++                return $this->result('Migrations', 'fail', 'The migrations table does not exist. Run php artisan migrate --force.');
++            }
++
++            $applied = $connection->table('migrations')->pluck('migration')->all();
++            $expected = [];
++
++            foreach (glob(database_path('migrations/*.php')) ?: [] as $file) {
++                $expected[] = pathinfo($file, PATHINFO_FILENAME);
++            }
++            foreach (glob(app_path('Modules/*/database/migrations/*.php')) ?: [] as $file) {
++                $expected[] = pathinfo($file, PATHINFO_FILENAME);
++            }
++
++            $missing = array_values(array_diff(array_unique($expected), $applied));
++
++            if ($missing !== []) {
++                return $this->result('Migrations', 'fail', count($missing).' migration(s) are not applied.');
++            }
++
++            return $this->result('Migrations', 'pass', 'All discovered migrations are applied.');
++        } catch (Throwable) {
++            return $this->result('Migrations', 'fail', 'Migration status could not be checked.');
++        }
++    }
++
++    /** @return array{name: string, status: 'pass'|'warn'|'fail', message: string} */
++    private function result(string $name, string $status, string $message): array
++    {
++        return [
++            'name' => $name,
++            'status' => $status,
++            'message' => $message,
++        ];
++    }
++}
+diff --git a/config/kassensystem.php b/config/kassensystem.php
+index 895ad9e..6bb6fd1 100644
+--- a/config/kassensystem.php
++++ b/config/kassensystem.php
+@@ -7,4 +7,7 @@ return [
+     'pin_max_attempts' => (int) env('KASSENSYSTEM_PIN_MAX_ATTEMPTS', 5),
+     'pin_lock_seconds' => (int) env('KASSENSYSTEM_PIN_LOCK_SECONDS', 60),
+     'register_name' => 'Kasse 1',
++    'backup_directory' => env('KASSENSYSTEM_BACKUP_DIRECTORY', storage_path('app/backups/database')),
++    'mysql_dump_binary' => env('KASSENSYSTEM_MYSQL_DUMP_BINARY', 'mysqldump'),
++    'mysql_client_binary' => env('KASSENSYSTEM_MYSQL_CLIENT_BINARY', 'mysql'),
+ ];
+diff --git a/docs/PRODUCTION.md b/docs/PRODUCTION.md
+new file mode 100644
+index 0000000..24f85a0
+--- /dev/null
++++ b/docs/PRODUCTION.md
+@@ -0,0 +1,145 @@
++# Kassensystem: Produktion, Backup und Restore
++
++Dieses Dokument beschreibt den reproduzierbaren v1-Probebetrieb. Die produktive Zielkonfiguration verwendet MySQL oder MariaDB, `APP_ENV=production` und deaktivierten Debug-Modus.
++
++## Produktionskonfiguration
++
++Produktive Secrets liegen ausschließlich in der `.env` des Servers oder im Secret Store des Hosters und niemals im Repository. Mindestens diese Werte müssen produktionsspezifisch gesetzt werden:
++
++```dotenv
++APP_ENV=production
++APP_DEBUG=false
++APP_URL=https://kasse.example.org
++APP_KEY=base64:...
++LOG_LEVEL=warning
++
++DB_CONNECTION=mysql
++DB_HOST=127.0.0.1
++DB_PORT=3306
++DB_DATABASE=kassensystem
++DB_USERNAME=kassensystem
++DB_PASSWORD=...
++
++SESSION_DRIVER=file
++CACHE_STORE=file
++QUEUE_CONNECTION=sync
++
++KASSENSYSTEM_CURRENCY=EUR
++KASSENSYSTEM_TIMEZONE=Europe/Berlin
++```
++
++`KASSENSYSTEM_MYSQL_DUMP_BINARY` und `KASSENSYSTEM_MYSQL_CLIENT_BINARY` können gesetzt werden, wenn `mysqldump` und `mysql` nicht im `PATH` liegen. Unter XAMPP ist beispielsweise ein absoluter Pfad unter `C:\xampp\mysql\bin` möglich.
++
++## Produktionscheck
++
++Nach der Konfiguration und nach jedem Deployment:
++
++```bat
++php artisan app:production-check
++```
++
++Der Check prüft unter anderem Environment, Debug-Modus, APP_KEY/APP_URL, Datenbankzugriff, MySQL/MariaDB-Treiber, ausstehende Migrationen, Storage-Schreibrechte, den Public-Storage-Link, Währung, Zeitzone und Repository-Schutz für Secrets/Backups.
++
++`WARN` ist ein Hinweis. `FAIL` beendet den Befehl mit Fehlercode 1 und muss vor dem Probebetrieb behoben werden.
++
++## Health-Check
++
++Laravel stellt weiterhin `/up` als einfachen Framework-Health-Check bereit. Zusätzlich prüft `/health` die Datenbankverbindung:
++
++```text
++GET /health
++```
++
++Erfolgreich:
++
++```json
++{"status":"ok","database":"ok","timestamp":"..."}
++```
++
++Bei nicht erreichbarer Datenbank antwortet die Route mit HTTP 503 und gibt bewusst keine Exception- oder Zugangsdaten aus.
++
++## Datenbank-Backup
++
++Vor jedem Update, jeder Migration und jeder manuellen Datenbankänderung:
++
++```bat
++php artisan app:backup
++```
++
++Standardziel:
++
++```text
++storage/app/backups/database/
++```
++
++Die Dateien sind über `.gitignore` vom Repository ausgeschlossen. Backups dürfen niemals unter `public/` abgelegt werden.
++
++SQLite wird mit `VACUUM INTO` konsistent gesichert. MySQL/MariaDB verwendet `mysqldump` mit `--single-transaction`. Das Datenbankpasswort wird über die Prozessumgebung übergeben und nicht als Kommandozeilenargument ausgegeben.
++
++Optional können Verbindung und Ziel explizit angegeben werden:
++
++```bat
++php artisan app:backup --connection=mysql
++php artisan app:backup --path=storageppackups\databaseor-update.sql
++```
++
++Zusätzlich zur Datenbank muss `storage/app/public/` gesichert werden, wenn dort produktive Uploads wie das Cafeteria-Logo liegen. Diese Dateien gehören nicht in das Datenbank-Backup.
++
++## Restore
++
++Restore ist absichtlich destruktiv und benötigt `--force`:
++
++```bat
++php artisan app:restore storageppackups\database60921_120000_mysql.sql --force
++```
++
++Vor dem Restore erzeugt der Befehl automatisch ein Sicherheitsbackup des aktuellen Datenbankstands. Nur wenn die aktuelle Datenbank so beschädigt ist, dass kein Backup mehr möglich ist, darf bewusst darauf verzichtet werden:
++
++```bat
++php artisan app:restore <backup> --force --skip-safety-backup
++```
++
++Nach einem Restore immer ausführen:
++
++```bat
++php artisan migrate:status
++php artisan app:production-check
++```
++
++## MySQL/MariaDB-Migrationstest vor dem ersten Probebetrieb
++
++Die Migrationskompatibilität wird nicht gegen die produktive Datenbank getestet. Dafür eine leere Testdatenbank auf demselben MySQL-/MariaDB-Typ wie im Betrieb anlegen, die Verbindung temporär darauf zeigen lassen und anschließend ausführen:
++
++```bat
++php artisan migrate --force
++php artisan migrate:status
++php artisan app:production-check
++```
++
++Erst wenn alle Migrationen erfolgreich angewendet wurden, darf dieselbe Release-Version produktiv migriert werden. `migrate:fresh` ist auf produktiven oder anderweitig wertvollen Datenbanken verboten.
++
++## Deployment / Update
++
++Empfohlener Ablauf:
++
++1. Neue Version vollständig herunterladen bzw. auschecken.
++2. `composer install --no-dev --optimize-autoloader` und Frontend-Build vorbereiten.
++3. `php artisan app:backup` ausführen und den Pfad notieren.
++4. `php artisan down` aktivieren.
++5. Dateien der neuen Version bereitstellen.
++6. `php artisan migrate --force` ausführen.
++7. `php artisan storage:link` sicherstellen.
++8. `php artisan optimize` ausführen.
++9. `php artisan up` ausführen.
++10. `/health`, Login, POS und Administration prüfen.
++11. `php artisan app:production-check` ausführen.
++
++Wenn eine Migration oder der Smoke-Test fehlschlägt, Anwendung im Wartungsmodus lassen, Ursache beheben oder das vor dem Update erzeugte Backup wiederherstellen.
++
++## Logs und Fehlerseiten
++
++Produktion verwendet `APP_DEBUG=false`. Technische Details werden in `storage/logs/laravel.log` protokolliert, aber nicht im Browser angezeigt. Für 403, 404, 500 und 503 existieren bewusst einfache deutschsprachige Fehlerseiten ohne Stacktraces oder interne Pfade.
++
++## Backup-Aufbewahrung
++
++Mindestens ein aktuelles Backup muss außerhalb des Webroots und vorzugsweise auf einem zweiten Datenträger oder einem geschützten externen Speicher liegen. Vor Updates erzeugte Backups erst löschen, wenn die neue Version erfolgreich geprüft wurde. Die konkrete Aufbewahrungsfrist ist eine Betriebsentscheidung und wird nicht automatisch durch die Anwendung erzwungen.
+diff --git a/resources/views/errors/403.blade.php b/resources/views/errors/403.blade.php
+new file mode 100644
+index 0000000..067c897
+--- /dev/null
++++ b/resources/views/errors/403.blade.php
+@@ -0,0 +1,27 @@
++<!doctype html>
++<html lang="de">
++<head>
++    <meta charset="utf-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1">
++    <title>403 · Kassensystem</title>
++    <style>
++        body { margin: 0; font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; }
++        main { min-height: 100vh; display: grid; place-items: center; padding: 2rem; box-sizing: border-box; }
++        section { width: min(34rem, 100%); background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 2rem; box-sizing: border-box; }
++        p.code { margin: 0; font-size: .8rem; font-weight: 800; letter-spacing: .15em; color: #64748b; }
++        h1 { margin: .5rem 0 0; font-size: 2rem; }
++        p { line-height: 1.6; color: #475569; }
++        a { display: inline-block; margin-top: .75rem; color: #0f172a; font-weight: 800; }
++    </style>
++</head>
++<body>
++<main>
++    <section>
++        <p class="code">FEHLER 403</p>
++        <h1>Zugriff verweigert</h1>
++        <p>Du hast keine Berechtigung für diese Seite oder Aktion.</p>
++        <a href="/">Zur Startseite</a>
++    </section>
++</main>
++</body>
++</html>
+diff --git a/resources/views/errors/404.blade.php b/resources/views/errors/404.blade.php
+new file mode 100644
+index 0000000..1f3b7c1
+--- /dev/null
++++ b/resources/views/errors/404.blade.php
+@@ -0,0 +1,27 @@
++<!doctype html>
++<html lang="de">
++<head>
++    <meta charset="utf-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1">
++    <title>404 · Kassensystem</title>
++    <style>
++        body { margin: 0; font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; }
++        main { min-height: 100vh; display: grid; place-items: center; padding: 2rem; box-sizing: border-box; }
++        section { width: min(34rem, 100%); background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 2rem; box-sizing: border-box; }
++        p.code { margin: 0; font-size: .8rem; font-weight: 800; letter-spacing: .15em; color: #64748b; }
++        h1 { margin: .5rem 0 0; font-size: 2rem; }
++        p { line-height: 1.6; color: #475569; }
++        a { display: inline-block; margin-top: .75rem; color: #0f172a; font-weight: 800; }
++    </style>
++</head>
++<body>
++<main>
++    <section>
++        <p class="code">FEHLER 404</p>
++        <h1>Seite nicht gefunden</h1>
++        <p>Die angeforderte Seite existiert nicht oder ist nicht mehr verfügbar.</p>
++        <a href="/">Zur Startseite</a>
++    </section>
++</main>
++</body>
++</html>
+diff --git a/resources/views/errors/500.blade.php b/resources/views/errors/500.blade.php
+new file mode 100644
+index 0000000..8194020
+--- /dev/null
++++ b/resources/views/errors/500.blade.php
+@@ -0,0 +1,27 @@
++<!doctype html>
++<html lang="de">
++<head>
++    <meta charset="utf-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1">
++    <title>500 · Kassensystem</title>
++    <style>
++        body { margin: 0; font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; }
++        main { min-height: 100vh; display: grid; place-items: center; padding: 2rem; box-sizing: border-box; }
++        section { width: min(34rem, 100%); background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 2rem; box-sizing: border-box; }
++        p.code { margin: 0; font-size: .8rem; font-weight: 800; letter-spacing: .15em; color: #64748b; }
++        h1 { margin: .5rem 0 0; font-size: 2rem; }
++        p { line-height: 1.6; color: #475569; }
++        a { display: inline-block; margin-top: .75rem; color: #0f172a; font-weight: 800; }
++    </style>
++</head>
++<body>
++<main>
++    <section>
++        <p class="code">FEHLER 500</p>
++        <h1>Interner Fehler</h1>
++        <p>Die Anfrage konnte nicht verarbeitet werden. Der Fehler wurde serverseitig protokolliert.</p>
++        <a href="/">Zur Startseite</a>
++    </section>
++</main>
++</body>
++</html>
+diff --git a/resources/views/errors/503.blade.php b/resources/views/errors/503.blade.php
+new file mode 100644
+index 0000000..75a2f14
+--- /dev/null
++++ b/resources/views/errors/503.blade.php
+@@ -0,0 +1,27 @@
++<!doctype html>
++<html lang="de">
++<head>
++    <meta charset="utf-8">
++    <meta name="viewport" content="width=device-width, initial-scale=1">
++    <title>503 · Kassensystem</title>
++    <style>
++        body { margin: 0; font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; }
++        main { min-height: 100vh; display: grid; place-items: center; padding: 2rem; box-sizing: border-box; }
++        section { width: min(34rem, 100%); background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 2rem; box-sizing: border-box; }
++        p.code { margin: 0; font-size: .8rem; font-weight: 800; letter-spacing: .15em; color: #64748b; }
++        h1 { margin: .5rem 0 0; font-size: 2rem; }
++        p { line-height: 1.6; color: #475569; }
++        a { display: inline-block; margin-top: .75rem; color: #0f172a; font-weight: 800; }
++    </style>
++</head>
++<body>
++<main>
++    <section>
++        <p class="code">FEHLER 503</p>
++        <h1>Dienst vorübergehend nicht verfügbar</h1>
++        <p>Das Kassensystem ist vorübergehend nicht verfügbar. Bitte versuche es später erneut.</p>
++        <a href="/">Zur Startseite</a>
++    </section>
++</main>
++</body>
++</html>
+diff --git a/routes/console.php b/routes/console.php
+index fa9463c..237ee8e 100644
+--- a/routes/console.php
++++ b/routes/console.php
+@@ -1,8 +1,85 @@
+ <?php
+ 
++use App\Foundation\Production\DatabaseBackupService;
++use App\Foundation\Production\ProductionCheckService;
+ use Illuminate\Foundation\Inspiring;
+ use Illuminate\Support\Facades\Artisan;
++use Symfony\Component\Console\Command\Command as SymfonyCommand;
+ 
+ Artisan::command('inspire', function (): void {
+     $this->comment(Inspiring::quote());
+ })->purpose('Display an inspiring quote');
++
++Artisan::command('app:backup {--connection=} {--path=}', function (DatabaseBackupService $backups): int {
++    try {
++        $path = $backups->create(
++            connectionName: $this->option('connection') ?: null,
++            targetPath: $this->option('path') ?: null,
++        );
++
++        $this->info('Database backup created: '.$path);
++
++        return SymfonyCommand::SUCCESS;
++    } catch (Throwable $exception) {
++        $this->error($exception->getMessage());
++
++        return SymfonyCommand::FAILURE;
++    }
++})->purpose('Create a consistent SQLite or MySQL/MariaDB database backup');
++
++Artisan::command(
++    'app:restore {backup} {--connection=} {--force} {--skip-safety-backup}',
++    function (DatabaseBackupService $backups): int {
++        if (! $this->option('force')) {
++            $this->error('Restore is destructive. Re-run with --force after verifying the backup file.');
++
++            return SymfonyCommand::FAILURE;
++        }
++
++        try {
++            $connection = $this->option('connection') ?: null;
++
++            if (! $this->option('skip-safety-backup')) {
++                $safetyBackup = $backups->create(connectionName: $connection);
++                $this->warn('Safety backup created before restore: '.$safetyBackup);
++            }
++
++            $backups->restore(
++                backupPath: (string) $this->argument('backup'),
++                connectionName: $connection,
++            );
++
++            $this->info('Database restore completed successfully.');
++
++            return SymfonyCommand::SUCCESS;
++        } catch (Throwable $exception) {
++            $this->error($exception->getMessage());
++
++            return SymfonyCommand::FAILURE;
++        }
++    },
++)->purpose('Restore a database backup; requires --force and creates a safety backup by default');
++
++Artisan::command('app:production-check', function (ProductionCheckService $checks): int {
++    $results = $checks->run();
++
++    $this->table(
++        ['Status', 'Check', 'Details'],
++        array_map(
++            static fn (array $result): array => [strtoupper($result['status']), $result['name'], $result['message']],
++            $results,
++        ),
++    );
++
++    $failures = array_filter($results, static fn (array $result): bool => $result['status'] === 'fail');
++
++    if ($failures !== []) {
++        $this->error(count($failures).' production readiness check(s) failed.');
++
++        return SymfonyCommand::FAILURE;
++    }
++
++    $this->info('Production readiness checks passed.');
++
++    return SymfonyCommand::SUCCESS;
++})->purpose('Check production environment, database, migrations, storage and secret safeguards');
+diff --git a/routes/web.php b/routes/web.php
+index c912b55..3b08ac0 100644
+--- a/routes/web.php
++++ b/routes/web.php
+@@ -1,9 +1,27 @@
+ <?php
+ 
+ use Illuminate\Support\Facades\Auth;
++use Illuminate\Support\Facades\DB;
+ use Illuminate\Support\Facades\Route;
+ 
+ Route::get('/', function () {
+     return redirect()->route(Auth::check() ? 'pos.register' : 'login');
+ })->name('home');
+ 
++Route::get('/health', function () {
++    try {
++        DB::connection()->select('SELECT 1');
++
++        return response()->json([
++            'status' => 'ok',
++            'database' => 'ok',
++            'timestamp' => now()->utc()->toIso8601String(),
++        ]);
++    } catch (Throwable) {
++        return response()->json([
++            'status' => 'unavailable',
++            'database' => 'unavailable',
++            'timestamp' => now()->utc()->toIso8601String(),
++        ], 503);
++    }
++})->name('health');
+diff --git a/scripts/production/preflight.cmd b/scripts/production/preflight.cmd
+new file mode 100644
+index 0000000..8597a0e
+--- /dev/null
++++ b/scripts/production/preflight.cmd
+@@ -0,0 +1,21 @@
++@echo off
++setlocal EnableExtensions
++cd /d "%~dp0\..\.."
++
++php artisan app:production-check
++if errorlevel 1 exit /b 1
++
++php artisan app:check
++if errorlevel 1 exit /b 1
++
++php artisan module:check
++if errorlevel 1 exit /b 1
++
++php artisan architecture:check
++if errorlevel 1 exit /b 1
++
++php artisan page:check
++if errorlevel 1 exit /b 1
++
++echo Production preflight passed.
++exit /b 0
+diff --git a/tests/Feature/Production/ProductionReadinessTest.php b/tests/Feature/Production/ProductionReadinessTest.php
+new file mode 100644
+index 0000000..0cbf617
+--- /dev/null
++++ b/tests/Feature/Production/ProductionReadinessTest.php
+@@ -0,0 +1,86 @@
++<?php
++
++use App\Foundation\Production\DatabaseBackupService;
++use Illuminate\Support\Facades\Config;
++use Illuminate\Support\Facades\DB;
++use Illuminate\Support\Facades\File;
++
++it('returns a database-aware health response', function () {
++    $this->get(route('health'))
++        ->assertOk()
++        ->assertJson([
++            'status' => 'ok',
++            'database' => 'ok',
++        ]);
++});
++
++it('renders the custom not found page without debug details', function () {
++    Config::set('app.debug', false);
++
++    $this->get('/definitely-not-a-kassensystem-route')
++        ->assertNotFound()
++        ->assertSee('Seite nicht gefunden')
++        ->assertDontSee('Stack trace');
++});
++
++it('creates and restores a consistent sqlite backup', function () {
++    $directory = storage_path('framework/testing/backup-'.bin2hex(random_bytes(6)));
++    File::ensureDirectoryExists($directory);
++    $database = $directory.DIRECTORY_SEPARATOR.'source.sqlite';
++    $backup = $directory.DIRECTORY_SEPARATOR.'backup.sqlite';
++    touch($database);
++
++    Config::set('database.connections.production_backup_test', [
++        'driver' => 'sqlite',
++        'database' => $database,
++        'prefix' => '',
++        'foreign_key_constraints' => true,
++    ]);
++
++    try {
++        DB::connection('production_backup_test')->statement('CREATE TABLE notes (id INTEGER PRIMARY KEY, value TEXT NOT NULL)');
++        DB::connection('production_backup_test')->table('notes')->insert(['id' => 1, 'value' => 'before']);
++
++        $service = app(DatabaseBackupService::class);
++        $created = $service->create('production_backup_test', $backup);
++
++        expect($created)->toBe($backup)
++            ->and(File::exists($backup))->toBeTrue()
++            ->and(File::size($backup))->toBeGreaterThan(0);
++
++        DB::connection('production_backup_test')->table('notes')->where('id', 1)->update(['value' => 'after']);
++        expect(DB::connection('production_backup_test')->table('notes')->value('value'))->toBe('after');
++
++        $service->restore($backup, 'production_backup_test');
++
++        expect(DB::connection('production_backup_test')->table('notes')->value('value'))->toBe('before');
++    } finally {
++        DB::purge('production_backup_test');
++        File::deleteDirectory($directory);
++    }
++});
++
++it('refuses to write database backups below the public directory', function () {
++    $directory = storage_path('framework/testing/backup-private-'.bin2hex(random_bytes(6)));
++    File::ensureDirectoryExists($directory);
++    $database = $directory.DIRECTORY_SEPARATOR.'source.sqlite';
++    touch($database);
++
++    Config::set('database.connections.production_backup_private_test', [
++        'driver' => 'sqlite',
++        'database' => $database,
++        'prefix' => '',
++        'foreign_key_constraints' => true,
++    ]);
++
++    try {
++        expect(fn () => app(DatabaseBackupService::class)->create(
++            'production_backup_private_test',
++            public_path('unsafe-backup.sqlite'),
++        ))->toThrow(RuntimeException::class, 'must not be written below the public directory');
++    } finally {
++        DB::purge('production_backup_private_test');
++        File::delete(public_path('unsafe-backup.sqlite'));
++        File::deleteDirectory($directory);
++    }
++});

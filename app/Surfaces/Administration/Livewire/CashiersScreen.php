@@ -2,11 +2,13 @@
 
 namespace App\Surfaces\Administration\Livewire;
 
+use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Identity\Models\User;
 use App\Modules\Identity\Services\CashierManagementService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
@@ -36,6 +38,11 @@ final class CashiersScreen extends Component
 
     public ?string $notice = null;
     public ?string $screenError = null;
+
+    public function boot(): void
+    {
+        Gate::authorize(Permission::UsersCashiersManage->value);
+    }
 
     public function createCashier(CashierManagementService $service): void
     {

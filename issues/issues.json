@@ -51,7 +51,7 @@
         {
             "id": "V1-003",
             "title": "[FEATURE] Reporting und CSV-Oberflaeche fertigstellen",
-            "status": "in-progress",
+            "status": "closed",
             "priority": "P1",
             "type": "feature",
             "areas": [
@@ -62,12 +62,12 @@
             "body_file": ".github/backlog/03-reporting.md",
             "github_number": null,
             "created_at": "2026-09-20",
-            "closed_at": null
+            "closed_at": "2026-09-20"
         },
         {
             "id": "V1-004",
             "title": "[FEATURE] Verkaufsdetails und Belegansicht",
-            "status": "open",
+            "status": "closed",
             "priority": "P1",
             "type": "feature",
             "areas": [
@@ -78,12 +78,12 @@
             "body_file": ".github/backlog/04-sales-receipts.md",
             "github_number": null,
             "created_at": "2026-09-20",
-            "closed_at": null
+            "closed_at": "2026-09-21"
         },
         {
             "id": "V1-005",
             "title": "[TECH] Berechtigungen zentralisieren und vollstaendig durchsetzen",
-            "status": "open",
+            "status": "closed",
             "priority": "P1",
             "type": "tech",
             "areas": [
@@ -94,12 +94,12 @@
             "body_file": ".github/backlog/05-permissions.md",
             "github_number": null,
             "created_at": "2026-09-20",
-            "closed_at": null
+            "closed_at": "2026-09-21"
         },
         {
             "id": "V1-006",
             "title": "[TECH] Backup, Restore und Produktionsvorbereitung",
-            "status": "open",
+            "status": "in-progress",
             "priority": "P1",
             "type": "tech",
             "areas": [
@@ -145,7 +145,7 @@
         {
             "id": "V1-009",
             "title": "[FEATURE] POS-Finalisierung fuer Tabletbetrieb",
-            "status": "open",
+            "status": "in-progress",
             "priority": "P2",
             "type": "feature",
             "areas": [

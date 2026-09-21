@@ -1,0 +1,944 @@
+diff --git a/app/Modules/Identity/Enums/Permission.php b/app/Modules/Identity/Enums/Permission.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Enums/Permission.php
+@@ -0,0 +1,31 @@
++<?php
++
++namespace App\Modules\Identity\Enums;
++
++enum Permission: string
++{
++    case PosAccess = 'pos.access';
++    case SalesCreate = 'sales.create';
++    case CashSessionsOpen = 'cash_sessions.open';
++    case CashSessionsClose = 'cash_sessions.close';
++    case CashMovementsCreate = 'cash_movements.create';
++
++    case AdministrationAccess = 'administration.access';
++    case CatalogManage = 'catalog.manage';
++    case UsersCashiersManage = 'users.cashiers.manage';
++    case UsersRolesManage = 'users.roles.manage';
++    case SalesView = 'sales.view';
++    case CashSessionsView = 'cash_sessions.view';
++    case ReportsView = 'reports.view';
++    case AuditView = 'audit.view';
++    case SettingsManage = 'settings.manage';
++
++    /** @return list<string> */
++    public static function values(): array
++    {
++        return array_map(
++            static fn (self $permission): string => $permission->value,
++            self::cases(),
++        );
++    }
++}
+diff --git a/app/Modules/Identity/Services/AuthorizationService.php b/app/Modules/Identity/Services/AuthorizationService.php
+new file mode 100644
+--- /dev/null
++++ b/app/Modules/Identity/Services/AuthorizationService.php
+@@ -0,0 +1,66 @@
++<?php
++
++namespace App\Modules\Identity\Services;
++
++use App\Modules\Identity\Enums\Permission;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Models\User;
++use Illuminate\Auth\Access\AuthorizationException;
++
++final class AuthorizationService
++{
++    public function allows(?User $user, Permission|string $permission): bool
++    {
++        if (! $user instanceof User || ! $user->active) {
++            return false;
++        }
++
++        $permission = $permission instanceof Permission
++            ? $permission
++            : Permission::tryFrom($permission);
++
++        if (! $permission instanceof Permission) {
++            return false;
++        }
++
++        return in_array($permission, $this->permissionsForRole($user->role), true);
++    }
++
++    /**
++     * @return list<Permission>
++     */
++    public function permissionsForRole(UserRole $role): array
++    {
++        $cashier = [
++            Permission::PosAccess,
++            Permission::SalesCreate,
++            Permission::CashSessionsOpen,
++            Permission::CashSessionsClose,
++            Permission::CashMovementsCreate,
++        ];
++
++        return match ($role) {
++            UserRole::Cashier => $cashier,
++            UserRole::Manager => [
++                ...$cashier,
++                Permission::AdministrationAccess,
++                Permission::CatalogManage,
++                Permission::UsersCashiersManage,
++                Permission::SalesView,
++                Permission::CashSessionsView,
++                Permission::ReportsView,
++            ],
++            UserRole::Administrator => Permission::cases(),
++        };
++    }
++
++    /**
++     * @throws AuthorizationException
++     */
++    public function authorize(?User $user, Permission|string $permission): void
++    {
++        if (! $this->allows($user, $permission)) {
++            throw new AuthorizationException('Diese Aktion ist nicht erlaubt.');
++        }
++    }
++}
+diff --git a/app/Providers/AppServiceProvider.php b/app/Providers/AppServiceProvider.php
+--- a/app/Providers/AppServiceProvider.php
++++ b/app/Providers/AppServiceProvider.php
+@@ -2,10 +2,23 @@
+ 
+ namespace App\Providers;
+ 
++use App\Modules\Identity\Enums\Permission;
++use App\Modules\Identity\Models\User;
++use App\Modules\Identity\Services\AuthorizationService;
++use Illuminate\Support\Facades\Gate;
+ use Illuminate\Support\ServiceProvider;
+ 
+ final class AppServiceProvider extends ServiceProvider
+ {
+     public function register(): void {}
+-    public function boot(): void {}
++
++    public function boot(AuthorizationService $authorization): void
++    {
++        foreach (Permission::cases() as $permission) {
++            Gate::define(
++                $permission->value,
++                static fn (User $user): bool => $authorization->allows($user, $permission),
++            );
++        }
++    }
+ }
+diff --git a/app/Http/Middleware/EnsureAdministrationAccess.php b/app/Http/Middleware/EnsureAdministrationAccess.php
+--- a/app/Http/Middleware/EnsureAdministrationAccess.php
++++ b/app/Http/Middleware/EnsureAdministrationAccess.php
+@@ -2,25 +2,17 @@
+ 
+ namespace App\Http\Middleware;
+ 
+-use App\Modules\Identity\Enums\UserRole;
+-use App\Modules\Identity\Models\User;
++use App\Modules\Identity\Enums\Permission;
+ use Closure;
+ use Illuminate\Http\Request;
++use Illuminate\Support\Facades\Gate;
+ use Symfony\Component\HttpFoundation\Response;
+ 
+ final class EnsureAdministrationAccess
+ {
+     public function handle(Request $request, Closure $next): Response
+     {
+-        $user = $request->user();
+-
+-        if (
+-            ! $user instanceof User
+-            || ! $user->active
+-            || ! in_array($user->role, [UserRole::Manager, UserRole::Administrator], true)
+-        ) {
+-            abort(403);
+-        }
++        Gate::authorize(Permission::AdministrationAccess->value);
+ 
+         return $next($request);
+     }
+diff --git a/app/Http/Middleware/EnsureAdministratorAccess.php b/app/Http/Middleware/EnsureAdministratorAccess.php
+--- a/app/Http/Middleware/EnsureAdministratorAccess.php
++++ b/app/Http/Middleware/EnsureAdministratorAccess.php
+@@ -2,25 +2,17 @@
+ 
+ namespace App\Http\Middleware;
+ 
+-use App\Modules\Identity\Enums\UserRole;
+-use App\Modules\Identity\Models\User;
++use App\Modules\Identity\Enums\Permission;
+ use Closure;
+ use Illuminate\Http\Request;
++use Illuminate\Support\Facades\Gate;
+ use Symfony\Component\HttpFoundation\Response;
+ 
+ final class EnsureAdministratorAccess
+ {
+     public function handle(Request $request, Closure $next): Response
+     {
+-        $user = $request->user();
+-
+-        if (
+-            ! $user instanceof User
+-            || ! $user->active
+-            || $user->role !== UserRole::Administrator
+-        ) {
+-            abort(403);
+-        }
++        Gate::authorize(Permission::UsersRolesManage->value);
+ 
+         return $next($request);
+     }
+diff --git a/resources/permissions/permissions.json b/resources/permissions/permissions.json
+--- a/resources/permissions/permissions.json
++++ b/resources/permissions/permissions.json
+@@ -1,3 +1,18 @@
+ {
+-  "permissions": []
++    "permissions": [
++        "administration.access",
++        "audit.view",
++        "cash_movements.create",
++        "cash_sessions.close",
++        "cash_sessions.open",
++        "cash_sessions.view",
++        "catalog.manage",
++        "pos.access",
++        "reports.view",
++        "sales.create",
++        "sales.view",
++        "settings.manage",
++        "users.cashiers.manage",
++        "users.roles.manage"
++    ]
+ }
+diff --git a/resources/pages/administration/dashboard/page.json b/resources/pages/administration/dashboard/page.json
+--- a/resources/pages/administration/dashboard/page.json
++++ b/resources/pages/administration/dashboard/page.json
+@@ -3,9 +3,9 @@
+     "surface": "administration",
+     "uri": "/",
+     "route_name": "administration.dashboard",
+-    "permission": null,
++    "permission": "administration.access",
+     "template": null,
+-    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "middleware": ["auth", "can:administration.access"],
+     "handler": {
+         "type": "livewire",
+         "target": "App\\Surfaces\\Administration\\Livewire\\DashboardScreen"
+diff --git a/resources/pages/administration/catalog/page.json b/resources/pages/administration/catalog/page.json
+--- a/resources/pages/administration/catalog/page.json
++++ b/resources/pages/administration/catalog/page.json
+@@ -3,9 +3,9 @@
+     "surface": "administration",
+     "uri": "/catalog",
+     "route_name": "administration.catalog",
+-    "permission": null,
++    "permission": "catalog.manage",
+     "template": null,
+-    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "middleware": ["auth", "can:catalog.manage"],
+     "handler": {
+         "type": "livewire",
+         "target": "App\\Surfaces\\Administration\\Livewire\\CatalogScreen"
+diff --git a/resources/pages/administration/cashiers/page.json b/resources/pages/administration/cashiers/page.json
+--- a/resources/pages/administration/cashiers/page.json
++++ b/resources/pages/administration/cashiers/page.json
+@@ -3,9 +3,9 @@
+     "surface": "administration",
+     "uri": "/cashiers",
+     "route_name": "administration.cashiers",
+-    "permission": null,
++    "permission": "users.cashiers.manage",
+     "template": null,
+-    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "middleware": ["auth", "can:users.cashiers.manage"],
+     "handler": {
+         "type": "livewire",
+         "target": "App\\Surfaces\\Administration\\Livewire\\CashiersScreen"
+diff --git a/resources/pages/administration/reporting/page.json b/resources/pages/administration/reporting/page.json
+--- a/resources/pages/administration/reporting/page.json
++++ b/resources/pages/administration/reporting/page.json
+@@ -3,9 +3,9 @@
+     "surface": "administration",
+     "uri": "/reporting",
+     "route_name": "administration.reporting",
+-    "permission": null,
++    "permission": "reports.view",
+     "template": null,
+-    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "middleware": ["auth", "can:reports.view"],
+     "handler": {
+         "type": "livewire",
+         "target": "App\\Surfaces\\Administration\\Livewire\\ReportingScreen"
+diff --git a/resources/pages/administration/settings/page.json b/resources/pages/administration/settings/page.json
+--- a/resources/pages/administration/settings/page.json
++++ b/resources/pages/administration/settings/page.json
+@@ -3,9 +3,9 @@
+     "surface": "administration",
+     "uri": "/settings",
+     "route_name": "administration.settings",
+-    "permission": null,
++    "permission": "settings.manage",
+     "template": null,
+-    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "middleware": ["auth", "can:settings.manage"],
+     "handler": {
+         "type": "livewire",
+         "target": "App\\Surfaces\\Administration\\Livewire\\SettingsScreen"
+diff --git a/resources/pages/administration/audit/page.json b/resources/pages/administration/audit/page.json
+--- a/resources/pages/administration/audit/page.json
++++ b/resources/pages/administration/audit/page.json
+@@ -3,11 +3,11 @@
+     "surface": "administration",
+     "uri": "/audit",
+     "route_name": "administration.audit",
+-    "permission": null,
++    "permission": "audit.view",
+     "template": null,
+     "middleware": [
+         "auth",
+-        "App\\Http\\Middleware\\EnsureAdministratorAccess"
++        "can:audit.view"
+     ],
+     "handler": {
+         "type": "livewire",
+diff --git a/resources/pages/administration/sales/page.json b/resources/pages/administration/sales/page.json
+--- a/resources/pages/administration/sales/page.json
++++ b/resources/pages/administration/sales/page.json
+@@ -3,9 +3,9 @@
+     "surface": "administration",
+     "uri": "/sales",
+     "route_name": "administration.sales",
+-    "permission": null,
++    "permission": "sales.view",
+     "template": null,
+-    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
++    "middleware": ["auth", "can:sales.view"],
+     "handler": {
+         "type": "livewire",
+         "target": "App\\Surfaces\\Administration\\Livewire\\SalesScreen"
+diff --git a/resources/pages/pos/register/page.json b/resources/pages/pos/register/page.json
+--- a/resources/pages/pos/register/page.json
++++ b/resources/pages/pos/register/page.json
+@@ -3,10 +3,11 @@
+     "surface": "pos",
+     "uri": "/",
+     "route_name": "pos.register",
+-    "permission": null,
++    "permission": "pos.access",
+     "template": null,
+     "middleware": [
+-        "auth"
++        "auth",
++        "can:pos.access"
+     ],
+     "handler": {
+         "type": "livewire",
+diff --git a/resources/navigation/administration.json b/resources/navigation/administration.json
+--- a/resources/navigation/administration.json
++++ b/resources/navigation/administration.json
+@@ -1,11 +1,11 @@
+ {
+     "items": [
+-        {"label": "Übersicht", "route": "administration.dashboard", "permission": null},
+-        {"label": "Katalog", "route": "administration.catalog", "permission": null},
+-        {"label": "Kassierer", "route": "administration.cashiers", "permission": null},
+-        {"label": "Verkäufe", "route": "administration.sales", "permission": null},
+-        {"label": "Berichte", "route": "administration.reporting", "permission": null},
+-        {"label": "Einstellungen", "route": "administration.settings", "permission": null},
+-        {"label": "Audit", "route": "administration.audit", "permission": null}
++        {"label": "Übersicht", "route": "administration.dashboard", "permission": "administration.access"},
++        {"label": "Katalog", "route": "administration.catalog", "permission": "catalog.manage"},
++        {"label": "Kassierer", "route": "administration.cashiers", "permission": "users.cashiers.manage"},
++        {"label": "Verkäufe", "route": "administration.sales", "permission": "sales.view"},
++        {"label": "Berichte", "route": "administration.reporting", "permission": "reports.view"},
++        {"label": "Einstellungen", "route": "administration.settings", "permission": "settings.manage"},
++        {"label": "Audit", "route": "administration.audit", "permission": "audit.view"}
+     ]
+ }
+diff --git a/resources/navigation/pos.json b/resources/navigation/pos.json
+--- a/resources/navigation/pos.json
++++ b/resources/navigation/pos.json
+@@ -3,7 +3,7 @@
+         {
+             "label": "Kasse",
+             "route": "pos.register",
+-            "permission": null
++            "permission": "pos.access"
+         }
+     ]
+ }
+diff --git a/resources/views/layouts/administration.blade.php b/resources/views/layouts/administration.blade.php
+--- a/resources/views/layouts/administration.blade.php
++++ b/resources/views/layouts/administration.blade.php
+@@ -12,16 +12,30 @@
+     <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+         <div><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Kassensystem</p><h1 class="text-xl font-black">Administration</h1></div>
+         <nav class="flex flex-wrap gap-2 text-sm font-bold">
+-            <a href="{{ route('administration.dashboard') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Übersicht</a>
+-            <a href="{{ route('administration.catalog') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Katalog</a>
+-            <a href="{{ route('administration.cashiers') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Kassierer</a>
+-            <a href="{{ route('administration.sales') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Verkäufe</a>
+-            <a href="{{ route('administration.reporting') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Berichte</a>
+-            <a href="{{ route('administration.settings') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Einstellungen</a>
+-            @if(auth()->user()?->role === \App\Modules\Identity\Enums\UserRole::Administrator)
++            @can('administration.access')
++                <a href="{{ route('administration.dashboard') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Übersicht</a>
++            @endcan
++            @can('catalog.manage')
++                <a href="{{ route('administration.catalog') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Katalog</a>
++            @endcan
++            @can('users.cashiers.manage')
++                <a href="{{ route('administration.cashiers') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Kassierer</a>
++            @endcan
++            @can('sales.view')
++                <a href="{{ route('administration.sales') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Verkäufe</a>
++            @endcan
++            @can('reports.view')
++                <a href="{{ route('administration.reporting') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Berichte</a>
++            @endcan
++            @can('settings.manage')
++                <a href="{{ route('administration.settings') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Einstellungen</a>
++            @endcan
++            @can('audit.view')
+                 <a href="{{ route('administration.audit') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Audit</a>
+-            @endif
+-            <a href="{{ route('pos.register') }}" wire:navigate class="rounded-xl border border-slate-300 px-3 py-2">Zur Kasse</a>
++            @endcan
++            @can('pos.access')
++                <a href="{{ route('pos.register') }}" wire:navigate class="rounded-xl border border-slate-300 px-3 py-2">Zur Kasse</a>
++            @endcan
+         </nav>
+     </div>
+ </header>
+diff --git a/app/Modules/Identity/README.md b/app/Modules/Identity/README.md
+--- a/app/Modules/Identity/README.md
++++ b/app/Modules/Identity/README.md
+@@ -1,6 +1,6 @@
+ # Identity
+ 
+-Verantwortlich für Benutzerkonten, Rollen und PIN-Anmeldung.
++Verantwortlich für Benutzerkonten, Rollen, PIN-Anmeldung und die zentrale Berechtigungsmatrix.
+ 
+ ## V1-Regeln
+ 
+@@ -9,3 +9,18 @@
+ - Benutzer werden deaktiviert statt gelöscht.
+ - Rollen: Kassierer, Leitung, Administrator.
+ - Der letzte aktive Administrator darf nicht deaktiviert oder herabgestuft werden.
++- Berechtigungen werden über `Permission`, `AuthorizationService` und Laravel Gates ausgewertet.
++- Deaktivierte Benutzer erhalten unabhängig von ihrer Rolle keine Berechtigung.
++
++## Berechtigungsmatrix
++
++Kassierer:
++`pos.access`, `sales.create`, `cash_sessions.open`, `cash_sessions.close`, `cash_movements.create`.
++
++Leitung:
++alle Kassierer-Rechte plus `administration.access`, `catalog.manage`, `users.cashiers.manage`,
++`sales.view`, `cash_sessions.view` und `reports.view`.
++
++Administrator:
++alle definierten Berechtigungen, zusätzlich insbesondere `users.roles.manage`, `audit.view`
++und `settings.manage`.
+diff --git a/app/Modules/Identity/Services/CashierManagementService.php b/app/Modules/Identity/Services/CashierManagementService.php
+--- a/app/Modules/Identity/Services/CashierManagementService.php
++++ b/app/Modules/Identity/Services/CashierManagementService.php
+@@ -6,6 +6,7 @@
+ use App\Modules\Identity\Actions\CreateUserAction;
+ use App\Modules\Identity\Actions\ResetUserPinAction;
+ use App\Modules\Identity\Actions\SetUserActiveAction;
++use App\Modules\Identity\Enums\Permission;
+ use App\Modules\Identity\Enums\UserRole;
+ use App\Modules\Identity\Models\User;
+ use InvalidArgumentException;
+@@ -18,6 +19,7 @@
+         private readonly ResetUserPinAction $resetUserPin,
+         private readonly SetUserActiveAction $setUserActive,
+         private readonly WriteAuditEventAction $audit,
++        private readonly AuthorizationService $authorization,
+     ) {}
+ 
+     public function create(
+@@ -125,12 +127,7 @@
+ 
+     private function assertActor(User $actor): void
+     {
+-        if (
+-            ! $actor->active
+-            || ! in_array($actor->role, [UserRole::Manager, UserRole::Administrator], true)
+-        ) {
+-            throw new LogicException('Only active managers and administrators may manage cashiers.');
+-        }
++        $this->authorization->authorize($actor, Permission::UsersCashiersManage);
+     }
+ 
+     private function assertCashier(User $user): void
+diff --git a/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php b/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php
+--- a/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php
++++ b/app/Modules/Settings/Actions/UpdateSystemSettingsAction.php
+@@ -3,14 +3,19 @@
+ namespace App\Modules\Settings\Actions;
+ 
+ use App\Modules\Audit\Actions\WriteAuditEventAction;
++use App\Modules\Identity\Enums\Permission;
+ use App\Modules\Identity\Models\User;
++use App\Modules\Identity\Services\AuthorizationService;
+ use App\Modules\Settings\Models\SystemSetting;
+ use Illuminate\Support\Facades\DB;
+ use InvalidArgumentException;
+ 
+ final class UpdateSystemSettingsAction
+ {
+-    public function __construct(private readonly WriteAuditEventAction $audit) {}
++    public function __construct(
++        private readonly WriteAuditEventAction $audit,
++        private readonly AuthorizationService $authorization,
++    ) {}
+ 
+     public function execute(
+         User $actor,
+@@ -18,6 +23,8 @@
+         ?string $logoPath = null,
+         bool $posShowShortNames = true,
+     ): SystemSetting {
++        $this->authorization->authorize($actor, Permission::SettingsManage);
++
+         $cafeteriaName = trim($cafeteriaName);
+         $logoPath = $logoPath !== null ? trim($logoPath) : null;
+ 
+diff --git a/app/Modules/CashRegister/Actions/RenameRegisterAction.php b/app/Modules/CashRegister/Actions/RenameRegisterAction.php
+--- a/app/Modules/CashRegister/Actions/RenameRegisterAction.php
++++ b/app/Modules/CashRegister/Actions/RenameRegisterAction.php
+@@ -4,16 +4,23 @@
+ 
+ use App\Modules\Audit\Actions\WriteAuditEventAction;
+ use App\Modules\CashRegister\Models\Register;
++use App\Modules\Identity\Enums\Permission;
+ use App\Modules\Identity\Models\User;
++use App\Modules\Identity\Services\AuthorizationService;
+ use Illuminate\Support\Facades\DB;
+ use InvalidArgumentException;
+ 
+ final class RenameRegisterAction
+ {
+-    public function __construct(private readonly WriteAuditEventAction $audit) {}
++    public function __construct(
++        private readonly WriteAuditEventAction $audit,
++        private readonly AuthorizationService $authorization,
++    ) {}
+ 
+     public function execute(Register $register, string $name, User $actor): Register
+     {
++        $this->authorization->authorize($actor, Permission::SettingsManage);
++
+         $name = trim($name);
+ 
+         if ($name === '') {
+diff --git a/app/Surfaces/Administration/Livewire/DashboardScreen.php b/app/Surfaces/Administration/Livewire/DashboardScreen.php
+--- a/app/Surfaces/Administration/Livewire/DashboardScreen.php
++++ b/app/Surfaces/Administration/Livewire/DashboardScreen.php
+@@ -3,17 +3,24 @@
+ namespace App\Surfaces\Administration\Livewire;
+ 
+ use App\Modules\Catalog\Models\Product;
++use App\Modules\Identity\Enums\Permission;
+ use App\Modules\Identity\Enums\UserRole;
+ use App\Modules\Identity\Models\User;
+ use App\Modules\Reporting\Queries\GetDailySummaryQuery;
+ use Carbon\CarbonImmutable;
+ use Illuminate\Contracts\View\View;
++use Illuminate\Support\Facades\Gate;
+ use Livewire\Attributes\Layout;
+ use Livewire\Component;
+ 
+ #[Layout('layouts.administration')]
+ final class DashboardScreen extends Component
+ {
++    public function boot(): void
++    {
++        Gate::authorize(Permission::AdministrationAccess->value);
++    }
++
+     public function render(GetDailySummaryQuery $dailySummary): View
+     {
+         $date = CarbonImmutable::now((string) config('kassensystem.timezone', 'Europe/Berlin'))
+diff --git a/tests/Feature/Administration/SettingsAdministrationTest.php b/tests/Feature/Administration/SettingsAdministrationTest.php
+--- a/tests/Feature/Administration/SettingsAdministrationTest.php
++++ b/tests/Feature/Administration/SettingsAdministrationTest.php
+@@ -16,7 +16,7 @@
+ 
+ uses(RefreshDatabase::class);
+ 
+-it('protects the settings route and allows administration roles', function () {
++it('protects the settings route and allows only administrators', function () {
+     expect(Route::has('administration.settings'))->toBeTrue();
+ 
+     $this->get(route('administration.settings'))->assertRedirect(route('login'));
+@@ -36,18 +36,27 @@
+         'Manager',
+         UserRole::Manager,
+     );
+-    $this->actingAs($manager)->get(route('administration.settings'))->assertOk();
++    $this->actingAs($manager)->get(route('administration.settings'))->assertForbidden();
++
++    $administrator = app(CreateUserAction::class)->execute(
++        'administrator-settings',
++        '123456',
++        'Ada',
++        'Admin',
++        UserRole::Administrator,
++    );
++    $this->actingAs($administrator)->get(route('administration.settings'))->assertOk();
+ });
+ 
+ it('saves visible system and register settings with audit events', function () {
+-    $manager = app(CreateUserAction::class)->execute(
+-        'manager-settings-save',
++    $administrator = app(CreateUserAction::class)->execute(
++        'administrator-settings-save',
+         '123456',
+-        'Mara',
+-        'Manager',
+-        UserRole::Manager,
++        'Ada',
++        'Admin',
++        UserRole::Administrator,
+     );
+-    $this->actingAs($manager);
++    $this->actingAs($administrator);
+ 
+     Livewire::test(SettingsScreen::class)
+         ->set('cafeteriaName', 'Schulcafeteria Nord')
+@@ -73,14 +82,14 @@
+ });
+ 
+ it('validates required names on the server', function () {
+-    $manager = app(CreateUserAction::class)->execute(
+-        'manager-settings-validation',
++    $administrator = app(CreateUserAction::class)->execute(
++        'administrator-settings-validation',
+         '123456',
+-        'Mara',
+-        'Manager',
+-        UserRole::Manager,
++        'Ada',
++        'Admin',
++        UserRole::Administrator,
+     );
+-    $this->actingAs($manager);
++    $this->actingAs($administrator);
+ 
+     Livewire::test(SettingsScreen::class)
+         ->set('cafeteriaName', '')
+@@ -98,22 +107,22 @@
+     Storage::fake('public');
+     Storage::disk('public')->put('settings/logos/old-logo.png', 'logo');
+ 
+-    $manager = app(CreateUserAction::class)->execute(
+-        'manager-settings-logo',
++    $administrator = app(CreateUserAction::class)->execute(
++        'administrator-settings-logo',
+         '123456',
+-        'Mara',
+-        'Manager',
+-        UserRole::Manager,
++        'Ada',
++        'Admin',
++        UserRole::Administrator,
+     );
+ 
+     app(UpdateSystemSettingsAction::class)->execute(
+-        actor: $manager,
++        actor: $administrator,
+         cafeteriaName: 'Schulcafeteria',
+         logoPath: 'settings/logos/old-logo.png',
+         posShowShortNames: true,
+     );
+ 
+-    $this->actingAs($manager);
++    $this->actingAs($administrator);
+ 
+     Livewire::test(SettingsScreen::class)
+         ->set('removeLogo', true)
+diff --git a/tests/Feature/Identity/AuthorizationTest.php b/tests/Feature/Identity/AuthorizationTest.php
+new file mode 100644
+--- /dev/null
++++ b/tests/Feature/Identity/AuthorizationTest.php
+@@ -0,0 +1,146 @@
++<?php
++
++use App\Modules\Identity\Actions\CreateUserAction;
++use App\Modules\Identity\Enums\Permission;
++use App\Modules\Identity\Enums\UserRole;
++use App\Modules\Identity\Services\AuthorizationService;
++use App\Modules\Identity\Services\CashierManagementService;
++use App\Modules\Settings\Actions\UpdateSystemSettingsAction;
++use Illuminate\Auth\Access\AuthorizationException;
++use Illuminate\Foundation\Testing\RefreshDatabase;
++use Illuminate\Support\Facades\Gate;
++
++uses(RefreshDatabase::class);
++
++it('maps permissions centrally by role', function () {
++    $cashier = app(CreateUserAction::class)->execute('permission-cashier', '123456', 'Casey', 'Cashier');
++    $manager = app(CreateUserAction::class)->execute(
++        'permission-manager',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $administrator = app(CreateUserAction::class)->execute(
++        'permission-admin',
++        '123456',
++        'Ada',
++        'Admin',
++        UserRole::Administrator,
++    );
++
++    $authorization = app(AuthorizationService::class);
++
++    expect($authorization->allows($cashier, Permission::PosAccess))->toBeTrue()
++        ->and($authorization->allows($cashier, Permission::SalesCreate))->toBeTrue()
++        ->and($authorization->allows($cashier, Permission::AdministrationAccess))->toBeFalse()
++        ->and($authorization->allows($manager, Permission::CatalogManage))->toBeTrue()
++        ->and($authorization->allows($manager, Permission::ReportsView))->toBeTrue()
++        ->and($authorization->allows($manager, Permission::SettingsManage))->toBeFalse()
++        ->and($authorization->allows($manager, Permission::AuditView))->toBeFalse();
++
++    foreach (Permission::cases() as $permission) {
++        expect($authorization->allows($administrator, $permission))
++            ->toBeTrue("Administrator should have {$permission->value}");
++    }
++
++    $cashier->update(['active' => false]);
++
++    expect($authorization->allows($cashier->refresh(), Permission::PosAccess))->toBeFalse();
++});
++
++it('registers the permission matrix as laravel gates', function () {
++    $manager = app(CreateUserAction::class)->execute(
++        'gate-manager',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $administrator = app(CreateUserAction::class)->execute(
++        'gate-admin',
++        '123456',
++        'Ada',
++        'Admin',
++        UserRole::Administrator,
++    );
++
++    expect(Gate::forUser($manager)->allows(Permission::ReportsView->value))->toBeTrue()
++        ->and(Gate::forUser($manager)->allows(Permission::SettingsManage->value))->toBeFalse()
++        ->and(Gate::forUser($administrator)->allows(Permission::SettingsManage->value))->toBeTrue();
++});
++
++it('enforces page permissions on routes and hides forbidden administration links', function () {
++    $cashier = app(CreateUserAction::class)->execute('route-cashier', '123456', 'Casey', 'Cashier');
++    $manager = app(CreateUserAction::class)->execute(
++        'route-manager',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $administrator = app(CreateUserAction::class)->execute(
++        'route-admin',
++        '123456',
++        'Ada',
++        'Admin',
++        UserRole::Administrator,
++    );
++
++    $this->actingAs($cashier)->get(route('administration.catalog'))->assertForbidden();
++
++    $this->actingAs($manager)
++        ->get(route('administration.dashboard'))
++        ->assertOk()
++        ->assertSee('Katalog')
++        ->assertDontSee('Einstellungen')
++        ->assertDontSee('Audit');
++
++    $this->actingAs($manager)->get(route('administration.settings'))->assertForbidden();
++
++    $this->actingAs($administrator)
++        ->get(route('administration.dashboard'))
++        ->assertOk()
++        ->assertSee('Einstellungen')
++        ->assertSee('Audit');
++
++    $this->actingAs($administrator)->get(route('administration.settings'))->assertOk();
++});
++
++it('protects management services independently from the ui', function () {
++    $cashier = app(CreateUserAction::class)->execute('service-cashier', '123456', 'Casey', 'Cashier');
++    $target = app(CreateUserAction::class)->execute('service-target', '123456', 'Taylor', 'Target');
++    $manager = app(CreateUserAction::class)->execute(
++        'service-manager',
++        '123456',
++        'Mara',
++        'Manager',
++        UserRole::Manager,
++    );
++    $administrator = app(CreateUserAction::class)->execute(
++        'service-admin',
++        '123456',
++        'Ada',
++        'Admin',
++        UserRole::Administrator,
++    );
++
++    expect(fn () => app(CashierManagementService::class)->setActive($cashier, $target, false))
++        ->toThrow(AuthorizationException::class);
++
++    app(CashierManagementService::class)->setActive($manager, $target, false);
++
++    expect($target->refresh()->active)->toBeFalse();
++
++    expect(fn () => app(UpdateSystemSettingsAction::class)->execute(
++        actor: $manager,
++        cafeteriaName: 'Nicht erlaubt',
++    ))->toThrow(AuthorizationException::class);
++
++    $settings = app(UpdateSystemSettingsAction::class)->execute(
++        actor: $administrator,
++        cafeteriaName: 'Erlaubt',
++    );
++
++    expect($settings->cafeteria_name)->toBe('Erlaubt');
++});
+diff --git a/app/Surfaces/Pos/Livewire/RegisterScreen.php b/app/Surfaces/Pos/Livewire/RegisterScreen.php
+--- a/app/Surfaces/Pos/Livewire/RegisterScreen.php
++++ b/app/Surfaces/Pos/Livewire/RegisterScreen.php
+@@ -15,2 +15,3 @@ use App\Modules\Catalog\Models\Product;
+ use App\Modules\Catalog\Queries\GetPosCatalogQuery;
++use App\Modules\Identity\Enums\Permission;
+ use App\Modules\Identity\Models\User;
+@@ -28,3 +29,4 @@ use Illuminate\Contracts\View\View;
+ use Illuminate\Support\Collection;
+ use Illuminate\Support\Facades\Auth;
++use Illuminate\Support\Facades\Gate;
+ use Illuminate\Support\Facades\Session;
+@@ -67,6 +69,11 @@ final class RegisterScreen extends Component
+ 
+     public ?int $lastChangeCents = null;
+ 
++    public function boot(): void
++    {
++        Gate::authorize(Permission::PosAccess->value);
++    }
++
+     public function mount(EnsureDefaultRegisterAction $ensureRegister): void
+     {
+         $this->registerId = $ensureRegister->execute($this->currentUser())->id;
+@@ -80,4 +87,6 @@ final class RegisterScreen extends Component
+ 
+     public function openCashSession(OpenCashSessionAction $openSession): void
+     {
++        Gate::authorize(Permission::CashSessionsOpen->value);
++
+         $this->clearMessages();
+@@ -133,4 +142,6 @@ final class RegisterScreen extends Component
+         RecordCashDepositAction $deposit,
+         RecordCashWithdrawalAction $withdrawal,
+     ): void {
++        Gate::authorize(Permission::CashMovementsCreate->value);
++
+         $this->clearMessages();
+@@ -165,4 +176,6 @@ final class RegisterScreen extends Component
+ 
+     public function startCashClosing(StartRegisterClosingAction $startClosing): void
+     {
++        Gate::authorize(Permission::CashSessionsClose->value);
++
+         $this->clearMessages();
+@@ -187,4 +200,6 @@ final class RegisterScreen extends Component
+ 
+     public function cancelCashClosing(CancelCashSessionClosingAction $cancelClosing): void
+     {
++        Gate::authorize(Permission::CashSessionsClose->value);
++
+         $this->clearMessages();
+@@ -210,4 +225,6 @@ final class RegisterScreen extends Component
+ 
+     public function closeCashSession(CloseCashSessionAction $closeSession): void
+     {
++        Gate::authorize(Permission::CashSessionsClose->value);
++
+         $this->clearMessages();
+@@ -240,4 +257,6 @@ final class RegisterScreen extends Component
+ 
+     public function addProduct(int $productId, AddProductToCartAction $addProduct): void
+     {
++        Gate::authorize(Permission::SalesCreate->value);
++
+         $this->clearMessages();
+@@ -270,4 +289,6 @@ final class RegisterScreen extends Component
+ 
+     public function showPayment(): void
+     {
++        Gate::authorize(Permission::SalesCreate->value);
++
+         $this->clearMessages();
+@@ -293,4 +314,6 @@ final class RegisterScreen extends Component
+ 
+     public function completeSale(CompleteCashSaleAction $completeSale): void
+     {
++        Gate::authorize(Permission::SalesCreate->value);
++
+         $this->clearMessages();
+@@ -325,4 +348,6 @@ final class RegisterScreen extends Component
+ 
+     public function discardSale(DiscardOpenSaleAction $discard): void
+     {
++        Gate::authorize(Permission::SalesCreate->value);
++
+         $this->clearMessages();
+@@ -409,4 +434,6 @@ final class RegisterScreen extends Component
+         int $delta,
+         ChangeSaleItemQuantityAction $changeQuantity,
+     ): void {
++        Gate::authorize(Permission::SalesCreate->value);
++
+         $this->clearMessages();
+diff --git a/resources/views/surfaces/pos/register.blade.php b/resources/views/surfaces/pos/register.blade.php
+--- a/resources/views/surfaces/pos/register.blade.php
++++ b/resources/views/surfaces/pos/register.blade.php
+@@ -1,6 +1,5 @@
+ @php
+     use App\Modules\CashRegister\Enums\CashMovementType;
+     use App\Modules\CashRegister\Enums\CashSessionStatus;
+-    use App\Modules\Identity\Enums\UserRole;
+     use App\Support\Money;
+ @endphp
+@@ -34,7 +33,7 @@
+                     <p class="text-sm font-bold">{{ $user->auditDisplayName() }}</p>
+                     <p class="text-xs text-slate-500">{{ $user->username }}</p>
+                 </div>
+-                @if (in_array($user->role, [UserRole::Manager, UserRole::Administrator], true))
++                @can('administration.access')
+                     <a
+                         href="{{ route('administration.dashboard') }}"
+                         wire:navigate
+@@ -44,5 +43,5 @@
+                     >
+                         Administration
+                     </a>
+-                @endif
++                @endcan
+                 @if ($session?->status === CashSessionStatus::Open)

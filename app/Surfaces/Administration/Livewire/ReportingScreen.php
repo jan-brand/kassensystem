@@ -2,14 +2,13 @@
 
 namespace App\Surfaces\Administration\Livewire;
 
-use App\Modules\Identity\Enums\UserRole;
-use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Enums\Permission;
 use App\Modules\Reporting\Queries\GetCashSessionReportQuery;
 use App\Modules\Reporting\Queries\GetDailySummaryQuery;
 use App\Modules\Reporting\Services\DailyReportCsvExporter;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -23,15 +22,7 @@ final class ReportingScreen extends Component
 
     public function boot(): void
     {
-        $user = Auth::user();
-
-        if (
-            ! $user instanceof User
-            || ! $user->active
-            || ! in_array($user->role, [UserRole::Manager, UserRole::Administrator], true)
-        ) {
-            abort(403);
-        }
+        Gate::authorize(Permission::ReportsView->value);
     }
 
     public function mount(): void

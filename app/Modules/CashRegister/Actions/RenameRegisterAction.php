@@ -4,16 +4,23 @@ namespace App\Modules\CashRegister\Actions;
 
 use App\Modules\Audit\Actions\WriteAuditEventAction;
 use App\Modules\CashRegister\Models\Register;
+use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Services\AuthorizationService;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 final class RenameRegisterAction
 {
-    public function __construct(private readonly WriteAuditEventAction $audit) {}
+    public function __construct(
+        private readonly WriteAuditEventAction $audit,
+        private readonly AuthorizationService $authorization,
+    ) {}
 
     public function execute(Register $register, string $name, User $actor): Register
     {
+        $this->authorization->authorize($actor, Permission::SettingsManage);
+
         $name = trim($name);
 
         if ($name === '') {

@@ -15,6 +15,7 @@ use App\Modules\CashRegister\Queries\GetActiveCashSessionQuery;
 use App\Modules\CashRegister\Queries\GetCashSessionCashSummaryQuery;
 use App\Modules\Catalog\Models\Product;
 use App\Modules\Catalog\Queries\GetPosCatalogQuery;
+use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Models\User;
 use App\Modules\Sales\Actions\AddProductToCartAction;
 use App\Modules\Sales\Actions\ChangeSaleItemQuantityAction;
@@ -29,6 +30,7 @@ use App\Surfaces\Pos\Actions\StartRegisterClosingAction;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Session;
 use InvalidArgumentException;
 use Livewire\Attributes\Layout;
@@ -50,6 +52,8 @@ final class RegisterScreen extends Component
     public string $receivedAmount = '';
 
     public bool $paymentOpen = false;
+
+    public bool $mobileCartOpen = false;
 
     public bool $cashMenuOpen = false;
 
@@ -73,6 +77,11 @@ final class RegisterScreen extends Component
 
     public ?int $lastChangeCents = null;
 
+    public function boot(): void
+    {
+        Gate::authorize(Permission::PosAccess->value);
+    }
+
     public function mount(EnsureDefaultRegisterAction $ensureRegister): void
     {
         $this->registerId = $ensureRegister->execute($this->currentUser())->id;
@@ -83,8 +92,20 @@ final class RegisterScreen extends Component
         $this->selectedCategoryId = $categoryId;
     }
 
+    public function openMobileCart(): void
+    {
+        $this->mobileCartOpen = true;
+    }
+
+    public function closeMobileCart(): void
+    {
+        $this->mobileCartOpen = false;
+    }
+
     public function openCashSession(OpenCashSessionAction $openSession): void
     {
+        Gate::authorize(Permission::CashSessionsOpen->value);
+
         $this->clearMessages();
 
         try {
@@ -107,6 +128,7 @@ final class RegisterScreen extends Component
 
         try {
             $this->requireOpenCashSession();
+            $this->mobileCartOpen = false;
             $this->cashMenuOpen = true;
             $this->cashMovementMode = null;
             $this->cashMovementAmount = '';
@@ -149,6 +171,8 @@ final class RegisterScreen extends Component
         RecordCashDepositAction $deposit,
         RecordCashWithdrawalAction $withdrawal,
     ): void {
+        Gate::authorize(Permission::CashMovementsCreate->value);
+
         $this->clearMessages();
 
         try {
@@ -174,11 +198,14 @@ final class RegisterScreen extends Component
 
     public function startCashClosing(StartRegisterClosingAction $startClosing): void
     {
+        Gate::authorize(Permission::CashSessionsClose->value);
+
         $this->clearMessages();
 
         try {
             $startClosing->execute($this->register(), $this->currentUser());
 
+            $this->mobileCartOpen = false;
             $this->cashMenuOpen = false;
             $this->cashMovementMode = null;
             $this->closingCountedCash = '';
@@ -191,6 +218,8 @@ final class RegisterScreen extends Component
 
     public function cancelCashClosing(CancelCashSessionClosingAction $cancelClosing): void
     {
+        Gate::authorize(Permission::CashSessionsClose->value);
+
         $this->clearMessages();
 
         try {
@@ -211,6 +240,8 @@ final class RegisterScreen extends Component
 
     public function closeCashSession(CloseCashSessionAction $closeSession): void
     {
+        Gate::authorize(Permission::CashSessionsClose->value);
+
         $this->clearMessages();
 
         try {
@@ -240,6 +271,8 @@ final class RegisterScreen extends Component
 
     public function addProduct(int $productId, AddProductToCartAction $addProduct): void
     {
+        Gate::authorize(Permission::SalesCreate->value);
+
         $this->clearMessages();
 
         try {
@@ -269,6 +302,8 @@ final class RegisterScreen extends Component
 
     public function showPayment(): void
     {
+        Gate::authorize(Permission::SalesCreate->value);
+
         $this->clearMessages();
 
         try {
@@ -278,6 +313,7 @@ final class RegisterScreen extends Component
                 throw new LogicException('Der Warenkorb ist leer.');
             }
 
+            $this->mobileCartOpen = false;
             $this->paymentOpen = true;
             $this->receivedAmount = Money::decimal($sale->total_cents);
         } catch (Throwable $exception) {
@@ -292,6 +328,8 @@ final class RegisterScreen extends Component
 
     public function completeSale(CompleteCashSaleAction $completeSale): void
     {
+        Gate::authorize(Permission::SalesCreate->value);
+
         $this->clearMessages();
 
         try {
@@ -310,6 +348,7 @@ final class RegisterScreen extends Component
             $this->lastSaleNumber = $completed->number;
             $this->lastSaleTotalCents = $completed->total_cents;
             $this->lastChangeCents = $completed->payment?->change_cents ?? 0;
+            $this->mobileCartOpen = false;
             $this->paymentOpen = false;
             $this->receivedAmount = '';
             $this->notice = 'Verkauf abgeschlossen.';
@@ -320,6 +359,8 @@ final class RegisterScreen extends Component
 
     public function discardSale(DiscardOpenSaleAction $discard): void
     {
+        Gate::authorize(Permission::SalesCreate->value);
+
         $this->clearMessages();
 
         try {
@@ -330,6 +371,7 @@ final class RegisterScreen extends Component
             }
 
             $discard->execute($sale, $this->currentUser());
+            $this->mobileCartOpen = false;
             $this->paymentOpen = false;
             $this->receivedAmount = '';
             $this->notice = 'Warenkorb wurde verworfen.';
@@ -377,6 +419,9 @@ final class RegisterScreen extends Component
         $closingDifferenceCents = $closingCountedCents !== null && $cashSummary !== null
             ? $closingCountedCents - $cashSummary['expected_cash_cents']
             : null;
+        $cartItemCount = $sale !== null
+            ? (int) $sale->items()->sum('quantity')
+            : 0;
 
         $products = $catalog
             ->when(
@@ -408,6 +453,7 @@ final class RegisterScreen extends Component
             'cashSummary' => $cashSummary,
             'recentMovements' => $recentMovements,
             'closingDifferenceCents' => $closingDifferenceCents,
+            'cartItemCount' => $cartItemCount,
             'foreignSale' => $sale !== null && $sale->cashier_id !== $user->id,
             'currency' => (string) config('kassensystem.currency', 'EUR'),
         ]);
@@ -418,6 +464,8 @@ final class RegisterScreen extends Component
         int $delta,
         ChangeSaleItemQuantityAction $changeQuantity,
     ): void {
+        Gate::authorize(Permission::SalesCreate->value);
+
         $this->clearMessages();
 
         try {

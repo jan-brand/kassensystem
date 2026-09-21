@@ -1,3 +1,18 @@
 {
-  "permissions": []
+    "permissions": [
+        "administration.access",
+        "audit.view",
+        "cash_movements.create",
+        "cash_sessions.close",
+        "cash_sessions.open",
+        "cash_sessions.view",
+        "catalog.manage",
+        "pos.access",
+        "reports.view",
+        "sales.create",
+        "sales.view",
+        "settings.manage",
+        "users.cashiers.manage",
+        "users.roles.manage"
+    ]
 }

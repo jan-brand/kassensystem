@@ -3,9 +3,9 @@
     "surface": "administration",
     "uri": "/cashiers",
     "route_name": "administration.cashiers",
-    "permission": null,
+    "permission": "users.cashiers.manage",
     "template": null,
-    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
+    "middleware": ["auth", "can:users.cashiers.manage"],
     "handler": {
         "type": "livewire",
         "target": "App\\Surfaces\\Administration\\Livewire\\CashiersScreen"

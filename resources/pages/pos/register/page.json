@@ -3,10 +3,11 @@
     "surface": "pos",
     "uri": "/",
     "route_name": "pos.register",
-    "permission": null,
+    "permission": "pos.access",
     "template": null,
     "middleware": [
-        "auth"
+        "auth",
+        "can:pos.access"
     ],
     "handler": {
         "type": "livewire",

@@ -3,14 +3,19 @@
 namespace App\Modules\Settings\Actions;
 
 use App\Modules\Audit\Actions\WriteAuditEventAction;
+use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Services\AuthorizationService;
 use App\Modules\Settings\Models\SystemSetting;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 final class UpdateSystemSettingsAction
 {
-    public function __construct(private readonly WriteAuditEventAction $audit) {}
+    public function __construct(
+        private readonly WriteAuditEventAction $audit,
+        private readonly AuthorizationService $authorization,
+    ) {}
 
     public function execute(
         User $actor,
@@ -18,6 +23,8 @@ final class UpdateSystemSettingsAction
         ?string $logoPath = null,
         bool $posShowShortNames = true,
     ): SystemSetting {
+        $this->authorization->authorize($actor, Permission::SettingsManage);
+
         $cafeteriaName = trim($cafeteriaName);
         $logoPath = $logoPath !== null ? trim($logoPath) : null;
 

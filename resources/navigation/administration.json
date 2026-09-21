@@ -1,10 +1,11 @@
 {
     "items": [
-        {"label": "Übersicht", "route": "administration.dashboard", "permission": null},
-        {"label": "Katalog", "route": "administration.catalog", "permission": null},
-        {"label": "Kassierer", "route": "administration.cashiers", "permission": null},
-        {"label": "Berichte", "route": "administration.reporting", "permission": null},
-        {"label": "Einstellungen", "route": "administration.settings", "permission": null},
-        {"label": "Audit", "route": "administration.audit", "permission": null}
+        {"label": "Übersicht", "route": "administration.dashboard", "permission": "administration.access"},
+        {"label": "Katalog", "route": "administration.catalog", "permission": "catalog.manage"},
+        {"label": "Kassierer", "route": "administration.cashiers", "permission": "users.cashiers.manage"},
+        {"label": "Verkäufe", "route": "administration.sales", "permission": "sales.view"},
+        {"label": "Berichte", "route": "administration.reporting", "permission": "reports.view"},
+        {"label": "Einstellungen", "route": "administration.settings", "permission": "settings.manage"},
+        {"label": "Audit", "route": "administration.audit", "permission": "audit.view"}
     ]
 }

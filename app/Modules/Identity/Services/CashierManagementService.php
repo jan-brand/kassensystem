@@ -6,6 +6,7 @@ use App\Modules\Audit\Actions\WriteAuditEventAction;
 use App\Modules\Identity\Actions\CreateUserAction;
 use App\Modules\Identity\Actions\ResetUserPinAction;
 use App\Modules\Identity\Actions\SetUserActiveAction;
+use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Identity\Models\User;
 use InvalidArgumentException;
@@ -18,6 +19,7 @@ final class CashierManagementService
         private readonly ResetUserPinAction $resetUserPin,
         private readonly SetUserActiveAction $setUserActive,
         private readonly WriteAuditEventAction $audit,
+        private readonly AuthorizationService $authorization,
     ) {}
 
     public function create(
@@ -125,12 +127,7 @@ final class CashierManagementService
 
     private function assertActor(User $actor): void
     {
-        if (
-            ! $actor->active
-            || ! in_array($actor->role, [UserRole::Manager, UserRole::Administrator], true)
-        ) {
-            throw new LogicException('Only active managers and administrators may manage cashiers.');
-        }
+        $this->authorization->authorize($actor, Permission::UsersCashiersManage);
     }
 
     private function assertCashier(User $user): void

@@ -3,9 +3,9 @@
     "surface": "administration",
     "uri": "/settings",
     "route_name": "administration.settings",
-    "permission": null,
+    "permission": "settings.manage",
     "template": null,
-    "middleware": ["auth", "App\\Http\\Middleware\\EnsureAdministrationAccess"],
+    "middleware": ["auth", "can:settings.manage"],
     "handler": {
         "type": "livewire",
         "target": "App\\Surfaces\\Administration\\Livewire\\SettingsScreen"

@@ -16,7 +16,7 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-it('protects the settings route and allows administration roles', function () {
+it('protects the settings route and allows only administrators', function () {
     expect(Route::has('administration.settings'))->toBeTrue();
 
     $this->get(route('administration.settings'))->assertRedirect(route('login'));
@@ -36,18 +36,27 @@ it('protects the settings route and allows administration roles', function () {
         'Manager',
         UserRole::Manager,
     );
-    $this->actingAs($manager)->get(route('administration.settings'))->assertOk();
+    $this->actingAs($manager)->get(route('administration.settings'))->assertForbidden();
+
+    $administrator = app(CreateUserAction::class)->execute(
+        'administrator-settings',
+        '123456',
+        'Ada',
+        'Admin',
+        UserRole::Administrator,
+    );
+    $this->actingAs($administrator)->get(route('administration.settings'))->assertOk();
 });
 
 it('saves visible system and register settings with audit events', function () {
-    $manager = app(CreateUserAction::class)->execute(
-        'manager-settings-save',
+    $administrator = app(CreateUserAction::class)->execute(
+        'administrator-settings-save',
         '123456',
-        'Mara',
-        'Manager',
-        UserRole::Manager,
+        'Ada',
+        'Admin',
+        UserRole::Administrator,
     );
-    $this->actingAs($manager);
+    $this->actingAs($administrator);
 
     Livewire::test(SettingsScreen::class)
         ->set('cafeteriaName', 'Schulcafeteria Nord')
@@ -73,14 +82,14 @@ it('saves visible system and register settings with audit events', function () {
 });
 
 it('validates required names on the server', function () {
-    $manager = app(CreateUserAction::class)->execute(
-        'manager-settings-validation',
+    $administrator = app(CreateUserAction::class)->execute(
+        'administrator-settings-validation',
         '123456',
-        'Mara',
-        'Manager',
-        UserRole::Manager,
+        'Ada',
+        'Admin',
+        UserRole::Administrator,
     );
-    $this->actingAs($manager);
+    $this->actingAs($administrator);
 
     Livewire::test(SettingsScreen::class)
         ->set('cafeteriaName', '')
@@ -98,22 +107,22 @@ it('can remove an application managed logo', function () {
     Storage::fake('public');
     Storage::disk('public')->put('settings/logos/old-logo.png', 'logo');
 
-    $manager = app(CreateUserAction::class)->execute(
-        'manager-settings-logo',
+    $administrator = app(CreateUserAction::class)->execute(
+        'administrator-settings-logo',
         '123456',
-        'Mara',
-        'Manager',
-        UserRole::Manager,
+        'Ada',
+        'Admin',
+        UserRole::Administrator,
     );
 
     app(UpdateSystemSettingsAction::class)->execute(
-        actor: $manager,
+        actor: $administrator,
         cafeteriaName: 'Schulcafeteria',
         logoPath: 'settings/logos/old-logo.png',
         posShowShortNames: true,
     );
 
-    $this->actingAs($manager);
+    $this->actingAs($administrator);
 
     Livewire::test(SettingsScreen::class)
         ->set('removeLogo', true)

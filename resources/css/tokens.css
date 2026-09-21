@@ -1,0 +1,195 @@
+/*
+ * Kassensystem — Design Tokens
+ */
+
+:root {
+    /* Brand */
+    --color-ink: #0f172a;
+    --color-white: #ffffff;
+    --color-primary: #2fbf71;
+    --color-secondary: #22b7a3;
+    --color-accent: #f59e0b;
+
+    /* Neutral UI */
+    --color-page: #ffffff;
+    --color-surface: #ffffff;
+    --color-surface-subtle: #f5f7f6;
+    --color-surface-strong: #edf1ef;
+    --color-border: #d4dbd8;
+    --color-border-strong: #8d9a95;
+    --color-text-muted: #52605b;
+    --color-text-disabled: #6f7b76;
+    --color-surface-disabled: #eef1f0;
+
+    /* Semantic UI */
+    --color-link: #086f64;
+    --color-focus: var(--color-ink);
+    --color-success: #18794e;
+    --color-warning: #8a5a00;
+    --color-danger: #a12622;
+    --color-info: #285b8f;
+
+    /* Typography */
+    --font-family-base:
+        "IBM Plex Sans",
+        system-ui,
+        -apple-system,
+        "Segoe UI",
+        Arial,
+        sans-serif;
+
+    --font-weight-light: 300;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    --text-3xl: clamp(1.75rem, 2.4vw, 2.25rem);
+    --text-4xl: clamp(2rem, 3vw, 2.75rem);
+
+    --leading-tight: 1.15;
+    --leading-heading: 1.22;
+    --leading-body: 1.55;
+
+    /* Spacing — 4px base rhythm */
+    --spacing-1: 0.25rem;
+    --spacing-2: 0.5rem;
+    --spacing-3: 0.75rem;
+    --spacing-4: 1rem;
+    --spacing-5: 1.5rem;
+    --spacing-6: 2rem;
+    --spacing-7: 2.5rem;
+    --spacing-8: 3rem;
+    --spacing-9: 4rem;
+    --spacing-10: 6rem;
+
+    --spacing-gap: var(--spacing-4);
+    --spacing-form: var(--spacing-4);
+    --spacing-card: var(--spacing-5);
+
+    /* Component scales */
+    --border-width-default: 1px;
+    --border-width-strong: 3px;
+    --border-width-accent: 5px;
+    --control-height-sm: 2.25rem;
+    --control-height-md: 2.9rem;
+    --control-height-lg: 3.1rem;
+    --icon-size-sm: 1rem;
+    --icon-size-md: 1.25rem;
+    --icon-size-lg: 1.5rem;
+
+    /* Layout */
+    --layout-content-small-max: 60rem; /* 960px */
+    --layout-content-max: 80rem; /* 1280px */
+    --layout-content-wide-max: 90rem; /* 1440px */
+    --layout-text-max: 46rem;
+    --layout-form-max: 46rem;
+    --layout-page-gutter: clamp(2rem, 4vw, 3.5rem); /* 32–56px */
+    --layout-page-gutter-mobile: 1rem;
+    --layout-main-padding-block: clamp(2rem, 4vw, 4rem);
+    --layout-section-gap: clamp(2rem, 4vw, 3.5rem);
+
+    /* Shape */
+    --radius-default: 0;
+    --radius-avatar: 999px;
+
+    /* Elevation */
+    --shadow-sm: 0 2px 8px rgb(15 23 42 / 10%);
+    --shadow-md: 0 8px 24px rgb(15 23 42 / 16%);
+    --shadow-lg: 0 14px 34px rgb(15 23 42 / 22%);
+
+    /* Layers */
+    --z-header: 100;
+    --z-dropdown: 130;
+    --z-popover: 140;
+    --z-overlay: 200;
+    --z-skip-link: 1000;
+
+    /* Motion */
+    --transition-fast: 160ms ease;
+    --transition-normal: 240ms ease;
+
+    /* ------------------------------------------------------------------
+     * Compatibility aliases for the initial Laravel design foundation.
+     * New code may use the canonical names above; old examples do not need
+     * to be rewritten all at once.
+     * ------------------------------------------------------------------ */
+    --vdbs-color-green: var(--color-primary);
+    --vdbs-color-ocean: var(--color-secondary-cta);
+    --vdbs-color-ink: var(--color-ink);
+    --vdbs-color-amber: var(--color-accent-amber);
+    --vdbs-color-teal: var(--color-accent-teal);
+    --vdbs-color-berry: var(--color-accent-berry);
+    --vdbs-color-white: var(--color-white);
+    --vdbs-color-page: var(--color-page);
+    --vdbs-color-surface: var(--color-surface);
+    --vdbs-color-surface-subtle: var(--color-surface-subtle);
+    --vdbs-color-border: var(--color-border);
+    --vdbs-color-border-strong: var(--color-border-strong);
+    --vdbs-color-muted-text: var(--color-text-muted);
+    --vdbs-color-text: var(--color-ink);
+    --vdbs-color-link: var(--color-link);
+    --vdbs-color-action: var(--color-secondary-cta);
+    --vdbs-color-focus: var(--color-focus);
+    --vdbs-color-success: var(--color-success);
+    --vdbs-color-warning: var(--color-warning);
+    --vdbs-color-danger: var(--color-danger);
+
+    --vdbs-font-sans: var(--font-family-base);
+    --vdbs-font-serif: var(--font-family-accent);
+    --vdbs-font-workshop: var(--font-family-workshop);
+
+    --vdbs-text-xs: var(--text-xs);
+    --vdbs-text-sm: var(--text-sm);
+    --vdbs-text-base: var(--text-base);
+    --vdbs-text-lg: var(--text-lg);
+    --vdbs-text-xl: var(--text-xl);
+    --vdbs-text-2xl: var(--text-2xl);
+    --vdbs-text-3xl: var(--text-3xl);
+    --vdbs-text-4xl: var(--text-4xl);
+
+    --vdbs-leading-tight: var(--leading-tight);
+    --vdbs-leading-heading: var(--leading-heading);
+    --vdbs-leading-body: var(--leading-body);
+
+    --vdbs-space-1: var(--spacing-1);
+    --vdbs-space-2: var(--spacing-2);
+    --vdbs-space-3: var(--spacing-3);
+    --vdbs-space-4: var(--spacing-4);
+    --vdbs-space-5: var(--spacing-5);
+    --vdbs-space-6: var(--spacing-6);
+    --vdbs-space-7: var(--spacing-7);
+    --vdbs-space-8: var(--spacing-8);
+    --vdbs-space-9: var(--spacing-9);
+    --vdbs-space-10: var(--spacing-10);
+
+    --vdbs-radius-sm: var(--radius-default);
+    --vdbs-radius-md: var(--radius-default);
+    --vdbs-radius-lg: var(--radius-default);
+    --vdbs-radius-pill: var(--radius-avatar);
+
+    --vdbs-content-max: var(--layout-content-max);
+    --vdbs-content-wide-max: var(--layout-content-wide-max);
+    --vdbs-text-max: var(--layout-text-max);
+    --vdbs-form-max: var(--layout-form-max);
+    --vdbs-page-gutter: var(--layout-page-gutter);
+
+    --vdbs-shadow-sm: var(--shadow-sm);
+    --vdbs-shadow-md: var(--shadow-md);
+    --vdbs-shadow-lg: var(--shadow-lg);
+    --vdbs-transition-fast: var(--transition-fast);
+    --vdbs-transition-normal: var(--transition-normal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --transition-fast: 0ms;
+        --transition-normal: 0ms;
+    }
+}

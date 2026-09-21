@@ -1,12 +1,11 @@
 @php
     use App\Modules\CashRegister\Enums\CashMovementType;
     use App\Modules\CashRegister\Enums\CashSessionStatus;
-    use App\Modules\Identity\Enums\UserRole;
     use App\Support\Money;
 @endphp
 
 <div class="min-h-screen">
-    <header class="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <header class="header-pos sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3 lg:px-6">
             <div class="flex min-w-0 items-center gap-3">
                 @if ($settings?->logo_path)
@@ -34,7 +33,7 @@
                     <p class="text-sm font-bold">{{ $user->auditDisplayName() }}</p>
                     <p class="text-xs text-slate-500">{{ $user->username }}</p>
                 </div>
-                @if (in_array($user->role, [UserRole::Manager, UserRole::Administrator], true))
+                @can('administration.access')
                     <a
                         href="{{ route('administration.dashboard') }}"
                         wire:navigate
@@ -42,7 +41,7 @@
                     >
                         Administration
                     </a>
-                @endif
+                @endcan
                 @if ($session?->status === CashSessionStatus::Open)
                     <button
                         type="button"

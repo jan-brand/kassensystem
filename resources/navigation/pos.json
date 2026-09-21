@@ -3,7 +3,7 @@
         {
             "label": "Kasse",
             "route": "pos.register",
-            "permission": null
+            "permission": "pos.access"
         }
     ]
 }

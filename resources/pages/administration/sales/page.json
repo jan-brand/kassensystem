@@ -1,0 +1,13 @@
+{
+    "name": "sales",
+    "surface": "administration",
+    "uri": "/sales",
+    "route_name": "administration.sales",
+    "permission": "sales.view",
+    "template": null,
+    "middleware": ["auth", "can:sales.view"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\SalesScreen"
+    }
+}
