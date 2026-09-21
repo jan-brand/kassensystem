@@ -11,6 +11,7 @@ it('loads the extracted POS component styles', function () {
         'cart-line.css',
         'quantity-stepper.css',
         'payment-action.css',
+        'dialog.css',
         'bottom-sheet.css',
         'toast.css',
         'pos-terminal.css',

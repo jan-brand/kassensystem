@@ -8,71 +8,70 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="min-h-[100dvh] bg-slate-100 text-slate-950">
-<header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur" style="padding-top: env(safe-area-inset-top);">
-    <div class="mx-auto max-w-7xl px-4 py-3 sm:px-6">
+<body class="admin-shell">
+<header class="admin-header" style="padding-top: env(safe-area-inset-top);">
+    <div class="admin-header__inner">
         <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
-                <p class="text-[11px] font-bold uppercase tracking-widest text-slate-500">Kassensystem</p>
-                <h1 class="truncate text-lg font-black sm:text-xl">Administration</h1>
+                <p class="admin-brand-kicker">Kassensystem</p>
+                <h1 class="admin-brand-title truncate">Administration</h1>
             </div>
 
-            <nav class="hidden flex-wrap items-center justify-end gap-1.5 text-sm font-bold md:flex">
+            <nav class="admin-nav hidden md:flex">
                 @can('administration.access')
-                    <a href="{{ route('administration.dashboard') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Übersicht</a>
+                    <a href="{{ route('administration.dashboard') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.dashboard') ? 'is-active' : '' }}">Übersicht</a>
                 @endcan
                 @can('catalog.manage')
-                    <a href="{{ route('administration.catalog') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Katalog</a>
+                    <a href="{{ route('administration.catalog') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.catalog') ? 'is-active' : '' }}">Katalog</a>
                 @endcan
                 @can('users.cashiers.manage')
-                    <a href="{{ route('administration.cashiers') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Kassierer</a>
+                    <a href="{{ route('administration.cashiers') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.cashiers') ? 'is-active' : '' }}">Kassierer</a>
                 @endcan
                 @can('sales.view')
-                    <a href="{{ route('administration.sales') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Verkäufe</a>
+                    <a href="{{ route('administration.sales') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.sales') ? 'is-active' : '' }}">Verkäufe</a>
                 @endcan
                 @can('reports.view')
-                    <a href="{{ route('administration.reporting') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Berichte</a>
+                    <a href="{{ route('administration.reporting') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.reporting') ? 'is-active' : '' }}">Berichte</a>
                 @endcan
                 @can('settings.manage')
-                    <a href="{{ route('administration.settings') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Einstellungen</a>
+                    <a href="{{ route('administration.settings') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.settings') ? 'is-active' : '' }}">Einstellungen</a>
                 @endcan
                 @can('audit.view')
-                    <a href="{{ route('administration.audit') }}" wire:navigate class="rounded-xl px-3 py-2 hover:bg-slate-100">Audit</a>
+                    <a href="{{ route('administration.audit') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.audit') ? 'is-active' : '' }}">Audit</a>
                 @endcan
                 @can('pos.access')
-                    <a href="{{ route('pos.register') }}" wire:navigate class="rounded-xl border border-slate-300 px-3 py-2 hover:bg-slate-50">Zur Kasse</a>
+                    <a href="{{ route('pos.register') }}" wire:navigate class="admin-nav__link admin-nav__link--pos">Zur Kasse</a>
                 @endcan
             </nav>
 
             <details class="relative md:hidden">
-                <summary class="cursor-pointer list-none rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-black shadow-sm">
+                <summary class="admin-mobile-summary list-none">
                     Menü
                 </summary>
-                <nav class="absolute right-0 mt-2 w-64 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-sm font-bold shadow-xl">
+                <nav class="admin-mobile-nav">
                     @can('administration.access')
-                        <a href="{{ route('administration.dashboard') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Übersicht</a>
+                        <a href="{{ route('administration.dashboard') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.dashboard') ? 'is-active' : '' }}">Übersicht</a>
                     @endcan
                     @can('catalog.manage')
-                        <a href="{{ route('administration.catalog') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Katalog</a>
+                        <a href="{{ route('administration.catalog') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.catalog') ? 'is-active' : '' }}">Katalog</a>
                     @endcan
                     @can('users.cashiers.manage')
-                        <a href="{{ route('administration.cashiers') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Kassierer</a>
+                        <a href="{{ route('administration.cashiers') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.cashiers') ? 'is-active' : '' }}">Kassierer</a>
                     @endcan
                     @can('sales.view')
-                        <a href="{{ route('administration.sales') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Verkäufe</a>
+                        <a href="{{ route('administration.sales') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.sales') ? 'is-active' : '' }}">Verkäufe</a>
                     @endcan
                     @can('reports.view')
-                        <a href="{{ route('administration.reporting') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Berichte</a>
+                        <a href="{{ route('administration.reporting') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.reporting') ? 'is-active' : '' }}">Berichte</a>
                     @endcan
                     @can('settings.manage')
-                        <a href="{{ route('administration.settings') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Einstellungen</a>
+                        <a href="{{ route('administration.settings') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.settings') ? 'is-active' : '' }}">Einstellungen</a>
                     @endcan
                     @can('audit.view')
-                        <a href="{{ route('administration.audit') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Audit</a>
+                        <a href="{{ route('administration.audit') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.audit') ? 'is-active' : '' }}">Audit</a>
                     @endcan
                     @can('pos.access')
-                        <div class="my-1 border-t border-slate-200"></div>
-                        <a href="{{ route('pos.register') }}" wire:navigate class="block rounded-xl px-3 py-3 hover:bg-slate-100">Zur Kasse</a>
+                        <a href="{{ route('pos.register') }}" wire:navigate class="admin-nav__link admin-nav__link--pos">Zur Kasse</a>
                     @endcan
                 </nav>
             </details>

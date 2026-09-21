@@ -79,27 +79,29 @@
         @endif
 
         @if (! $session)
-            <section class="mx-auto max-w-xl rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
-                <p class="text-sm font-bold uppercase tracking-[0.15em] text-slate-500">Kassenstart</p>
-                <h2 class="mt-2 text-3xl font-bold">Kasse öffnen</h2>
-                <p class="mt-2 text-slate-600">Trage den gezählten Anfangsbestand der Bargeldkasse ein.</p>
+            <section class="pos-start-card">
+                <p class="pos-eyebrow">Kassenstart</p>
+                <h2 class="pos-start-title">Kasse öffnen</h2>
+                <p class="pos-start-copy">Trage den gezählten Anfangsbestand der Bargeldkasse ein.</p>
 
-                <form wire:submit="openCashSession" class="mt-8 space-y-5">
+                <form wire:submit="openCashSession" class="pos-start-form">
                     <div>
-                        <label for="openingCash" class="mb-2 block text-sm font-bold">Anfangsbestand</label>
-                        <div class="relative">
+                        <label for="openingCash" class="pos-field-label">Anfangsbestand</label>
+                        <div class="pos-money-input">
                             <input
                                 id="openingCash"
                                 type="text"
                                 inputmode="decimal"
                                 wire:model="openingCash"
-                                class="w-full rounded-2xl border border-slate-300 px-4 py-4 pr-14 text-right text-2xl font-bold outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
+                                placeholder="0,00"
+                                autocomplete="off"
+                                class="pos-money-input__control"
                             >
-                            <span class="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-lg font-bold text-slate-500">€</span>
+                            <span class="pos-money-input__currency">€</span>
                         </div>
                     </div>
 
-                    <button type="submit" wire:loading.attr="disabled" class="w-full touch-manipulation rounded-2xl bg-slate-950 px-5 py-4 text-lg font-bold text-white hover:bg-slate-800 disabled:opacity-50">
+                    <button type="submit" wire:loading.attr="disabled" class="pos-primary-action touch-manipulation disabled:opacity-50">
                         <span wire:loading.remove wire:target="openCashSession">Kasse öffnen</span>
                         <span wire:loading wire:target="openCashSession">Wird geöffnet …</span>
                     </button>
@@ -541,44 +543,48 @@
     @endif
 
     @if ($paymentOpen && $sale && ! $foreignSale)
-        <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4">
-            <div class="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-6" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom));">
-                <div class="flex items-start justify-between gap-4">
+        <div class="pos-dialog-backdrop fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+            <div class="pos-dialog-card" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom));">
+                <div class="pos-dialog-header">
                     <div>
-                        <p class="text-sm font-bold uppercase tracking-[0.15em] text-slate-500">Barzahlung</p>
-                        <h2 class="mt-1 text-3xl font-black">{{ Money::format($sale->total_cents, $currency) }}</h2>
+                        <p class="pos-eyebrow">Barzahlung</p>
+                        <h2 class="pos-dialog-total">{{ Money::format($sale->total_cents, $currency) }}</h2>
                     </div>
-                    <button type="button" wire:click="$set('paymentOpen', false)" class="rounded-xl bg-slate-100 px-3 py-2 font-bold">Schließen</button>
+                    <button type="button" wire:click="$set('paymentOpen', false)" class="pos-dialog-close">Schließen</button>
                 </div>
 
                 @if ($sale->total_cents > 0)
-                    <label for="receivedAmount" class="mt-6 block text-sm font-bold">Gegeben</label>
-                    <div class="relative mt-2">
-                        <input
-                            id="receivedAmount"
-                            type="text"
-                            inputmode="decimal"
-                            wire:model="receivedAmount"
-                            class="w-full rounded-2xl border border-slate-300 px-4 py-4 pr-14 text-right text-3xl font-black outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
-                        >
-                        <span class="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-500">€</span>
+                    <div class="pos-dialog-field">
+                        <label for="receivedAmount" class="pos-field-label">Gegeben</label>
+                        <div class="pos-money-input">
+                            <input
+                                id="receivedAmount"
+                                type="text"
+                                inputmode="decimal"
+                                wire:model="receivedAmount"
+                                placeholder="0,00"
+                                autocomplete="off"
+                                class="pos-money-input__control"
+                            >
+                            <span class="pos-money-input__currency">€</span>
+                        </div>
                     </div>
 
-                    <div class="mt-3 grid grid-cols-4 gap-2">
-                        <button type="button" wire:click="setReceivedAmount({{ $sale->total_cents }})" class="rounded-xl bg-slate-100 px-2 py-3 text-sm font-bold">Passend</button>
+                    <div class="pos-quick-amounts">
+                        <button type="button" wire:click="setReceivedAmount({{ $sale->total_cents }})" class="pos-quick-amount">Passend</button>
                         @foreach ([500, 1000, 2000] as $quickAmount)
-                            <button type="button" wire:click="setReceivedAmount({{ $quickAmount }})" class="rounded-xl bg-slate-100 px-2 py-3 text-sm font-bold">
+                            <button type="button" wire:click="setReceivedAmount({{ $quickAmount }})" class="pos-quick-amount">
                                 {{ Money::format($quickAmount, $currency) }}
                             </button>
                         @endforeach
                     </div>
                 @else
-                    <div class="mt-6 rounded-2xl bg-emerald-50 p-4 text-emerald-900">
+                    <div class="pos-zero-sale">
                         Dieser Verkauf ist kostenlos und wird trotzdem vollständig protokolliert.
                     </div>
                 @endif
 
-                <button type="button" wire:click="completeSale" wire:loading.attr="disabled" class="mt-6 w-full touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-xl font-black text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60">
+                <button type="button" wire:click="completeSale" wire:loading.attr="disabled" class="pos-dialog-action touch-manipulation disabled:cursor-wait disabled:opacity-60">
                     <span wire:loading.remove wire:target="completeSale">Verkauf abschließen</span>
                     <span wire:loading wire:target="completeSale">Wird abgeschlossen …</span>
                 </button>

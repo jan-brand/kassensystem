@@ -43,7 +43,7 @@ final class RegisterScreen extends Component
 {
     public int $registerId;
 
-    public string $openingCash = '0,00';
+    public string $openingCash = '';
 
     public ?int $selectedCategoryId = null;
 
@@ -109,13 +109,15 @@ final class RegisterScreen extends Component
         $this->clearMessages();
 
         try {
+            $openingCashCents = trim($this->openingCash) === '' ? 0 : Money::parseCents($this->openingCash);
+
             $openSession->execute(
                 register: $this->register(),
                 user: $this->currentUser(),
-                openingCashCents: Money::parseCents($this->openingCash),
+                openingCashCents: $openingCashCents,
             );
 
-            $this->openingCash = '0,00';
+            $this->openingCash = '';
             $this->notice = 'Kasse wurde geöffnet.';
         } catch (Throwable $exception) {
             $this->screenError = $this->friendlyMessage($exception);
@@ -315,7 +317,7 @@ final class RegisterScreen extends Component
 
             $this->mobileCartOpen = false;
             $this->paymentOpen = true;
-            $this->receivedAmount = Money::decimal($sale->total_cents);
+            $this->receivedAmount = '';
         } catch (Throwable $exception) {
             $this->screenError = $this->friendlyMessage($exception);
         }

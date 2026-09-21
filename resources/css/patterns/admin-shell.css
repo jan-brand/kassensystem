@@ -1,0 +1,189 @@
+/*
+ * Administration shell and dashboard.
+ *
+ * The administration uses a light neutral workspace. Colour is limited to
+ * small accents and status meaning.
+ */
+
+.admin-shell {
+    min-height: 100dvh;
+    background: var(--raw-color-neutral-100);
+    color: var(--raw-color-black);
+}
+
+.admin-header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    border-bottom: 1px solid var(--raw-color-neutral-300);
+    background: color-mix(in srgb, var(--raw-color-white) 96%, transparent);
+    backdrop-filter: blur(0.75rem);
+}
+
+.admin-header__inner {
+    width: min(100%, var(--layout-content-wide-max));
+    margin-inline: auto;
+    padding: 0.85rem var(--layout-page-gutter);
+}
+
+.admin-brand-kicker {
+    margin: 0;
+    color: var(--raw-color-neutral-500);
+    font-size: 0.68rem;
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.admin-brand-title {
+    margin-top: 0.2rem;
+    color: var(--raw-color-black);
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--leading-tight);
+}
+
+.admin-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.25rem;
+}
+
+.admin-nav__link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid transparent;
+    border-radius: var(--radius-md);
+    background: transparent;
+    color: var(--raw-color-black);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        color var(--transition-fast);
+}
+
+.admin-nav__link:hover {
+    background: var(--raw-color-white);
+    border-color: var(--raw-color-neutral-300);
+}
+
+.admin-nav__link.is-active {
+    border-color: var(--raw-color-black);
+    background: var(--raw-color-black);
+    color: var(--raw-color-white);
+}
+
+.admin-nav__link--pos {
+    border-color: var(--raw-color-neutral-300);
+    background: var(--raw-color-white);
+    box-shadow: inset 0 -0.15rem 0 var(--accent-active);
+}
+
+.admin-mobile-summary {
+    min-height: 2.75rem;
+    padding: 0.6rem 0.9rem;
+    border: 1px solid var(--raw-color-neutral-300);
+    border-radius: var(--radius-md);
+    background: var(--raw-color-white);
+    color: var(--raw-color-black);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-bold);
+    cursor: pointer;
+}
+
+.admin-mobile-nav {
+    position: absolute;
+    inset-inline-end: 0;
+    width: 16rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    overflow: hidden;
+    border: 1px solid var(--raw-color-neutral-300);
+    border-radius: var(--radius-lg);
+    background: var(--raw-color-white);
+    box-shadow: var(--shadow-md);
+}
+
+.admin-mobile-nav .admin-nav__link {
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.8rem;
+}
+
+.admin-page {
+    width: min(100%, var(--layout-content-wide-max));
+    margin-inline: auto;
+    padding: clamp(2rem, 5vw, 4rem) var(--layout-page-gutter);
+}
+
+.admin-page__heading {
+    color: var(--raw-color-black);
+    font-size: clamp(2.25rem, 5vw, 3.5rem);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.035em;
+    line-height: var(--leading-tight);
+}
+
+.admin-page__date {
+    margin-top: 0.5rem;
+    color: var(--raw-color-neutral-500);
+    font-size: var(--text-base);
+    font-variant-numeric: tabular-nums;
+}
+
+.admin-stat-grid {
+    display: grid;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.admin-stat-card {
+    position: relative;
+    min-height: 9.5rem;
+    padding: 1.5rem;
+    overflow: hidden;
+    border: 1px solid var(--raw-color-neutral-300);
+    border-radius: var(--radius-xl);
+    background: var(--raw-color-white);
+    box-shadow: none;
+}
+
+.admin-stat-card--revenue {
+    box-shadow: inset 0 0.2rem 0 var(--accent-active);
+}
+
+.admin-stat-label {
+    color: var(--raw-color-neutral-500);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+.admin-stat-value {
+    margin-top: 1rem;
+    color: var(--raw-color-black);
+    font-size: clamp(2rem, 4vw, 2.75rem);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.035em;
+    line-height: 1;
+}
+
+@media (min-width: 640px) {
+    .admin-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .admin-stat-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}

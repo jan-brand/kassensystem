@@ -68,6 +68,7 @@ it('opens the register, builds a cart and completes a cash sale', function () {
     $this->actingAs($user);
 
     $component = Livewire::test(RegisterScreen::class)
+        ->assertSet('openingCash', '')
         ->set('openingCash', '20,00')
         ->call('openCashSession')
         ->assertSet('screenError', null)
@@ -84,6 +85,7 @@ it('opens the register, builds a cart and completes a cash sale', function () {
 
     $component
         ->call('showPayment')
+        ->assertSet('receivedAmount', '')
         ->set('receivedAmount', '5,00')
         ->call('completeSale')
         ->assertSet('screenError', null)
