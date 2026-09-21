@@ -1,0 +1,19 @@
+/*
+ * Component layer
+ *
+ * Neue Komponenten werden hier importiert:
+ *
+ * @import './button.css';
+ * @import './form-field.css';
+ * @import './surface-card.css';
+ * @import './product-tile.css';
+ * @import './category-tab.css';
+ * @import './quantity-stepper.css';
+ * @import './cart-line.css';
+ * @import './payment-action.css';
+ * @import './table-card.css';
+ * @import './bottom-sheet.css';
+ * @import './toast.css';
+ *
+ * Komponenten verwenden semantische Tokens aus ../tokens.css.
+ */

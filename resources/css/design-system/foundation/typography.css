@@ -1,0 +1,31 @@
+/*
+ * Typografische Grundregeln.
+ * Komponenten dürfen Größen später gezielt überschreiben.
+ */
+
+html[data-theme='gastro-dark'] :where(h1, h2, h3, h4, h5, h6, p) {
+    margin-block-start: 0;
+}
+
+html[data-theme='gastro-dark'] :where(h1, h2, h3, h4, h5, h6) {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--line-height-tight);
+    text-wrap: balance;
+}
+
+html[data-theme='gastro-dark'] :where(p, li, dd) {
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] :where(small, .text-secondary) {
+    color: var(--text-secondary);
+}
+
+html[data-theme='gastro-dark'] :where(strong, b) {
+    font-weight: var(--font-weight-bold);
+}
+
+html[data-theme='gastro-dark'] :where(code, kbd, samp) {
+    font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}

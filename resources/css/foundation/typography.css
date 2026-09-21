@@ -1,0 +1,33 @@
+/*
+ * Typografie-Fundament.
+ */
+
+html[data-theme='gastro-dark'] body {
+    font-size: var(--text-base);
+    line-height: var(--leading-body);
+}
+
+html[data-theme='gastro-dark'] :where(h1, h2, h3, h4, h5, h6) {
+    margin-block-start: 0;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--leading-heading);
+    text-wrap: balance;
+}
+
+html[data-theme='gastro-dark'] :where(p, li, dd) {
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] :where(small, .text-secondary) {
+    color: var(--text-secondary);
+}
+
+html[data-theme='gastro-dark'] :where(strong, b) {
+    font-weight: var(--font-weight-bold);
+}
+
+html[data-theme='gastro-dark'] :where(a) {
+    color: inherit;
+    text-underline-offset: 0.18em;
+}

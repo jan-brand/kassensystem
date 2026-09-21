@@ -20,3 +20,9 @@ Thumbs.db
 /database/*.sqlite-shm
 /database/*.sqlite-wal
 /storage/app/backups/
+
+# Local development patch artifacts
+/kassensystem-*.patch
+/kassensystem-*.zip
+/kassensystem-*-compat.php
+/register.blade.php.mobile-merge-conflict

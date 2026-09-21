@@ -1,0 +1,13 @@
+/*
+ * Pattern layer
+ *
+ * Patterns kombinieren Komponenten zu wiederkehrenden Strukturen:
+ *
+ * @import './product-grid.css';
+ * @import './category-rail.css';
+ * @import './cart-panel.css';
+ * @import './payment-panel.css';
+ * @import './table-overview.css';
+ *
+ * Keine neuen Raw Colors in Patterns definieren.
+ */

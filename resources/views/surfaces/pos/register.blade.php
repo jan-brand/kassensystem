@@ -4,32 +4,32 @@
     use App\Support\Money;
 @endphp
 
-<div class="min-h-screen">
-    <header class="header-pos sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-        <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-4 px-4 py-3 lg:px-6">
-            <div class="flex min-w-0 items-center gap-3">
+<div class="min-h-[100dvh]">
+    <header class="header-pos sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur" style="padding-top: env(safe-area-inset-top);">
+        <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3 lg:px-6">
+            <div class="flex min-w-0 items-center gap-2 sm:gap-3">
                 @if ($settings?->logo_path)
-                    <img src="{{ asset('storage/'.$settings->logo_path) }}" alt="Logo" class="h-10 w-10 shrink-0 rounded-xl object-contain ring-1 ring-slate-200">
+                    <img src="{{ asset('storage/'.$settings->logo_path) }}" alt="Logo" class="h-9 w-9 shrink-0 rounded-xl object-contain ring-1 ring-slate-200 sm:h-10 sm:w-10">
                 @endif
                 <div class="min-w-0">
-                    <p class="truncate text-sm font-semibold text-slate-500">
+                    <p class="truncate text-xs font-semibold text-slate-500 sm:text-sm">
                         {{ $settings?->cafeteria_name ?: config('app.name') }}
                     </p>
-                    <div class="flex items-center gap-3">
-                        <h1 class="text-xl font-bold">{{ $register->name }}</h1>
+                    <div class="flex min-w-0 items-center gap-2 sm:gap-3">
+                        <h1 class="truncate text-base font-black sm:text-xl">{{ $register->name }}</h1>
                         @if ($session)
-                            <span class="rounded-full px-2.5 py-1 text-xs font-bold {{ $session->status === CashSessionStatus::Open ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+                            <span class="hidden rounded-full px-2.5 py-1 text-xs font-bold sm:inline-flex {{ $session->status === CashSessionStatus::Open ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
                                 {{ $session->status === CashSessionStatus::Open ? 'Geöffnet' : 'Abschluss läuft' }}
                             </span>
                         @else
-                            <span class="rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-700">Geschlossen</span>
+                            <span class="hidden rounded-full bg-slate-200 px-2.5 py-1 text-xs font-bold text-slate-700 sm:inline-flex">Geschlossen</span>
                         @endif
                     </div>
                 </div>
             </div>
 
-            <div class="flex items-center gap-3">
-                <div class="hidden text-right sm:block">
+            <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                <div class="hidden text-right lg:block">
                     <p class="text-sm font-bold">{{ $user->auditDisplayName() }}</p>
                     <p class="text-xs text-slate-500">{{ $user->username }}</p>
                 </div>
@@ -37,32 +37,35 @@
                     <a
                         href="{{ route('administration.dashboard') }}"
                         wire:navigate
-                        class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold hover:bg-slate-50"
+                        class="hidden rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold hover:bg-slate-50 sm:inline-flex"
                     >
-                        Administration
+                        Admin
                     </a>
                 @endcan
                 @if ($session?->status === CashSessionStatus::Open)
                     <button
                         type="button"
                         wire:click="openCashMenu"
-                        class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
+                        wire:loading.attr="disabled"
+                        class="touch-manipulation rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50 sm:px-4"
                     >
-                        Kassenmenü
+                        Kasse
                     </button>
                 @endif
                 <button
                     type="button"
                     wire:click="switchUser"
-                    class="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold hover:bg-slate-50"
+                    wire:loading.attr="disabled"
+                    class="touch-manipulation rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold hover:bg-slate-50 disabled:opacity-50"
                 >
-                    Benutzer wechseln
+                    <span class="sm:hidden">Wechsel</span>
+                    <span class="hidden sm:inline">Benutzer wechseln</span>
                 </button>
             </div>
         </div>
     </header>
 
-    <main class="mx-auto max-w-[1600px] p-4 lg:p-6">
+    <main class="mx-auto max-w-[1600px] px-3 py-3 pb-28 sm:px-4 sm:py-4 lg:p-6 xl:pb-6">
         @if ($notice)
             <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-medium text-emerald-900">
                 {{ $notice }}
@@ -96,8 +99,9 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="w-full rounded-2xl bg-slate-950 px-5 py-4 text-lg font-bold text-white hover:bg-slate-800">
-                        Kasse öffnen
+                    <button type="submit" wire:loading.attr="disabled" class="w-full touch-manipulation rounded-2xl bg-slate-950 px-5 py-4 text-lg font-bold text-white hover:bg-slate-800 disabled:opacity-50">
+                        <span wire:loading.remove wire:target="openCashSession">Kasse öffnen</span>
+                        <span wire:loading wire:target="openCashSession">Wird geöffnet …</span>
                     </button>
                 </form>
             </section>
@@ -216,14 +220,14 @@
                 </div>
             </section>
         @else
-            <div class="grid gap-5 xl:grid-cols-[minmax(0,1fr)_430px]">
-                <section class="min-w-0 space-y-4">
-                    <div class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+            <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_430px] xl:gap-5">
+                <section class="min-w-0 space-y-3 sm:space-y-4">
+                    <div class="-mx-3 border-y border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:mx-0 sm:rounded-2xl sm:border-0 sm:p-3 sm:ring-1 sm:ring-slate-200">
                         <div class="flex gap-2 overflow-x-auto pb-1">
                             <button
                                 type="button"
                                 wire:click="selectCategory(null)"
-                                class="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold {{ $selectedCategoryId === null ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-800' }}"
+                                class="shrink-0 touch-manipulation rounded-xl px-4 py-3 text-sm font-bold {{ $selectedCategoryId === null ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-800' }}"
                             >
                                 Alle
                             </button>
@@ -232,7 +236,7 @@
                                     type="button"
                                     wire:key="category-{{ $category->id }}"
                                     wire:click="selectCategory({{ $category->id }})"
-                                    class="shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold {{ $selectedCategoryId === $category->id ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-800' }}"
+                                    class="shrink-0 touch-manipulation rounded-xl px-4 py-3 text-sm font-bold {{ $selectedCategoryId === $category->id ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-800' }}"
                                 >
                                     {{ $category->name }}
                                 </button>
@@ -240,49 +244,52 @@
                         </div>
                     </div>
 
-                    <div class="rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200">
+                    <div class="rounded-2xl bg-white p-2.5 shadow-sm ring-1 ring-slate-200 sm:p-3">
                         <input
                             type="search"
                             wire:model.live.debounce.250ms="search"
                             placeholder="Produkt suchen …"
-                            class="w-full rounded-xl border border-slate-300 px-4 py-3 text-lg outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
+                            enterkeyhint="search"
+                            autocomplete="off"
+                            class="w-full rounded-xl border border-slate-300 px-4 py-3 text-base outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10 sm:text-lg"
                         >
                     </div>
 
                     @if ($foreignSale)
-                        <div class="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950">
+                        <div class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950 sm:p-5">
                             <h2 class="font-bold">Offener Warenkorb eines anderen Benutzers</h2>
                             <p class="mt-1 text-sm">Dieser Warenkorb muss zuerst vom zugehörigen Benutzer abgeschlossen oder verworfen werden.</p>
                         </div>
                     @endif
 
-                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 2xl:grid-cols-5">
                         @forelse ($products as $product)
                             <button
                                 type="button"
                                 wire:key="product-{{ $product->id }}"
                                 wire:click="addProduct({{ $product->id }})"
+                                wire:loading.attr="disabled"
                                 @disabled($foreignSale)
-                                class="flex min-h-32 flex-col justify-between rounded-2xl bg-white p-4 text-left shadow-sm ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                class="flex min-h-28 touch-manipulation select-none flex-col justify-between rounded-2xl bg-white p-3 text-left shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-32 sm:p-4 sm:hover:-translate-y-0.5 sm:hover:shadow-md"
                             >
                                 <span class="font-bold leading-tight">{{ ($settings?->pos_show_short_names ?? true) ? $product->short_name : $product->name }}</span>
-                                <span class="mt-4 text-xl font-black">{{ Money::format($product->price_cents, $currency) }}</span>
+                                <span class="mt-3 text-lg font-black sm:mt-4 sm:text-xl">{{ Money::format($product->price_cents, $currency) }}</span>
                             </button>
                         @empty
-                            <div class="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-500">
+                            <div class="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500 sm:p-10">
                                 Keine aktiven Produkte gefunden.
                             </div>
                         @endforelse
                     </div>
                 </section>
 
-                <aside class="xl:sticky xl:top-24 xl:self-start">
+                <aside class="hidden xl:sticky xl:top-24 xl:block xl:self-start">
                     <div class="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
                         <div class="border-b border-slate-200 px-5 py-4">
                             <div class="flex items-center justify-between">
                                 <h2 class="text-xl font-bold">Warenkorb</h2>
                                 @if ($sale && ! $foreignSale)
-                                    <button type="button" wire:click="discardSale" class="text-sm font-bold text-red-700 hover:text-red-900">Verwerfen</button>
+                                    <button type="button" wire:click="discardSale" wire:loading.attr="disabled" class="text-sm font-bold text-red-700 hover:text-red-900 disabled:opacity-50">Verwerfen</button>
                                 @endif
                             </div>
                         </div>
@@ -292,15 +299,15 @@
                                 <div class="p-8 text-center text-slate-500">Noch keine Produkte ausgewählt.</div>
                             @else
                                 @foreach ($sale->items as $item)
-                                    <div wire:key="cart-item-{{ $item->id }}" class="flex items-center gap-3 px-5 py-4">
+                                    <div wire:key="cart-item-desktop-{{ $item->id }}" class="flex items-center gap-3 px-5 py-4">
                                         <div class="min-w-0 flex-1">
                                             <p class="truncate font-bold">{{ $item->product_name }}</p>
                                             <p class="text-sm text-slate-500">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
                                         </div>
                                         <div class="flex items-center rounded-xl bg-slate-100 p-1">
-                                            <button type="button" wire:click="decreaseItem({{ $item->id }})" class="h-9 w-9 rounded-lg text-xl font-black hover:bg-white">−</button>
+                                            <button type="button" wire:click="decreaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-10 w-10 touch-manipulation rounded-lg text-xl font-black hover:bg-white disabled:opacity-50">−</button>
                                             <span class="w-9 text-center font-black">{{ $item->quantity }}</span>
-                                            <button type="button" wire:click="increaseItem({{ $item->id }})" class="h-9 w-9 rounded-lg text-xl font-black hover:bg-white">+</button>
+                                            <button type="button" wire:click="increaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-10 w-10 touch-manipulation rounded-lg text-xl font-black hover:bg-white disabled:opacity-50">+</button>
                                         </div>
                                         <p class="w-24 text-right font-black">{{ Money::format($item->total_cents, $currency) }}</p>
                                     </div>
@@ -317,8 +324,9 @@
                             <button
                                 type="button"
                                 wire:click="showPayment"
+                                wire:loading.attr="disabled"
                                 @disabled(! $sale || $sale->items->isEmpty() || $foreignSale)
-                                class="mt-5 w-full rounded-2xl bg-emerald-600 px-5 py-4 text-xl font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                class="mt-5 w-full touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-xl font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                                 Bezahlen
                             </button>
@@ -326,12 +334,94 @@
                     </div>
                 </aside>
             </div>
+
+            <div
+                data-pos-mobile-bar
+                class="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pt-2.5 shadow-[0_-8px_30px_rgba(15,23,42,0.12)] backdrop-blur xl:hidden"
+                style="padding-bottom: max(0.75rem, env(safe-area-inset-bottom));"
+            >
+                <div class="mx-auto flex max-w-3xl items-center gap-2">
+                    <button
+                        type="button"
+                        wire:click="openMobileCart"
+                        wire:loading.attr="disabled"
+                        class="min-w-0 flex-1 touch-manipulation rounded-2xl border border-slate-300 bg-white px-4 py-3 text-left disabled:opacity-50"
+                    >
+                        <span class="block text-xs font-bold uppercase tracking-wide text-slate-500">{{ $cartItemCount }} Artikel</span>
+                        <span class="block truncate text-xl font-black">{{ Money::format($sale?->total_cents ?? 0, $currency) }}</span>
+                    </button>
+                    <button
+                        type="button"
+                        wire:click="showPayment"
+                        wire:loading.attr="disabled"
+                        @disabled(! $sale || $sale->items->isEmpty() || $foreignSale)
+                        class="touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-base font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300 sm:px-7"
+                    >
+                        Bezahlen
+                    </button>
+                </div>
+            </div>
         @endif
     </main>
 
+    @if ($mobileCartOpen && $session?->status === CashSessionStatus::Open)
+        <div data-pos-mobile-cart class="fixed inset-0 z-50 flex items-end bg-slate-950/50 xl:hidden" wire:click.self="closeMobileCart">
+            <section class="max-h-[88dvh] w-full overflow-hidden rounded-t-3xl bg-white shadow-2xl">
+                <header class="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-4">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ $cartItemCount }} Artikel</p>
+                        <h2 class="text-xl font-black">Warenkorb</h2>
+                    </div>
+                    <button type="button" wire:click="closeMobileCart" class="touch-manipulation rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-black">Schließen</button>
+                </header>
+
+                <div class="max-h-[52dvh] divide-y divide-slate-100 overflow-y-auto overscroll-contain">
+                    @if (! $sale || $sale->items->isEmpty())
+                        <div class="p-8 text-center text-slate-500">Noch keine Produkte ausgewählt.</div>
+                    @else
+                        @foreach ($sale->items as $item)
+                            <div wire:key="cart-item-mobile-{{ $item->id }}" class="flex items-center gap-3 px-4 py-4">
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate font-bold">{{ $item->product_name }}</p>
+                                    <p class="text-sm text-slate-500">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
+                                </div>
+                                <div class="flex shrink-0 items-center rounded-xl bg-slate-100 p-1">
+                                    <button type="button" wire:click="decreaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-11 w-11 touch-manipulation rounded-lg text-xl font-black disabled:opacity-50">−</button>
+                                    <span class="w-9 text-center font-black">{{ $item->quantity }}</span>
+                                    <button type="button" wire:click="increaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-11 w-11 touch-manipulation rounded-lg text-xl font-black disabled:opacity-50">+</button>
+                                </div>
+                            </div>
+                        @endforeach
+                    @endif
+                </div>
+
+                <footer class="border-t border-slate-200 bg-slate-50 px-4 pt-4" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+                    <div class="flex items-end justify-between gap-4">
+                        <span class="font-bold text-slate-600">Gesamt</span>
+                        <span class="text-3xl font-black">{{ Money::format($sale?->total_cents ?? 0, $currency) }}</span>
+                    </div>
+                    <div class="mt-4 grid grid-cols-[auto_1fr] gap-2">
+                        @if ($sale && ! $foreignSale)
+                            <button type="button" wire:click="discardSale" wire:loading.attr="disabled" class="touch-manipulation rounded-2xl border border-red-200 bg-white px-4 py-4 text-sm font-black text-red-700 disabled:opacity-50">Verwerfen</button>
+                        @endif
+                        <button
+                            type="button"
+                            wire:click="showPayment"
+                            wire:loading.attr="disabled"
+                            @disabled(! $sale || $sale->items->isEmpty() || $foreignSale)
+                            class="touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-lg font-black text-white disabled:bg-slate-300"
+                        >
+                            Bezahlen
+                        </button>
+                    </div>
+                </footer>
+            </section>
+        </div>
+    @endif
+
     @if ($cashMenuOpen && $session?->status === CashSessionStatus::Open)
         <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4">
-            <div class="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl">
+            <div class="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-6" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom));">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="text-sm font-bold uppercase tracking-[0.15em] text-slate-500">Bargeld</p>
@@ -436,7 +526,7 @@
 
     @if ($paymentOpen && $sale && ! $foreignSale)
         <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4">
-            <div class="w-full max-w-lg rounded-t-3xl bg-white p-6 shadow-2xl sm:rounded-3xl">
+            <div class="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-6" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom));">
                 <div class="flex items-start justify-between gap-4">
                     <div>
                         <p class="text-sm font-bold uppercase tracking-[0.15em] text-slate-500">Barzahlung</p>
@@ -472,16 +562,17 @@
                     </div>
                 @endif
 
-                <button type="button" wire:click="completeSale" class="mt-6 w-full rounded-2xl bg-emerald-600 px-5 py-4 text-xl font-black text-white hover:bg-emerald-700">
-                    Verkauf abschließen
+                <button type="button" wire:click="completeSale" wire:loading.attr="disabled" class="mt-6 w-full touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-xl font-black text-white hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60">
+                    <span wire:loading.remove wire:target="completeSale">Verkauf abschließen</span>
+                    <span wire:loading wire:target="completeSale">Wird abgeschlossen …</span>
                 </button>
             </div>
         </div>
     @endif
 
     @if ($lastSaleNumber)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
-            <div class="w-full max-w-md rounded-3xl bg-white p-7 text-center shadow-2xl">
+        <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4">
+            <div class="w-full max-w-md rounded-t-3xl bg-white p-6 text-center shadow-2xl sm:rounded-3xl sm:p-7" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom));">
                 <p class="text-sm font-bold uppercase tracking-[0.15em] text-emerald-700">Verkauf abgeschlossen</p>
                 <h2 class="mt-2 text-2xl font-black">{{ $lastSaleNumber }}</h2>
                 <p class="mt-5 text-sm font-bold text-slate-500">Gesamt</p>

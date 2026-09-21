@@ -99,7 +99,7 @@
         {
             "id": "V1-006",
             "title": "[TECH] Backup, Restore und Produktionsvorbereitung",
-            "status": "in-progress",
+            "status": "closed",
             "priority": "P1",
             "type": "tech",
             "areas": [
@@ -109,7 +109,7 @@
             "body_file": ".github/backlog/06-production.md",
             "github_number": null,
             "created_at": "2026-09-20",
-            "closed_at": null
+            "closed_at": "2026-09-21"
         },
         {
             "id": "V1-007",
@@ -145,7 +145,7 @@
         {
             "id": "V1-009",
             "title": "[FEATURE] POS-Finalisierung fuer Tabletbetrieb",
-            "status": "in-progress",
+            "status": "closed",
             "priority": "P2",
             "type": "feature",
             "areas": [
@@ -156,7 +156,7 @@
             "body_file": ".github/backlog/09-pos-finalization.md",
             "github_number": null,
             "created_at": "2026-09-20",
-            "closed_at": null
+            "closed_at": "2026-09-21"
         }
     ]
 }

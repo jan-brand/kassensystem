@@ -1,0 +1,60 @@
+/*
+ * Globales Gastro-Fundament.
+ *
+ * Opt-in:
+ * Erst <html data-theme="gastro-dark"> aktiviert diese Regeln.
+ */
+
+html[data-theme='gastro-dark'] {
+    min-height: 100%;
+    background: var(--bg-main);
+    color: var(--text-primary);
+    color-scheme: dark;
+    font-family: var(--font-family-base);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+html[data-theme='gastro-dark'] body {
+    min-height: 100vh;
+    margin: 0;
+    background: var(--bg-main);
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] *,
+html[data-theme='gastro-dark'] *::before,
+html[data-theme='gastro-dark'] *::after {
+    box-sizing: border-box;
+}
+
+html[data-theme='gastro-dark'] ::selection {
+    background: var(--selection-bg);
+    color: var(--selection-text);
+}
+
+html[data-theme='gastro-dark'] :where(img, svg) {
+    max-width: 100%;
+}
+
+html[data-theme='gastro-dark'] :where(button, input, select, textarea) {
+    font: inherit;
+}
+
+html[data-theme='gastro-dark'] :where(:focus-visible) {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-theme='gastro-dark'] *,
+    html[data-theme='gastro-dark'] *::before,
+    html[data-theme='gastro-dark'] *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}

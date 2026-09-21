@@ -1,6 +1,10 @@
 @import 'tailwindcss';
 
-/* Kassensystem CSS architecture: tokens -> foundation -> components -> patterns -> parts */
+/*
+ * Kassensystem CSS architecture
+ *
+ * tokens -> foundation -> components -> patterns -> project parts
+ */
 @import './tokens.css';
 @import './foundation/base.css';
 @import './foundation/typography.css';
@@ -15,23 +19,30 @@
 @source '../**/*.blade.php';
 @source '../**/*.js';
 
-/* Tailwind 4 bridge. Canonical values live in tokens.css. */
+/*
+ * Tailwind 4 bridge.
+ * Die tatsächlichen Werte bleiben ausschließlich in tokens.css.
+ */
 @theme inline {
     --font-sans: var(--font-family-base);
 
-    --color-primary: var(--brand-primary);
-    --color-secondary: var(--brand-secondary);
-    --color-accent: var(--brand-accent);
+    /* Legacy utility names */
+    --color-primary: var(--color-primary);
+    --color-secondary: var(--color-secondary);
+    --color-accent: var(--color-accent);
 
+    /* Semantic POS utilities */
     --color-pos-bg: var(--bg-main);
     --color-pos-panel: var(--bg-panel);
     --color-pos-panel-raised: var(--bg-panel-raised);
     --color-pos-nav: var(--bg-navigation);
     --color-pos-nav-strong: var(--bg-navigation-strong);
     --color-pos-secondary: var(--bg-secondary);
+
     --color-pos-text: var(--text-primary);
     --color-pos-text-muted: var(--text-secondary);
     --color-pos-border: var(--border-default);
+
     --color-pos-accent: var(--accent-active);
     --color-pos-success: var(--action-success);
     --color-pos-danger: var(--action-danger);

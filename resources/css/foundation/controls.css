@@ -1,0 +1,91 @@
+/*
+ * Globale ergonomische Control-Basis.
+ * Noch keine fertige Button- oder Input-Komponente.
+ */
+
+html[data-theme='gastro-dark'] :where(
+    button,
+    [role='button'],
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+    select,
+    textarea
+) {
+    min-height: var(--touch-min);
+    border: var(--border-width-default) solid var(--input-border);
+    border-radius: var(--radius-md);
+    background: var(--input-bg);
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] :where(button, [role='button']) {
+    padding-inline: var(--spacing-4);
+    background: var(--action-neutral);
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+html[data-theme='gastro-dark'] :where(button, [role='button']):active:not(:disabled, [aria-disabled='true']) {
+    transform: translateY(1px);
+}
+
+html[data-theme='gastro-dark'] :where(
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+    select,
+    textarea
+) {
+    width: 100%;
+    padding: var(--spacing-3) var(--spacing-4);
+    caret-color: var(--accent-active);
+}
+
+html[data-theme='gastro-dark'] :where(textarea) {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+html[data-theme='gastro-dark'] :where(
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+    select,
+    textarea
+)::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.72;
+}
+
+html[data-theme='gastro-dark'] :where(
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+    select,
+    textarea
+):focus {
+    border-color: var(--input-border-focus);
+}
+
+html[data-theme='gastro-dark'] :where(
+    button:disabled,
+    [role='button'][aria-disabled='true'],
+    input:disabled,
+    select:disabled,
+    textarea:disabled
+) {
+    background: var(--state-disabled-bg);
+    color: var(--state-disabled-text);
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+@media (pointer: coarse) {
+    html[data-theme='gastro-dark'] :where(
+        button,
+        [role='button'],
+        input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+        select
+    ) {
+        min-height: var(--touch-comfort);
+    }
+}
