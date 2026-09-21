@@ -1,15 +1,15 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-theme="gastro-dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#101412">
     <title>{{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="min-h-[100dvh] bg-slate-100 text-slate-950 antialiased">
+<body class="min-h-[100dvh] antialiased">
     {{ $slot }}
     @livewireScripts
 </body>

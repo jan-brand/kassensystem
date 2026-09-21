@@ -1,0 +1,425 @@
+/*
+ * POS Terminal — Mitarbeiteroberfläche
+ *
+ * Ziel: maximale Lesbarkeit, kurze Wege, große Touch-Ziele, wenig Dekoration.
+ * Alle Farben stammen aus ../tokens.css.
+ */
+
+html[data-theme='gastro-dark'] .pos-terminal {
+    min-height: 100dvh;
+    background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg-navigation-strong) 24%, transparent) 0, transparent 11rem),
+        var(--bg-main);
+    color: var(--text-primary);
+}
+
+/* ------------------------------------------------------------------
+ * Header
+ * ------------------------------------------------------------------ */
+
+html[data-theme='gastro-dark'] .header-pos {
+    border-color: var(--border-default) !important;
+    background: color-mix(in srgb, var(--bg-navigation-strong) 96%, transparent) !important;
+    box-shadow: 0 1px 0 rgb(255 255 255 / 4%);
+    backdrop-filter: none !important;
+}
+
+html[data-theme='gastro-dark'] .header-pos .pos-brand-name {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .header-pos .pos-register-name {
+    color: var(--text-primary) !important;
+    letter-spacing: -0.01em;
+}
+
+html[data-theme='gastro-dark'] .header-pos .pos-user-name {
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] .header-pos .pos-user-id {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-header-action {
+    min-height: 2.75rem;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-header-action:hover {
+    border-color: var(--border-strong) !important;
+    background: color-mix(in srgb, var(--bg-panel-raised) 82%, var(--bg-secondary)) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-header-action--cash {
+    border-color: color-mix(in srgb, var(--accent-active) 50%, transparent) !important;
+    background: var(--accent-active) !important;
+    color: var(--text-on-accent) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-header-action--cash:hover {
+    background: var(--accent-active-hover) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-session-badge {
+    border: 1px solid color-mix(in srgb, var(--action-success) 60%, transparent);
+    background: color-mix(in srgb, var(--action-success) 22%, var(--bg-navigation-strong)) !important;
+    color: #8fe0b2 !important;
+}
+
+/* ------------------------------------------------------------------
+ * Main workspace
+ * ------------------------------------------------------------------ */
+
+html[data-theme='gastro-dark'] .pos-terminal__main {
+    width: 100%;
+    max-width: 112rem;
+}
+
+html[data-theme='gastro-dark'] .pos-workspace {
+    align-items: start;
+}
+
+html[data-theme='gastro-dark'] .pos-catalog {
+    min-width: 0;
+}
+
+/* category navigation */
+html[data-theme='gastro-dark'] .pos-category-bar {
+    margin-inline: 0 !important;
+    padding: 0.5rem !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-category-scroll {
+    gap: 0.4rem !important;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+}
+
+html[data-theme='gastro-dark'] .pos-category-button {
+    min-height: 3rem;
+    padding: 0.65rem 1rem !important;
+    border: 1px solid transparent !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--text-secondary) !important;
+    font-weight: var(--font-weight-bold);
+    white-space: nowrap;
+}
+
+html[data-theme='gastro-dark'] .pos-category-button:hover {
+    border-color: var(--border-strong) !important;
+    color: var(--text-primary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-category-button.is-active {
+    border-color: var(--accent-active) !important;
+    background: var(--accent-active) !important;
+    color: var(--text-on-accent) !important;
+}
+
+/* search */
+html[data-theme='gastro-dark'] .pos-search {
+    position: relative;
+    padding: 0 !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-search::before {
+    content: "⌕";
+    position: absolute;
+    inset-inline-start: 1rem;
+    top: 50%;
+    z-index: 1;
+    translate: 0 -50%;
+    color: var(--text-secondary);
+    font-size: 1.4rem;
+    pointer-events: none;
+}
+
+html[data-theme='gastro-dark'] .pos-search__input {
+    min-height: 3.25rem;
+    padding: 0.7rem 1rem 0.7rem 3rem !important;
+    border: 0 !important;
+    border-radius: var(--radius-lg) !important;
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-search__input::placeholder {
+    color: var(--text-secondary) !important;
+    opacity: 0.78;
+}
+
+/* products */
+html[data-theme='gastro-dark'] .pos-product-grid {
+    gap: 0.65rem !important;
+}
+
+html[data-theme='gastro-dark'] .pos-product-tile {
+    position: relative;
+    min-height: 7.75rem !important;
+    padding: 0.9rem !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel) !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+    ring: none !important;
+    transition:
+        border-color var(--transition-fast),
+        background-color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+html[data-theme='gastro-dark'] .pos-product-tile:hover {
+    border-color: var(--border-strong) !important;
+    background: var(--bg-panel-raised) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-product-tile:active {
+    border-color: var(--accent-active) !important;
+    background: color-mix(in srgb, var(--accent-active) 13%, var(--bg-panel)) !important;
+    transform: scale(0.985) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-product-name {
+    color: var(--text-primary);
+    font-size: 0.98rem;
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.25;
+}
+
+html[data-theme='gastro-dark'] .pos-product-price {
+    color: var(--accent-highlight);
+    font-size: 1.35rem !important;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+/* ------------------------------------------------------------------
+ * Cart
+ * ------------------------------------------------------------------ */
+
+html[data-theme='gastro-dark'] .pos-cart {
+    top: 4.75rem !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__panel {
+    overflow: hidden;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__header {
+    padding: 0.9rem 1rem !important;
+    border-color: var(--border-default) !important;
+    background: var(--bg-navigation-strong);
+}
+
+html[data-theme='gastro-dark'] .pos-cart__title {
+    color: var(--text-primary);
+    font-size: 1.05rem !important;
+    letter-spacing: 0.01em;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__discard {
+    min-height: auto !important;
+    padding: 0.45rem 0.65rem !important;
+    border: 1px solid color-mix(in srgb, var(--action-danger) 50%, transparent) !important;
+    border-radius: var(--radius-sm) !important;
+    background: transparent !important;
+    color: #ff938d !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__body {
+    max-height: calc(100dvh - 22rem) !important;
+    min-height: 11rem;
+    border-color: var(--border-default);
+    background: var(--bg-panel);
+}
+
+html[data-theme='gastro-dark'] .pos-cart__empty {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__row {
+    border-color: var(--border-default);
+}
+
+html[data-theme='gastro-dark'] .pos-cart__row p {
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] .pos-cart__row .pos-cart__unit {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-quantity {
+    background: var(--bg-panel-raised) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-quantity button {
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--text-primary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-quantity button:hover {
+    background: color-mix(in srgb, var(--bg-secondary) 16%, var(--bg-panel-raised)) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__footer {
+    padding: 1rem !important;
+    border-color: var(--border-default) !important;
+    background: var(--bg-panel-raised) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__total-label {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__total {
+    color: var(--text-primary);
+    font-size: clamp(2rem, 4vw, 3rem) !important;
+    font-variant-numeric: tabular-nums;
+}
+
+html[data-theme='gastro-dark'] .pos-pay-button {
+    min-height: 3.75rem;
+    border: 1px solid color-mix(in srgb, var(--action-success) 70%, white) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--action-success) !important;
+    color: var(--text-on-action) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-pay-button:hover:not(:disabled) {
+    background: var(--action-success-hover) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-pay-button:disabled {
+    border-color: var(--border-default) !important;
+    background: var(--state-disabled-bg) !important;
+    color: var(--state-disabled-text) !important;
+}
+
+/* ------------------------------------------------------------------
+ * Mobile action bar
+ * ------------------------------------------------------------------ */
+
+html[data-theme='gastro-dark'] [data-pos-mobile-bar] {
+    border-color: var(--border-default) !important;
+    background: color-mix(in srgb, var(--bg-navigation-strong) 96%, transparent) !important;
+    box-shadow: 0 -0.75rem 2rem rgb(0 0 0 / 30%) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-bar] > div > button:first-child {
+    border-color: var(--border-default) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--text-primary) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-bar] > div > button:first-child span:first-child {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-bar] > div > button:last-child {
+    background: var(--action-success) !important;
+    color: var(--text-on-action) !important;
+}
+
+/* ------------------------------------------------------------------
+ * Dialogs / bottom sheets in POS
+ * ------------------------------------------------------------------ */
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] {
+    background: rgb(0 0 0 / 68%) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] > section {
+    border: 1px solid var(--border-default);
+    background: var(--bg-panel) !important;
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] header,
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] footer {
+    border-color: var(--border-default) !important;
+    background: var(--bg-panel-raised) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] p,
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] span {
+    color: inherit;
+}
+
+/* ------------------------------------------------------------------
+ * Desktop density
+ * ------------------------------------------------------------------ */
+
+@media (min-width: 1280px) {
+    html[data-theme='gastro-dark'] .pos-terminal__main {
+        padding-top: 0.9rem !important;
+        padding-inline: 0.9rem !important;
+    }
+
+    html[data-theme='gastro-dark'] .pos-workspace {
+        grid-template-columns: minmax(0, 1fr) 25rem !important;
+        gap: 0.9rem !important;
+    }
+
+    html[data-theme='gastro-dark'] .pos-catalog {
+        gap: 0.7rem;
+    }
+
+    html[data-theme='gastro-dark'] .pos-product-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (min-width: 1600px) {
+    html[data-theme='gastro-dark'] .pos-product-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    }
+}
+
+/* ------------------------------------------------------------------
+ * Small screens
+ * ------------------------------------------------------------------ */
+
+@media (max-width: 639px) {
+    html[data-theme='gastro-dark'] .header-pos {
+        position: sticky;
+    }
+
+    html[data-theme='gastro-dark'] .pos-category-bar {
+        border-radius: 0 !important;
+        border-inline: 0 !important;
+    }
+
+    html[data-theme='gastro-dark'] .pos-product-tile {
+        min-height: 6.75rem !important;
+        padding: 0.8rem !important;
+    }
+
+    html[data-theme='gastro-dark'] .pos-product-price {
+        font-size: 1.15rem !important;
+    }
+}

@@ -26,3 +26,4 @@ Thumbs.db
 /kassensystem-*.zip
 /kassensystem-*-compat.php
 /register.blade.php.mobile-merge-conflict
+/.foundation/compat-backups/

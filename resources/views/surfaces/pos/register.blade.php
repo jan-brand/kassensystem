@@ -4,7 +4,7 @@
     use App\Support\Money;
 @endphp
 
-<div class="min-h-[100dvh]">
+<div class="pos-terminal min-h-[100dvh]">
     <header class="header-pos sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur" style="padding-top: env(safe-area-inset-top);">
         <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-4 sm:py-3 lg:px-6">
             <div class="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -12,13 +12,13 @@
                     <img src="{{ asset('storage/'.$settings->logo_path) }}" alt="Logo" class="h-9 w-9 shrink-0 rounded-xl object-contain ring-1 ring-slate-200 sm:h-10 sm:w-10">
                 @endif
                 <div class="min-w-0">
-                    <p class="truncate text-xs font-semibold text-slate-500 sm:text-sm">
+                    <p class="pos-brand-name truncate text-xs font-semibold text-slate-500 sm:text-sm">
                         {{ $settings?->cafeteria_name ?: config('app.name') }}
                     </p>
                     <div class="flex min-w-0 items-center gap-2 sm:gap-3">
-                        <h1 class="truncate text-base font-black sm:text-xl">{{ $register->name }}</h1>
+                        <h1 class="pos-register-name truncate text-base font-black sm:text-xl">{{ $register->name }}</h1>
                         @if ($session)
-                            <span class="hidden rounded-full px-2.5 py-1 text-xs font-bold sm:inline-flex {{ $session->status === CashSessionStatus::Open ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
+                            <span class="pos-session-badge hidden rounded-full px-2.5 py-1 text-xs font-bold sm:inline-flex {{ $session->status === CashSessionStatus::Open ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">
                                 {{ $session->status === CashSessionStatus::Open ? 'Geöffnet' : 'Abschluss läuft' }}
                             </span>
                         @else
@@ -30,14 +30,14 @@
 
             <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
                 <div class="hidden text-right lg:block">
-                    <p class="text-sm font-bold">{{ $user->auditDisplayName() }}</p>
-                    <p class="text-xs text-slate-500">{{ $user->username }}</p>
+                    <p class="pos-user-name text-sm font-bold">{{ $user->auditDisplayName() }}</p>
+                    <p class="pos-user-id text-xs text-slate-500">{{ $user->username }}</p>
                 </div>
                 @can('administration.access')
                     <a
                         href="{{ route('administration.dashboard') }}"
                         wire:navigate
-                        class="hidden rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold hover:bg-slate-50 sm:inline-flex"
+                        class="pos-header-action hidden rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold hover:bg-slate-50 sm:inline-flex"
                     >
                         Admin
                     </a>
@@ -47,7 +47,7 @@
                         type="button"
                         wire:click="openCashMenu"
                         wire:loading.attr="disabled"
-                        class="touch-manipulation rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50 sm:px-4"
+                        class="pos-header-action pos-header-action--cash touch-manipulation rounded-xl bg-slate-950 px-3 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50 sm:px-4"
                     >
                         Kasse
                     </button>
@@ -56,7 +56,7 @@
                     type="button"
                     wire:click="switchUser"
                     wire:loading.attr="disabled"
-                    class="touch-manipulation rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold hover:bg-slate-50 disabled:opacity-50"
+                    class="pos-header-action touch-manipulation rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm font-bold hover:bg-slate-50 disabled:opacity-50"
                 >
                     <span class="sm:hidden">Wechsel</span>
                     <span class="hidden sm:inline">Benutzer wechseln</span>
@@ -65,7 +65,7 @@
         </div>
     </header>
 
-    <main class="mx-auto max-w-[1600px] px-3 py-3 pb-28 sm:px-4 sm:py-4 lg:p-6 xl:pb-6">
+    <main class="pos-terminal__main mx-auto max-w-[1600px] px-3 py-3 pb-28 sm:px-4 sm:py-4 lg:p-6 xl:pb-6">
         @if ($notice)
             <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-medium text-emerald-900">
                 {{ $notice }}
@@ -220,14 +220,14 @@
                 </div>
             </section>
         @else
-            <div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_430px] xl:gap-5">
-                <section class="min-w-0 space-y-3 sm:space-y-4">
-                    <div class="-mx-3 border-y border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:mx-0 sm:rounded-2xl sm:border-0 sm:p-3 sm:ring-1 sm:ring-slate-200">
-                        <div class="flex gap-2 overflow-x-auto pb-1">
+            <div class="pos-workspace grid gap-4 xl:grid-cols-[minmax(0,1fr)_430px] xl:gap-5">
+                <section class="pos-catalog min-w-0 space-y-3 sm:space-y-4">
+                    <div class="pos-category-bar -mx-3 border-y border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:mx-0 sm:rounded-2xl sm:border-0 sm:p-3 sm:ring-1 sm:ring-slate-200">
+                        <div class="pos-category-scroll flex gap-2 overflow-x-auto pb-1">
                             <button
                                 type="button"
                                 wire:click="selectCategory(null)"
-                                class="shrink-0 touch-manipulation rounded-xl px-4 py-3 text-sm font-bold {{ $selectedCategoryId === null ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-800' }}"
+                                class="pos-category-button shrink-0 touch-manipulation rounded-xl px-4 py-3 text-sm font-bold {{ $selectedCategoryId === null ? 'is-active' : '' }}"
                             >
                                 Alle
                             </button>
@@ -236,7 +236,7 @@
                                     type="button"
                                     wire:key="category-{{ $category->id }}"
                                     wire:click="selectCategory({{ $category->id }})"
-                                    class="shrink-0 touch-manipulation rounded-xl px-4 py-3 text-sm font-bold {{ $selectedCategoryId === $category->id ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-800' }}"
+                                    class="pos-category-button shrink-0 touch-manipulation rounded-xl px-4 py-3 text-sm font-bold {{ $selectedCategoryId === $category->id ? 'is-active' : '' }}"
                                 >
                                     {{ $category->name }}
                                 </button>
@@ -244,14 +244,14 @@
                         </div>
                     </div>
 
-                    <div class="rounded-2xl bg-white p-2.5 shadow-sm ring-1 ring-slate-200 sm:p-3">
+                    <div class="pos-search rounded-2xl bg-white p-2.5 shadow-sm ring-1 ring-slate-200 sm:p-3">
                         <input
                             type="search"
                             wire:model.live.debounce.250ms="search"
                             placeholder="Produkt suchen …"
                             enterkeyhint="search"
                             autocomplete="off"
-                            class="w-full rounded-xl border border-slate-300 px-4 py-3 text-base outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10 sm:text-lg"
+                            class="pos-search__input w-full rounded-xl border border-slate-300 px-4 py-3 text-base outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10 sm:text-lg"
                         >
                     </div>
 
@@ -262,7 +262,7 @@
                         </div>
                     @endif
 
-                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 2xl:grid-cols-5">
+                    <div class="pos-product-grid grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 lg:grid-cols-4 2xl:grid-cols-5">
                         @forelse ($products as $product)
                             <button
                                 type="button"
@@ -270,10 +270,10 @@
                                 wire:click="addProduct({{ $product->id }})"
                                 wire:loading.attr="disabled"
                                 @disabled($foreignSale)
-                                class="flex min-h-28 touch-manipulation select-none flex-col justify-between rounded-2xl bg-white p-3 text-left shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-32 sm:p-4 sm:hover:-translate-y-0.5 sm:hover:shadow-md"
+                                class="pos-product-tile flex min-h-28 touch-manipulation select-none flex-col justify-between rounded-2xl bg-white p-3 text-left shadow-sm ring-1 ring-slate-200 transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-32 sm:p-4"
                             >
-                                <span class="font-bold leading-tight">{{ ($settings?->pos_show_short_names ?? true) ? $product->short_name : $product->name }}</span>
-                                <span class="mt-3 text-lg font-black sm:mt-4 sm:text-xl">{{ Money::format($product->price_cents, $currency) }}</span>
+                                <span class="pos-product-name font-bold leading-tight">{{ ($settings?->pos_show_short_names ?? true) ? $product->short_name : $product->name }}</span>
+                                <span class="pos-product-price mt-3 text-lg font-black sm:mt-4 sm:text-xl">{{ Money::format($product->price_cents, $currency) }}</span>
                             </button>
                         @empty
                             <div class="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500 sm:p-10">
@@ -283,28 +283,28 @@
                     </div>
                 </section>
 
-                <aside class="hidden xl:sticky xl:top-24 xl:block xl:self-start">
-                    <div class="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
-                        <div class="border-b border-slate-200 px-5 py-4">
+                <aside class="pos-cart hidden xl:sticky xl:top-24 xl:block xl:self-start">
+                    <div class="pos-cart__panel overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
+                        <div class="pos-cart__header border-b border-slate-200 px-5 py-4">
                             <div class="flex items-center justify-between">
-                                <h2 class="text-xl font-bold">Warenkorb</h2>
+                                <h2 class="pos-cart__title text-xl font-bold">Warenkorb</h2>
                                 @if ($sale && ! $foreignSale)
-                                    <button type="button" wire:click="discardSale" wire:loading.attr="disabled" class="text-sm font-bold text-red-700 hover:text-red-900 disabled:opacity-50">Verwerfen</button>
+                                    <button type="button" wire:click="discardSale" wire:loading.attr="disabled" class="pos-cart__discard text-sm font-bold text-red-700 hover:text-red-900 disabled:opacity-50">Verwerfen</button>
                                 @endif
                             </div>
                         </div>
 
-                        <div class="max-h-[46vh] divide-y divide-slate-100 overflow-y-auto">
+                        <div class="pos-cart__body max-h-[46vh] divide-y divide-slate-100 overflow-y-auto">
                             @if (! $sale || $sale->items->isEmpty())
-                                <div class="p-8 text-center text-slate-500">Noch keine Produkte ausgewählt.</div>
+                                <div class="pos-cart__empty p-8 text-center text-slate-500">Noch keine Produkte ausgewählt.</div>
                             @else
                                 @foreach ($sale->items as $item)
-                                    <div wire:key="cart-item-desktop-{{ $item->id }}" class="flex items-center gap-3 px-5 py-4">
+                                    <div wire:key="cart-item-desktop-{{ $item->id }}" class="pos-cart__row flex items-center gap-3 px-5 py-4">
                                         <div class="min-w-0 flex-1">
                                             <p class="truncate font-bold">{{ $item->product_name }}</p>
-                                            <p class="text-sm text-slate-500">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
+                                            <p class="pos-cart__unit text-sm text-slate-500">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
                                         </div>
-                                        <div class="flex items-center rounded-xl bg-slate-100 p-1">
+                                        <div class="pos-quantity flex items-center rounded-xl bg-slate-100 p-1">
                                             <button type="button" wire:click="decreaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-10 w-10 touch-manipulation rounded-lg text-xl font-black hover:bg-white disabled:opacity-50">−</button>
                                             <span class="w-9 text-center font-black">{{ $item->quantity }}</span>
                                             <button type="button" wire:click="increaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-10 w-10 touch-manipulation rounded-lg text-xl font-black hover:bg-white disabled:opacity-50">+</button>
@@ -315,10 +315,10 @@
                             @endif
                         </div>
 
-                        <div class="border-t border-slate-200 bg-slate-50 p-5">
+                        <div class="pos-cart__footer border-t border-slate-200 bg-slate-50 p-5">
                             <div class="flex items-end justify-between gap-4">
-                                <span class="font-bold text-slate-600">Gesamt</span>
-                                <span class="text-4xl font-black tracking-tight">{{ Money::format($sale?->total_cents ?? 0, $currency) }}</span>
+                                <span class="pos-cart__total-label font-bold text-slate-600">Gesamt</span>
+                                <span class="pos-cart__total text-4xl font-black tracking-tight">{{ Money::format($sale?->total_cents ?? 0, $currency) }}</span>
                             </div>
 
                             <button
@@ -326,7 +326,7 @@
                                 wire:click="showPayment"
                                 wire:loading.attr="disabled"
                                 @disabled(! $sale || $sale->items->isEmpty() || $foreignSale)
-                                class="mt-5 w-full touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-xl font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                                class="pos-pay-button mt-5 w-full touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-xl font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                             >
                                 Bezahlen
                             </button>
@@ -377,13 +377,13 @@
 
                 <div class="max-h-[52dvh] divide-y divide-slate-100 overflow-y-auto overscroll-contain">
                     @if (! $sale || $sale->items->isEmpty())
-                        <div class="p-8 text-center text-slate-500">Noch keine Produkte ausgewählt.</div>
+                        <div class="pos-cart__empty p-8 text-center text-slate-500">Noch keine Produkte ausgewählt.</div>
                     @else
                         @foreach ($sale->items as $item)
                             <div wire:key="cart-item-mobile-{{ $item->id }}" class="flex items-center gap-3 px-4 py-4">
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate font-bold">{{ $item->product_name }}</p>
-                                    <p class="text-sm text-slate-500">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
+                                    <p class="pos-cart__unit text-sm text-slate-500">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
                                 </div>
                                 <div class="flex shrink-0 items-center rounded-xl bg-slate-100 p-1">
                                     <button type="button" wire:click="decreaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-11 w-11 touch-manipulation rounded-lg text-xl font-black disabled:opacity-50">−</button>
@@ -397,7 +397,7 @@
 
                 <footer class="border-t border-slate-200 bg-slate-50 px-4 pt-4" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
                     <div class="flex items-end justify-between gap-4">
-                        <span class="font-bold text-slate-600">Gesamt</span>
+                        <span class="pos-cart__total-label font-bold text-slate-600">Gesamt</span>
                         <span class="text-3xl font-black">{{ Money::format($sale?->total_cents ?? 0, $currency) }}</span>
                     </div>
                     <div class="mt-4 grid grid-cols-[auto_1fr] gap-2">
