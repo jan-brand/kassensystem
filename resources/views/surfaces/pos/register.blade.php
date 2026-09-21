@@ -67,13 +67,13 @@
 
     <main class="pos-terminal__main mx-auto max-w-[1600px] px-3 py-3 pb-28 sm:px-4 sm:py-4 lg:p-6 xl:pb-6">
         @if ($notice)
-            <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 font-medium text-emerald-900">
+            <div class="pos-feedback pos-feedback--success" role="status" aria-live="polite">
                 {{ $notice }}
             </div>
         @endif
 
         @if ($screenError)
-            <div class="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 font-medium text-red-900">
+            <div class="pos-feedback pos-feedback--danger" role="alert">
                 {{ $screenError }}
             </div>
         @endif
@@ -296,7 +296,23 @@
 
                         <div class="pos-cart__body max-h-[46vh] divide-y divide-slate-100 overflow-y-auto">
                             @if (! $sale || $sale->items->isEmpty())
-                                <div class="pos-cart__empty p-8 text-center text-slate-500">Noch keine Produkte ausgewählt.</div>
+                                <div class="pos-cart__empty text-center">
+                                    <svg
+                                        class="pos-cart__empty-icon"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="1.6"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H6.1" />
+                                        <circle cx="9" cy="20" r="1" />
+                                        <circle cx="18" cy="20" r="1" />
+                                    </svg>
+                                    <p class="pos-cart__empty-text">Noch keine Produkte ausgewählt.</p>
+                                </div>
                             @else
                                 @foreach ($sale->items as $item)
                                     <div wire:key="cart-item-desktop-{{ $item->id }}" class="pos-cart__row flex items-center gap-3 px-5 py-4">

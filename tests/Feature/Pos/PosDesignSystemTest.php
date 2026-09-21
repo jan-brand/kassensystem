@@ -12,6 +12,7 @@ it('loads the extracted POS component styles', function () {
         'quantity-stepper.css',
         'payment-action.css',
         'bottom-sheet.css',
+        'toast.css',
         'pos-terminal.css',
     ] as $component) {
         expect($index)->toContain("@import './{$component}';");

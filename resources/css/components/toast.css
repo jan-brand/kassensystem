@@ -1,0 +1,60 @@
+/*
+ * POS feedback / status messages.
+ *
+ * Neutral panels carry the message. Accent colours only communicate state.
+ */
+
+html[data-theme='gastro-dark'] .pos-feedback {
+    display: flex;
+    min-height: 3rem;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid var(--border-default);
+    border-inline-start-width: 0.25rem;
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel-raised);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+    line-height: var(--leading-body);
+    box-shadow: none;
+}
+
+html[data-theme='gastro-dark'] .pos-feedback::before {
+    display: inline-grid;
+    width: 1.5rem;
+    height: 1.5rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid currentColor;
+    border-radius: var(--radius-full);
+    font-size: 0.85rem;
+    font-weight: var(--font-weight-bold);
+    line-height: 1;
+}
+
+html[data-theme='gastro-dark'] .pos-feedback--success {
+    border-inline-start-color: var(--action-success);
+}
+
+html[data-theme='gastro-dark'] .pos-feedback--success::before {
+    content: "✓";
+    color: var(--raw-color-green-500);
+}
+
+html[data-theme='gastro-dark'] .pos-feedback--danger {
+    border-inline-start-color: var(--action-danger);
+}
+
+html[data-theme='gastro-dark'] .pos-feedback--danger::before {
+    content: "!";
+    color: var(--raw-color-red-500);
+}
+
+@media (min-width: 640px) {
+    html[data-theme='gastro-dark'] .pos-feedback {
+        font-size: var(--text-base);
+    }
+}
