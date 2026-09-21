@@ -1,0 +1,24 @@
+/*
+ * Mobile POS bottom-sheet shell.
+ */
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] {
+    background: rgb(0 0 0 / 68%) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] > section {
+    border: 1px solid var(--border-default);
+    background: var(--bg-panel) !important;
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] header,
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] footer {
+    border-color: var(--border-default) !important;
+    background: var(--bg-panel-raised) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] p,
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] span {
+    color: inherit;
+}

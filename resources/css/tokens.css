@@ -26,6 +26,17 @@
     --raw-color-cream-100: #ece3d4;
     --raw-color-cream-300: #cfc3b1;
 
+    /* Neutral — primäre POS-Flächen */
+    --raw-color-black: #000000;
+    --raw-color-neutral-950: #0d0d0d;
+    --raw-color-neutral-900: #171717;
+    --raw-color-neutral-800: #242424;
+    --raw-color-neutral-700: #383838;
+    --raw-color-neutral-500: #8a8a8a;
+    --raw-color-neutral-300: #c8c8c8;
+    --raw-color-neutral-100: #f3f3f3;
+    --raw-color-white: #ffffff;
+
     /* Navigation — Tannengrün */
     --raw-color-fir-950: #10281e;
     --raw-color-fir-900: #163629;
@@ -313,6 +324,40 @@
     --vdbs-shadow-lg: var(--shadow-lg);
     --vdbs-transition-fast: var(--transition-fast);
     --vdbs-transition-normal: var(--transition-normal);
+}
+
+/*
+ * POS theme:
+ * Flächen bleiben neutral. Ocker, Grün und Rot sind ausschließlich
+ * Auswahl-/Status-/Aktionsakzente.
+ */
+html[data-theme='gastro-dark'] {
+    --brand-primary: var(--raw-color-neutral-900);
+    --brand-secondary: var(--raw-color-neutral-300);
+
+    --bg-main: var(--raw-color-black);
+    --bg-panel: var(--raw-color-neutral-950);
+    --bg-panel-raised: var(--raw-color-neutral-900);
+    --bg-navigation: var(--raw-color-black);
+    --bg-navigation-strong: var(--raw-color-black);
+    --bg-secondary: var(--raw-color-neutral-800);
+
+    --text-primary: var(--raw-color-white);
+    --text-secondary: var(--raw-color-neutral-300);
+    --text-on-light: var(--raw-color-black);
+    --text-on-accent: var(--raw-color-black);
+    --text-disabled: var(--raw-color-neutral-500);
+
+    --border-default: var(--raw-color-neutral-800);
+    --border-strong: var(--raw-color-neutral-700);
+
+    --action-neutral: var(--raw-color-neutral-900);
+    --action-neutral-hover: var(--raw-color-neutral-800);
+
+    --state-disabled-bg: var(--raw-color-neutral-800);
+    --state-disabled-text: var(--raw-color-neutral-500);
+
+    --color-link: var(--text-primary);
 }
 
 @media (prefers-reduced-motion: reduce) {

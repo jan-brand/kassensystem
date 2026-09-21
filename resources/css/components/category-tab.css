@@ -1,0 +1,48 @@
+/*
+ * Horizontal POS category navigation.
+ */
+
+html[data-theme='gastro-dark'] .pos-category-bar {
+    margin-inline: 0 !important;
+    padding: 0.5rem !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-category-scroll {
+    gap: 0.4rem !important;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+}
+
+html[data-theme='gastro-dark'] .pos-category-button {
+    min-height: 3rem;
+    padding: 0.65rem 1rem !important;
+    border: 1px solid transparent !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--text-secondary) !important;
+    font-weight: var(--font-weight-bold);
+    white-space: nowrap;
+}
+
+html[data-theme='gastro-dark'] .pos-category-button:hover {
+    border-color: var(--border-strong) !important;
+    color: var(--text-primary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-category-button.is-active {
+    border-color: var(--accent-active) !important;
+    background: var(--text-primary) !important;
+    color: var(--text-on-light) !important;
+    box-shadow: inset 0 -0.2rem 0 var(--accent-active);
+}
+
+@media (max-width: 639px) {
+    html[data-theme='gastro-dark'] .pos-category-bar {
+        border-radius: 0 !important;
+        border-inline: 0 !important;
+    }
+}

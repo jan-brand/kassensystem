@@ -1,21 +1,15 @@
-@import './pos-terminal.css';
-
 /*
- * Component layer
+ * POS component layer.
  *
- * Neue Komponenten werden hier importiert:
- *
- * @import './button.css';
- * @import './form-field.css';
- * @import './surface-card.css';
- * @import './product-tile.css';
- * @import './category-tab.css';
- * @import './quantity-stepper.css';
- * @import './cart-line.css';
- * @import './payment-action.css';
- * @import './table-card.css';
- * @import './bottom-sheet.css';
- * @import './toast.css';
- *
+ * Reihenfolge: generische Controls -> fachnahe POS-Komponenten -> Terminal-Shell.
  * Komponenten verwenden semantische Tokens aus ../tokens.css.
  */
+@import './button.css';
+@import './form-field.css';
+@import './category-tab.css';
+@import './product-tile.css';
+@import './cart-line.css';
+@import './quantity-stepper.css';
+@import './payment-action.css';
+@import './bottom-sheet.css';
+@import './pos-terminal.css';

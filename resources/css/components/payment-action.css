@@ -1,0 +1,46 @@
+/*
+ * Primary payment action and mobile action bar.
+ */
+
+html[data-theme='gastro-dark'] .pos-pay-button {
+    min-height: 3.75rem;
+    border: 1px solid var(--action-success) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--text-primary) !important;
+    color: var(--text-on-light) !important;
+    box-shadow: inset 0 -0.2rem 0 var(--action-success) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-pay-button:hover:not(:disabled) {
+    border-color: var(--action-success-hover) !important;
+    background: color-mix(in srgb, var(--text-primary) 92%, var(--bg-secondary)) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-pay-button:disabled {
+    border-color: var(--border-default) !important;
+    background: var(--state-disabled-bg) !important;
+    color: var(--state-disabled-text) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-bar] {
+    border-color: var(--border-default) !important;
+    background: var(--bg-navigation-strong) !important;
+    box-shadow: 0 -0.75rem 2rem rgb(0 0 0 / 30%) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-bar] > div > button:first-child {
+    border-color: var(--border-default) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--text-primary) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-bar] > div > button:first-child span:first-child {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-bar] > div > button:last-child {
+    border-color: var(--action-success) !important;
+    background: var(--text-primary) !important;
+    color: var(--text-on-light) !important;
+    box-shadow: inset 0 -0.2rem 0 var(--action-success) !important;
+}

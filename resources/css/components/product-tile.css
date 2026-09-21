@@ -1,0 +1,72 @@
+/*
+ * Product grid and product tile.
+ */
+
+html[data-theme='gastro-dark'] .pos-product-grid {
+    gap: 0.65rem !important;
+}
+
+html[data-theme='gastro-dark'] .pos-product-tile {
+    position: relative;
+    min-height: 7.75rem !important;
+    padding: 0.9rem !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel) !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+    transition:
+        border-color var(--transition-fast),
+        background-color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+html[data-theme='gastro-dark'] .pos-product-tile:hover {
+    border-color: var(--border-strong) !important;
+    background: var(--bg-panel-raised) !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-product-tile:active {
+    border-color: var(--accent-active) !important;
+    background: var(--bg-panel-raised) !important;
+    transform: scale(0.985) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-product-name {
+    color: var(--text-primary);
+    font-size: 0.98rem;
+    font-weight: var(--font-weight-semibold);
+    line-height: 1.25;
+}
+
+html[data-theme='gastro-dark'] .pos-product-price {
+    color: var(--text-primary);
+    font-size: 1.35rem !important;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+@media (min-width: 1280px) {
+    html[data-theme='gastro-dark'] .pos-product-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (min-width: 1600px) {
+    html[data-theme='gastro-dark'] .pos-product-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    }
+}
+
+@media (max-width: 639px) {
+    html[data-theme='gastro-dark'] .pos-product-tile {
+        min-height: 6.75rem !important;
+        padding: 0.8rem !important;
+    }
+
+    html[data-theme='gastro-dark'] .pos-product-price {
+        font-size: 1.15rem !important;
+    }
+}

@@ -1,0 +1,75 @@
+/*
+ * Desktop cart panel and cart line presentation.
+ */
+
+html[data-theme='gastro-dark'] .pos-cart {
+    top: 4.75rem !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__panel {
+    overflow: hidden;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__header {
+    padding: 0.9rem 1rem !important;
+    border-color: var(--border-default) !important;
+    background: var(--bg-navigation-strong);
+}
+
+html[data-theme='gastro-dark'] .pos-cart__title {
+    color: var(--text-primary);
+    font-size: 1.05rem !important;
+    letter-spacing: 0.01em;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__discard {
+    min-height: auto !important;
+    padding: 0.45rem 0.65rem !important;
+    border: 1px solid color-mix(in srgb, var(--action-danger) 50%, transparent) !important;
+    border-radius: var(--radius-sm) !important;
+    background: transparent !important;
+    color: color-mix(in srgb, var(--text-primary) 60%, var(--action-danger)) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__body {
+    max-height: calc(100dvh - 22rem) !important;
+    min-height: 11rem;
+    border-color: var(--border-default);
+    background: var(--bg-panel);
+}
+
+html[data-theme='gastro-dark'] .pos-cart__empty {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__row {
+    border-color: var(--border-default);
+}
+
+html[data-theme='gastro-dark'] .pos-cart__row p {
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] .pos-cart__row .pos-cart__unit {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__footer {
+    padding: 1rem !important;
+    border-color: var(--border-default) !important;
+    background: var(--bg-panel-raised) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__total-label {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cart__total {
+    color: var(--text-primary);
+    font-size: clamp(2rem, 4vw, 3rem) !important;
+    font-variant-numeric: tabular-nums;
+}

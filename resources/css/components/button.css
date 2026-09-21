@@ -1,0 +1,29 @@
+/*
+ * POS buttons that are not part of the global control foundation.
+ */
+
+html[data-theme='gastro-dark'] .pos-header-action {
+    min-height: 2.75rem;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-header-action:hover {
+    border-color: var(--border-strong) !important;
+    background: color-mix(in srgb, var(--bg-panel-raised) 82%, var(--bg-secondary)) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-header-action--cash {
+    border-color: var(--accent-active) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--accent-highlight) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-header-action--cash:hover {
+    border-color: var(--accent-highlight) !important;
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}

@@ -1,0 +1,17 @@
+/*
+ * Quantity stepper used by POS cart lines.
+ */
+
+html[data-theme='gastro-dark'] .pos-quantity {
+    background: var(--bg-panel-raised) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-quantity button {
+    border: 0 !important;
+    background: transparent !important;
+    color: var(--text-primary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-quantity button:hover {
+    background: color-mix(in srgb, var(--bg-secondary) 16%, var(--bg-panel-raised)) !important;
+}

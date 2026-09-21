@@ -1,0 +1,39 @@
+/*
+ * POS search field.
+ */
+
+html[data-theme='gastro-dark'] .pos-search {
+    position: relative;
+    padding: 0 !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-search::before {
+    content: "⌕";
+    position: absolute;
+    inset-inline-start: 1rem;
+    top: 50%;
+    z-index: 1;
+    translate: 0 -50%;
+    color: var(--text-secondary);
+    font-size: 1.4rem;
+    pointer-events: none;
+}
+
+html[data-theme='gastro-dark'] .pos-search__input {
+    min-height: 3.25rem;
+    padding: 0.7rem 1rem 0.7rem 3rem !important;
+    border: 0 !important;
+    border-radius: var(--radius-lg) !important;
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-search__input::placeholder {
+    color: var(--text-secondary) !important;
+    opacity: 0.78;
+}
