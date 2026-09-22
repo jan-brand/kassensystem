@@ -10,10 +10,31 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use LogicException;
 
+/**
+ * @property int $id
+ * @property int $register_id
+ * @property int $opened_by_user_id
+ * @property int|null $closed_by_user_id
+ * @property CashSessionStatus $status
+ * @property int $opening_cash_cents
+ * @property int $cash_sales_cents
+ * @property int|null $closing_expected_cash_cents
+ * @property int|null $closing_counted_cash_cents
+ * @property int|null $closing_difference_cents
+ * @property string|null $closing_comment
+ * @property \Illuminate\Support\Carbon $opened_at
+ * @property \Illuminate\Support\Carbon|null $closing_started_at
+ * @property \Illuminate\Support\Carbon|null $closed_at
+ * @property-read Register $register
+ * @property-read User $openedBy
+ * @property-read User|null $closedBy
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, CashMovement> $movements
+ */
 final class CashSession extends Model
 {
     protected $guarded = [];
 
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -44,21 +65,25 @@ final class CashSession extends Model
         });
     }
 
+    /** @return BelongsTo<Register, $this> */
     public function register(): BelongsTo
     {
         return $this->belongsTo(Register::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function openedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'opened_by_user_id');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function closedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by_user_id');
     }
 
+    /** @return HasMany<CashMovement, $this> */
     public function movements(): HasMany
     {
         return $this->hasMany(CashMovement::class);

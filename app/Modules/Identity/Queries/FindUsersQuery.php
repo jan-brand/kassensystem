@@ -8,6 +8,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 final class FindUsersQuery
 {
+    /** @return LengthAwarePaginator<User> */
     public function execute(
         ?string $search = null,
         ?UserRole $role = null,

@@ -5,89 +5,175 @@ namespace App\Foundation\Generation;
 use RuntimeException;
 use Throwable;
 
+/**
+ * @phpstan-type WriteOperation array{
+ *     type: 'write',
+ *     path: string,
+ *     content: string,
+ *     allow_overwrite: bool
+ * }
+ * @phpstan-type DeleteOperation array{
+ *     type: 'delete',
+ *     path: string
+ * }
+ * @phpstan-type FileOperation WriteOperation|DeleteOperation
+ * @phpstan-type HistoryOperation array{
+ *     path: string,
+ *     before: string|null,
+ *     after: string|null
+ * }
+ */
 final class FilePlan
 {
+    /** @var list<FileOperation> */
     private array $operations = [];
 
-    public function __construct(private readonly HistoryRepository $history) {}
+    public function __construct(
+        private readonly HistoryRepository $history,
+    ) {}
 
-    public function write(string $relativePath, string $content, bool $allowOverwrite = false): self
-    {
-        $this->operations[] = ['type' => 'write', 'path' => $this->safe($relativePath), 'content' => $content, 'allow_overwrite' => $allowOverwrite];
+    public function write(
+        string $relativePath,
+        string $content,
+        bool $allowOverwrite = false,
+    ): self {
+        $this->operations[] = [
+            'type' => 'write',
+            'path' => $this->safe($relativePath),
+            'content' => $content,
+            'allow_overwrite' => $allowOverwrite,
+        ];
+
         return $this;
     }
 
     public function delete(string $relativePath): self
     {
-        $this->operations[] = ['type' => 'delete', 'path' => $this->safe($relativePath)];
+        $this->operations[] = [
+            'type' => 'delete',
+            'path' => $this->safe($relativePath),
+        ];
+
         return $this;
     }
 
-    public function operations(): array { return $this->operations; }
-
-    public function descriptions(): array
+    /** @return list<FileOperation> */
+    public function operations(): array
     {
-        return array_map(fn (array $op) => strtoupper($op['type']).' '.$op['path'], $this->operations);
+        return $this->operations;
     }
 
-    public function apply(string $label, bool $force = false, bool $recordHistory = true): ?string
+    /** @return list<string> */
+    public function descriptions(): array
     {
+        return array_map(
+            static fn (array $operation): string => strtoupper($operation['type']).' '.$operation['path'],
+            $this->operations,
+        );
+    }
+
+    public function apply(
+        string $label,
+        bool $force = false,
+        bool $recordHistory = true,
+    ): ?string {
         $this->preflight($force);
 
-        $historyOps = [];
-        foreach ($this->operations as $op) {
-            $absolute = base_path($op['path']);
+        /** @var list<HistoryOperation> $historyOperations */
+        $historyOperations = [];
+
+        foreach ($this->operations as $operation) {
+            $absolute = base_path($operation['path']);
             $exists = is_file($absolute);
-            $historyOps[] = [
-                'path' => $op['path'],
-                'before' => $exists ? base64_encode((string) file_get_contents($absolute)) : null,
-                'after' => $op['type'] === 'write' ? base64_encode($op['content']) : null,
+
+            $historyOperations[] = [
+                'path' => $operation['path'],
+                'before' => $exists
+                    ? base64_encode((string) file_get_contents($absolute))
+                    : null,
+                'after' => $operation['type'] === 'write'
+                    ? base64_encode($operation['content'])
+                    : null,
             ];
         }
 
+        /** @var list<int> $applied */
         $applied = [];
+
         try {
-            foreach ($this->operations as $index => $op) {
-                $absolute = base_path($op['path']);
-                if ($op['type'] === 'write') {
-                    $dir = dirname($absolute);
-                    if (! is_dir($dir) && ! mkdir($dir, 0775, true) && ! is_dir($dir)) {
-                        throw new RuntimeException("Unable to create directory {$dir}");
+            foreach ($this->operations as $index => $operation) {
+                $absolute = base_path($operation['path']);
+
+                if ($operation['type'] === 'write') {
+                    $directory = dirname($absolute);
+
+                    if (
+                        ! is_dir($directory)
+                        && ! mkdir($directory, 0775, true)
+                        && ! is_dir($directory)
+                    ) {
+                        throw new RuntimeException("Unable to create directory {$directory}");
                     }
-                    if (file_put_contents($absolute, $op['content']) === false) {
-                        throw new RuntimeException("Unable to write {$op['path']}");
+
+                    if (file_put_contents($absolute, $operation['content']) === false) {
+                        throw new RuntimeException("Unable to write {$operation['path']}");
                     }
-                } else {
-                    if (is_file($absolute) && ! unlink($absolute)) {
-                        throw new RuntimeException("Unable to delete {$op['path']}");
-                    }
+                } elseif (is_file($absolute) && ! unlink($absolute)) {
+                    throw new RuntimeException("Unable to delete {$operation['path']}");
                 }
+
                 $applied[] = $index;
             }
         } catch (Throwable $exception) {
             foreach (array_reverse($applied) as $index) {
-                $state = $historyOps[$index];
+                $state = $historyOperations[$index];
                 $absolute = base_path($state['path']);
+
                 if ($state['before'] === null) {
-                    if (is_file($absolute)) { @unlink($absolute); }
-                } else {
-                    $dir = dirname($absolute);
-                    if (! is_dir($dir)) { @mkdir($dir, 0775, true); }
-                    @file_put_contents($absolute, base64_decode($state['before'], true) ?: '');
+                    if (is_file($absolute)) {
+                        @unlink($absolute);
+                    }
+
+                    continue;
                 }
+
+                $directory = dirname($absolute);
+
+                if (! is_dir($directory)) {
+                    @mkdir($directory, 0775, true);
+                }
+
+                @file_put_contents(
+                    $absolute,
+                    base64_decode($state['before'], true) ?: '',
+                );
             }
+
             throw $exception;
         }
 
-        return $recordHistory && $historyOps !== [] ? $this->history->record($label, $historyOps) : null;
+        return $recordHistory && $historyOperations !== []
+            ? $this->history->record($label, $historyOperations)
+            : null;
     }
 
     private function preflight(bool $force): void
     {
-        foreach ($this->operations as $op) {
-            $absolute = base_path($op['path']);
-            if ($op['type'] === 'write' && is_file($absolute) && ! $force && ! ($op['allow_overwrite'] ?? false)) {
-                throw new RuntimeException("Refusing to overwrite {$op['path']}; use --force.");
+        foreach ($this->operations as $operation) {
+            if ($operation['type'] !== 'write') {
+                continue;
+            }
+
+            $absolute = base_path($operation['path']);
+
+            if (
+                is_file($absolute)
+                && ! $force
+                && ! $operation['allow_overwrite']
+            ) {
+                throw new RuntimeException(
+                    "Refusing to overwrite {$operation['path']}; use --force.",
+                );
             }
         }
     }
@@ -95,9 +181,15 @@ final class FilePlan
     private function safe(string $path): string
     {
         $path = str_replace('\\', '/', ltrim($path, '/'));
-        if ($path === '' || str_contains($path, '../') || $path === '..') {
+
+        if (
+            $path === ''
+            || str_contains($path, '../')
+            || $path === '..'
+        ) {
             throw new RuntimeException('Unsafe project-relative path.');
         }
+
         return $path;
     }
 }

@@ -3,23 +3,75 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <meta name="theme-color" content="#000000">
     <title>500 · Kassensystem</title>
     <style>
-        body { margin: 0; font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; }
-        main { min-height: 100vh; display: grid; place-items: center; padding: 2rem; box-sizing: border-box; }
-        section { width: min(34rem, 100%); background: white; border: 1px solid #e2e8f0; border-radius: 1.5rem; padding: 2rem; box-sizing: border-box; }
-        p.code { margin: 0; font-size: .8rem; font-weight: 800; letter-spacing: .15em; color: #64748b; }
-        h1 { margin: .5rem 0 0; font-size: 2rem; }
-        p { line-height: 1.6; color: #475569; }
-        a { display: inline-block; margin-top: .75rem; color: #0f172a; font-weight: 800; }
+        :root {
+            color-scheme: dark;
+            font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: #000000;
+            color: #ffffff;
+            -webkit-font-smoothing: antialiased;
+        }
+        main {
+            min-height: 100dvh;
+            display: grid;
+            place-items: center;
+            padding: 1.25rem;
+        }
+        section {
+            width: min(34rem, 100%);
+            padding: clamp(1.5rem, 5vw, 2.25rem);
+            border: 1px solid #242424;
+            border-top: .2rem solid #c79a38;
+            border-radius: 1.5rem;
+            background: #0d0d0d;
+        }
+        .code {
+            margin: 0;
+            color: #c8c8c8;
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+        }
+        h1 {
+            margin: .6rem 0 0;
+            color: #ffffff;
+            font-size: clamp(2rem, 7vw, 2.75rem);
+            line-height: 1.15;
+        }
+        .copy {
+            margin: 1rem 0 0;
+            color: #c8c8c8;
+            line-height: 1.55;
+        }
+        a {
+            display: inline-flex;
+            min-height: 3rem;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding: .65rem 1rem;
+            border: 1px solid #ffffff;
+            border-radius: .75rem;
+            background: #ffffff;
+            color: #000000;
+            font-weight: 700;
+            text-decoration: none;
+        }
     </style>
 </head>
-<body>
+<body data-error-surface="500">
 <main>
     <section>
-        <p class="code">FEHLER 500</p>
+        <p class="code">Fehler 500</p>
         <h1>Interner Fehler</h1>
-        <p>Die Anfrage konnte nicht verarbeitet werden. Der Fehler wurde serverseitig protokolliert.</p>
+        <p class="copy">Die Anfrage konnte nicht verarbeitet werden. Der Fehler wurde serverseitig protokolliert.</p>
         <a href="/">Zur Startseite</a>
     </section>
 </main>

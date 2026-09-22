@@ -6,12 +6,14 @@
  */
 @import './button.css';
 @import './form-field.css';
+@import './login.css';
 @import './category-tab.css';
 @import './product-tile.css';
 @import './cart-line.css';
 @import './quantity-stepper.css';
 @import './payment-action.css';
 @import './dialog.css';
+@import './register-closing.css';
 @import './bottom-sheet.css';
 @import './toast.css';
 @import './pos-terminal.css';

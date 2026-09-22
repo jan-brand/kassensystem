@@ -47,8 +47,12 @@
       "Composer\\Config::disableProcessTimeout",
       "npx concurrently \"php artisan serve\" \"npm run dev\" --names=server,vite --kill-others"
     ],
-    "lint": "@php vendor/bin/pint --test",
+    "lint": "@php vendor/bin/pint --test --parallel",
     "analyse": "@php vendor/bin/phpstan analyse --memory-limit=1G --no-progress",
+    "qa:static": [
+      "@lint",
+      "@analyse"
+    ],
     "test": "@php artisan test",
     "qa": [
       "composer validate --no-check-publish",

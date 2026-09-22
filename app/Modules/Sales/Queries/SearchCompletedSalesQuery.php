@@ -9,6 +9,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 final class SearchCompletedSalesQuery
 {
+    /** @return LengthAwarePaginator<Sale> */
     public function execute(
         ?string $number = null,
         ?CarbonImmutable $from = null,

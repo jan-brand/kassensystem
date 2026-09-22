@@ -4,4 +4,7 @@ includes:
 parameters:
     paths:
         - app
+
     level: 6
+    tmpDir: storage/framework/cache/phpstan
+    reportUnmatchedIgnoredErrors: true

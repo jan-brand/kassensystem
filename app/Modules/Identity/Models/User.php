@@ -6,6 +6,20 @@ use App\Modules\Identity\Enums\UserRole;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @property int $id
+ * @property string $username
+ * @property string $pin_hash
+ * @property string $first_name
+ * @property string $last_name
+ * @property string|null $display_name
+ * @property string|null $email
+ * @property string|null $phone
+ * @property UserRole $role
+ * @property bool $active
+ * @property \Illuminate\Support\Carbon|null $last_login_at
+ * @property \Illuminate\Support\Carbon|null $pin_changed_at
+ */
 final class User extends Authenticatable
 {
     use Notifiable;
@@ -16,6 +30,7 @@ final class User extends Authenticatable
         'pin_hash',
     ];
 
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [

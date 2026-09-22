@@ -4,6 +4,10 @@ namespace App\Modules\Sales\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $year
+ * @property int $last_number
+ */
 final class SaleNumberSequence extends Model
 {
     public $timestamps = false;
@@ -16,6 +20,7 @@ final class SaleNumberSequence extends Model
 
     protected $keyType = 'int';
 
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [

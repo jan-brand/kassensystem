@@ -1,0 +1,217 @@
+/*
+ * POS cash-session closing surface.
+ *
+ * Closing is intentionally calm and neutral: the operator should focus on
+ * counting and variance. Green / red / ocher are reduced to thin state accents.
+ */
+
+html[data-theme='gastro-dark'] .pos-closing {
+    width: min(100%, 70rem);
+    margin-inline: auto;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__intro {
+    padding: clamp(1.25rem, 4vw, 2rem);
+    border: 1px solid var(--border-default);
+    border-inline-start: 0.25rem solid var(--accent-active);
+    border-radius: var(--radius-xl);
+    background: var(--bg-panel);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__eyebrow {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__title {
+    margin-top: 0.45rem;
+    color: var(--text-primary);
+    font-size: var(--text-3xl);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.025em;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__copy {
+    max-width: 48rem;
+    margin-top: 0.65rem;
+    color: var(--text-secondary);
+    line-height: var(--leading-body);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__summary {
+    display: grid;
+    gap: 0.65rem;
+}
+
+html[data-theme='gastro-dark'] .pos-closing-stat {
+    min-width: 0;
+    padding: 1rem;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel-raised);
+}
+
+html[data-theme='gastro-dark'] .pos-closing-stat--expected {
+    box-shadow: inset 0 0.18rem 0 var(--accent-active);
+}
+
+html[data-theme='gastro-dark'] .pos-closing-stat__label {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+html[data-theme='gastro-dark'] .pos-closing-stat__value {
+    margin-top: 0.4rem;
+    color: var(--text-primary);
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__workspace {
+    display: grid;
+    gap: 1rem;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__panel {
+    padding: clamp(1.25rem, 4vw, 2rem);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    background: var(--bg-panel);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__label {
+    display: block;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-bold);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__difference {
+    margin-top: 1rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border-default);
+    border-inline-start-width: 0.25rem;
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel-raised);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__difference.is-balanced {
+    border-inline-start-color: var(--action-success);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__difference.has-difference {
+    border-inline-start-color: var(--accent-active);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__difference-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__difference-label {
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-bold);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__difference-value {
+    color: var(--text-primary);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__difference-copy {
+    margin-top: 0.25rem;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__actions {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 1.5rem;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__movements-title {
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-bold);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__movement {
+    padding-block: 0.8rem;
+    border-top: 1px solid var(--border-default);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__movement:first-child {
+    border-top: 0;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__movement-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__movement-type {
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-bold);
+}
+
+html[data-theme='gastro-dark'] .pos-closing__movement-type--deposit {
+    text-decoration-color: var(--action-success);
+    text-decoration-line: underline;
+    text-decoration-thickness: 0.15rem;
+    text-underline-offset: 0.25rem;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__movement-type--withdrawal {
+    text-decoration-color: var(--action-danger);
+    text-decoration-line: underline;
+    text-decoration-thickness: 0.15rem;
+    text-underline-offset: 0.25rem;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__movement-amount {
+    color: var(--text-primary);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+html[data-theme='gastro-dark'] .pos-closing__movement-reason,
+html[data-theme='gastro-dark'] .pos-closing__empty {
+    margin-top: 0.25rem;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
+@media (min-width: 640px) {
+    html[data-theme='gastro-dark'] .pos-closing__summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    html[data-theme='gastro-dark'] .pos-closing__actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    html[data-theme='gastro-dark'] .pos-closing__summary {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    html[data-theme='gastro-dark'] .pos-closing__workspace {
+        grid-template-columns: minmax(0, 1fr) 22.5rem;
+    }
+}

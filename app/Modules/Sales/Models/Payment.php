@@ -7,12 +7,24 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use LogicException;
 
+/**
+ * @property int $id
+ * @property int $sale_id
+ * @property PaymentMethod $method
+ * @property int $amount_cents
+ * @property int $received_cents
+ * @property int $change_cents
+ * @property \Illuminate\Support\Carbon $completed_at
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property-read Sale $sale
+ */
 final class Payment extends Model
 {
     public const UPDATED_AT = null;
 
     protected $guarded = [];
 
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
@@ -36,6 +48,7 @@ final class Payment extends Model
         });
     }
 
+    /** @return BelongsTo<Sale, $this> */
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);

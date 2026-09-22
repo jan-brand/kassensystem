@@ -108,114 +108,114 @@
                 </form>
             </section>
         @elseif ($session->status === CashSessionStatus::Closing)
-            <section class="mx-auto max-w-5xl space-y-5">
-                <div class="rounded-3xl border border-amber-200 bg-amber-50 p-6 sm:p-8">
-                    <p class="text-sm font-bold uppercase tracking-[0.15em] text-amber-700">Kassenabschluss</p>
-                    <h2 class="mt-2 text-3xl font-black text-amber-950">Bargeld zählen und Kasse schließen</h2>
-                    <p class="mt-2 max-w-3xl text-amber-900">
+            <section class="pos-closing space-y-4">
+                <div class="pos-closing__intro">
+                    <p class="pos-closing__eyebrow">Kassenabschluss</p>
+                    <h2 class="pos-closing__title">Bargeld zählen und Kasse schließen</h2>
+                    <p class="pos-closing__copy">
                         Neue Verkäufe, Einlagen und Entnahmen sind jetzt gesperrt. Der Abschluss kann abgebrochen werden, solange die Kasse noch nicht geschlossen wurde.
                     </p>
                 </div>
 
                 @if ($cashSummary)
-                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                        <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Startbestand</p>
-                            <p class="mt-2 text-xl font-black">{{ Money::format($cashSummary['opening_cash_cents'], $currency) }}</p>
+                    <div class="pos-closing__summary">
+                        <div class="pos-closing-stat">
+                            <p class="pos-closing-stat__label">Startbestand</p>
+                            <p class="pos-closing-stat__value">{{ Money::format($cashSummary['opening_cash_cents'], $currency) }}</p>
                         </div>
-                        <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Barumsatz</p>
-                            <p class="mt-2 text-xl font-black text-emerald-700">+ {{ Money::format($cashSummary['cash_sales_cents'], $currency) }}</p>
+                        <div class="pos-closing-stat">
+                            <p class="pos-closing-stat__label">Barumsatz</p>
+                            <p class="pos-closing-stat__value">+ {{ Money::format($cashSummary['cash_sales_cents'], $currency) }}</p>
                         </div>
-                        <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Einlagen</p>
-                            <p class="mt-2 text-xl font-black text-emerald-700">+ {{ Money::format($cashSummary['deposits_cents'], $currency) }}</p>
+                        <div class="pos-closing-stat">
+                            <p class="pos-closing-stat__label">Einlagen</p>
+                            <p class="pos-closing-stat__value">+ {{ Money::format($cashSummary['deposits_cents'], $currency) }}</p>
                         </div>
-                        <div class="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-                            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Entnahmen</p>
-                            <p class="mt-2 text-xl font-black text-red-700">− {{ Money::format($cashSummary['withdrawals_cents'], $currency) }}</p>
+                        <div class="pos-closing-stat">
+                            <p class="pos-closing-stat__label">Entnahmen</p>
+                            <p class="pos-closing-stat__value">− {{ Money::format($cashSummary['withdrawals_cents'], $currency) }}</p>
                         </div>
-                        <div class="rounded-2xl bg-slate-950 p-4 text-white shadow-sm">
-                            <p class="text-xs font-bold uppercase tracking-wide text-slate-300">Sollbestand</p>
-                            <p class="mt-2 text-xl font-black">{{ Money::format($cashSummary['expected_cash_cents'], $currency) }}</p>
+                        <div class="pos-closing-stat pos-closing-stat--expected">
+                            <p class="pos-closing-stat__label">Sollbestand</p>
+                            <p class="pos-closing-stat__value">{{ Money::format($cashSummary['expected_cash_cents'], $currency) }}</p>
                         </div>
                     </div>
                 @endif
 
-                <div class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
-                    <form wire:submit="closeCashSession" class="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
+                <div class="pos-closing__workspace">
+                    <form wire:submit="closeCashSession" class="pos-closing__panel">
                         <div>
-                            <label for="closingCountedCash" class="block text-sm font-bold">Gezählter Bargeldbestand</label>
-                            <div class="relative mt-2">
+                            <label for="closingCountedCash" class="pos-closing__label">Gezählter Bargeldbestand</label>
+                            <div class="pos-money-input mt-2">
                                 <input
                                     id="closingCountedCash"
                                     type="text"
                                     inputmode="decimal"
                                     wire:model.live.debounce.250ms="closingCountedCash"
                                     placeholder="0,00"
-                                    class="w-full rounded-2xl border border-slate-300 px-4 py-4 pr-14 text-right text-3xl font-black outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
+                                    class="pos-money-input__control"
                                 >
-                                <span class="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-500">€</span>
+                                <span class="pos-money-input__currency">€</span>
                             </div>
                         </div>
 
                         @if ($closingDifferenceCents !== null)
-                            <div class="mt-4 rounded-2xl p-4 {{ $closingDifferenceCents === 0 ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-950' }}">
-                                <div class="flex items-center justify-between gap-4">
-                                    <span class="font-bold">Differenz</span>
-                                    <span class="text-2xl font-black">{{ Money::format($closingDifferenceCents, $currency) }}</span>
+                            <div class="pos-closing__difference {{ $closingDifferenceCents === 0 ? 'is-balanced' : 'has-difference' }}">
+                                <div class="pos-closing__difference-row">
+                                    <span class="pos-closing__difference-label">Differenz</span>
+                                    <span class="pos-closing__difference-value">{{ Money::format($closingDifferenceCents, $currency) }}</span>
                                 </div>
                                 @if ($closingDifferenceCents !== 0)
-                                    <p class="mt-1 text-sm">Bei einer Differenz ist ein Kommentar verpflichtend.</p>
+                                    <p class="pos-closing__difference-copy">Bei einer Differenz ist ein Kommentar verpflichtend.</p>
                                 @endif
                             </div>
                         @endif
 
                         <div class="mt-5">
-                            <label for="closingComment" class="block text-sm font-bold">Abschlusskommentar</label>
+                            <label for="closingComment" class="pos-closing__label">Abschlusskommentar</label>
                             <textarea
                                 id="closingComment"
                                 wire:model="closingComment"
                                 rows="3"
                                 placeholder="Bei Differenzen bitte Ursache oder Hinweis dokumentieren …"
-                                class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
+                                class="pos-text-input mt-2"
                             ></textarea>
                         </div>
 
-                        <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                        <div class="pos-closing__actions">
                             <button
                                 type="button"
                                 wire:click="cancelCashClosing"
-                                class="rounded-2xl border border-slate-300 bg-white px-5 py-4 text-base font-black hover:bg-slate-50"
+                                class="pos-secondary-action"
                             >
                                 Abschluss abbrechen
                             </button>
                             <button
                                 type="submit"
-                                class="rounded-2xl bg-slate-950 px-5 py-4 text-base font-black text-white hover:bg-slate-800"
+                                class="pos-primary-action"
                             >
                                 Kasse schließen
                             </button>
                         </div>
                     </form>
 
-                    <aside class="rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-                        <h3 class="font-black">Letzte Kassenbewegungen</h3>
-                        <div class="mt-4 divide-y divide-slate-100">
+                    <aside class="pos-closing__panel">
+                        <h3 class="pos-closing__movements-title">Letzte Kassenbewegungen</h3>
+                        <div class="mt-3">
                             @forelse ($recentMovements as $movement)
-                                <div class="py-3">
-                                    <div class="flex items-center justify-between gap-3">
-                                        <span class="text-sm font-bold {{ $movement->type === CashMovementType::Deposit ? 'text-emerald-700' : 'text-red-700' }}">
+                                <div class="pos-closing__movement">
+                                    <div class="pos-closing__movement-head">
+                                        <span class="pos-closing__movement-type {{ $movement->type === CashMovementType::Deposit ? 'pos-closing__movement-type--deposit' : 'pos-closing__movement-type--withdrawal' }}">
                                             {{ $movement->type === CashMovementType::Deposit ? 'Einlage' : 'Entnahme' }}
                                         </span>
-                                        <span class="font-black">
+                                        <span class="pos-closing__movement-amount">
                                             {{ $movement->type === CashMovementType::Deposit ? '+' : '−' }} {{ Money::format($movement->amount_cents, $currency) }}
                                         </span>
                                     </div>
-                                    <p class="mt-1 text-sm text-slate-600">{{ $movement->reason }}</p>
+                                    <p class="pos-closing__movement-reason">{{ $movement->reason }}</p>
                                 </div>
                             @empty
-                                <p class="py-5 text-sm text-slate-500">Keine Kassenbewegungen in dieser Schicht.</p>
+                                <p class="pos-closing__empty">Keine Kassenbewegungen in dieser Schicht.</p>
                             @endforelse
                         </div>
                     </aside>
