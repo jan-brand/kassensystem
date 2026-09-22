@@ -192,10 +192,12 @@ Jeweils Smartphone, Tablet und Desktop prüfen:
 V1-008 darf erst geschlossen werden, wenn:
 
 - [ ] diese manuelle Checkliste vollständig durchgeführt wurde,
-- [ ] `php artisan test` vollständig grün ist,
-- [ ] `npm run build` grün ist,
-- [ ] keine offenen P0/P1-Fehler für den Probebetrieb vorhanden sind,
+- [x] `php artisan test` vollständig grün ist,
+- [x] `npm run build` grün ist,
+- [x] keine offenen P0/P1-Fehler für den Probebetrieb vorhanden sind,
 - [ ] ein realer Smartphone-/Tablet-Test dokumentiert wurde.
+
+Der technische RC1-Stand ist damit automatisiert freigegeben. Die noch offenen manuellen Punkte werden anschließend in `release\v1-acceptance.json` übertragen.
 
 Datum: ____________________
 

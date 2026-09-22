@@ -2,7 +2,7 @@
 
 return [
     'strict' => (bool) env('FOUNDATION_STRICT', true),
-    'default_surface' => env('FOUNDATION_DEFAULT_SURFACE', 'public'),
+    'default_surface' => env('FOUNDATION_DEFAULT_SURFACE', 'pos'),
     'dashboard' => [
         'enabled' => (bool) env('FOUNDATION_DASHBOARD', true),
         'local_only' => true,

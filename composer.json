@@ -1,8 +1,8 @@
 {
   "$schema": "https://getcomposer.org/schema.json",
-  "name": "example/webapp-foundation",
+  "name": "jan-brand/kassensystem",
   "type": "project",
-  "description": "A generic Laravel foundation with architecture-aware scaffolding, design-system tooling, environment synchronization and project diagnostics.",
+  "description": "Tablet-optimiertes Laravel-Kassensystem für Schulcafeteria und Gastronomie mit POS, Bargeldführung, Administration, Reporting und Audit.",
   "license": "MIT",
   "require": {
     "php": "^8.4",
@@ -75,6 +75,8 @@
       "@php scripts/production/release-artifacts.php",
       "@qa:acceptance"
     ],
+    "release:status": "@php scripts/production/final-release-check.php --status-only",
+    "release:final-check": "@php scripts/production/final-release-check.php",
     "security": [
       "composer audit --locked",
       "npm audit --audit-level=high"

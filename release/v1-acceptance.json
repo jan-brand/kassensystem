@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "release": "1.0.0-rc.1",
+  "target": "1.0.0",
+  "status": "pending",
+  "date": null,
+  "tester": null,
+  "commit": null,
+  "checks": {
+    "manual_checklist_complete": false,
+    "desktop_browser": false,
+    "smartphone_or_tablet": false,
+    "backup_restore": false,
+    "production_check_reviewed": false
+  },
+  "notes": []
+}

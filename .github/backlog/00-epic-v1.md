@@ -14,7 +14,7 @@ Die erste produktnahe Version des Kassensystems vollstaendig abschliessen.
 
 ## Definition of Done
 - [ ] Alle v1-Funktionen sind ueber Browser/POS bedienbar.
-- [ ] Alle automatisierten Tests sind gruen.
-- [ ] Foundation-, Modul-, Architektur- und Page-Checks sind gruen.
-- [ ] Produktionsbetrieb und Backup/Restore sind dokumentiert.
-- [ ] Keine bekannten kritischen Fehler fuer den Probebetrieb.
+- [x] Alle automatisierten Tests sind gruen.
+- [x] Foundation-, Modul-, Architektur- und Page-Checks sind gruen.
+- [x] Produktionsbetrieb und Backup/Restore sind dokumentiert.
+- [x] Keine bekannten kritischen Fehler fuer den Probebetrieb.

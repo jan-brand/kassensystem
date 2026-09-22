@@ -1,1 +1,1 @@
-console.info('Webapp Foundation loaded');
+console.info('Kassensystem loaded');

@@ -15,8 +15,8 @@ final class AppConfigureCommand extends FoundationCommand
     public function handle(FilePlan $plan): int
     {
         $data = JsonFile::read(base_path('foundation.json'));
-        $name = $this->option('name') ?: ($data['project']['name'] ?? 'Webapp Foundation');
-        $surface = $this->option('default-surface') ?: ($data['project']['default_surface'] ?? 'public');
+        $name = $this->option('name') ?: ($data['project']['name'] ?? 'Kassensystem');
+        $surface = $this->option('default-surface') ?: ($data['project']['default_surface'] ?? 'pos');
         $targets = $this->option('env-target') ?: ($data['environment']['targets'] ?? ['.env', '.env.testing']);
 
         if ($this->input->isInteractive()) {

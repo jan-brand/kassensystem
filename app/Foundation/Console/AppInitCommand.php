@@ -19,7 +19,7 @@ final class AppInitCommand extends FoundationCommand
         if ($this->input->isInteractive() && ! $this->option('name')) {
             $name = $this->ask('Project name', $name);
         }
-        $surface = $this->option('surface') ?: ($current['project']['default_surface'] ?? 'public');
+        $surface = $this->option('surface') ?: ($current['project']['default_surface'] ?? 'pos');
         $surface = Names::kebab($surface);
         $current['project'] = array_merge($current['project'] ?? [], ['name' => $name, 'slug' => Names::kebab($name), 'default_surface' => $surface]);
         $plan->write('foundation.json', JsonFile::encode($current), true);

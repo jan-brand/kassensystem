@@ -195,9 +195,12 @@ final class ReleaseArtifactCheckService
     private function releaseDocumentationCheck(): array
     {
         $required = [
+            'CHANGELOG.md',
+            'config/release.php',
             'docs/ACCEPTANCE_V1.md',
             'docs/PRODUCTION.md',
             'docs/RELEASE_V1.md',
+            'release/v1-acceptance.json',
         ];
 
         $missing = array_values(array_filter(
@@ -209,8 +212,8 @@ final class ReleaseArtifactCheckService
             'Release documentation',
             $missing === [] ? 'pass' : 'fail',
             $missing === []
-                ? 'Acceptance, production and release runbooks are present.'
-                : 'Missing release documentation: '.implode(', ', $missing),
+                ? 'Release documentation and metadata are present.'
+                : 'Missing release documentation or metadata: '.implode(', ', $missing),
         );
     }
 
@@ -218,6 +221,8 @@ final class ReleaseArtifactCheckService
     private function releaseScriptsCheck(): array
     {
         $required = [
+            'scripts/production/final-release-check.cmd',
+            'scripts/production/final-release-check.php',
             'scripts/production/mariadb-smoke.cmd',
             'scripts/production/mariadb-smoke.php',
             'scripts/production/rc1-check.cmd',
@@ -233,7 +238,7 @@ final class ReleaseArtifactCheckService
             'Release scripts',
             $missing === [] ? 'pass' : 'fail',
             $missing === []
-                ? 'RC1 and MariaDB smoke-test scripts are present.'
+                ? 'RC1, final-release and MariaDB smoke-test scripts are present.'
                 : 'Missing release script(s): '.implode(', ', $missing),
         );
     }

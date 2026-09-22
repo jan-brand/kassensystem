@@ -9,9 +9,9 @@
 </head>
 <body class="public-shell">
 <main class="public-page">
-    <p class="public-kicker">Laravel Webapp Foundation</p>
-    <h1 class="public-title">Ein neutrales Grundkonstrukt für Webanwendungen.</h1>
-    <p class="public-copy">Module, Designsystem, Surfaces, Pages, Environment-Synchronisation und Architekturchecks sind als Entwicklungswerkzeuge integriert.</p>
+    <p class="public-kicker">Kassensystem</p>
+    <h1 class="public-title">Technische Projektübersicht.</h1>
+    <p class="public-copy">Foundation-Werkzeuge für Module, Designsystem, Surfaces, Umgebungen und Architekturchecks bleiben für die lokale Entwicklung verfügbar.</p>
     @if (Route::has('foundation.dashboard'))
         <a class="public-action" href="{{ route('foundation.dashboard') }}">Foundation Dashboard</a>
     @endif

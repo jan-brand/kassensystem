@@ -3,12 +3,12 @@ setlocal EnableExtensions
 cd /d "%~dp0\..\.."
 
 echo.
-echo [1/4] Vollstaendiges Release-Gate
+echo [1/5] Vollstaendiges Release-Gate
 call composer qa:release
 if errorlevel 1 goto :fail
 
 echo.
-echo [2/4] Laravel Optimize / Route-Cache
+echo [2/5] Laravel Optimize / Route-Cache
 set "FOUNDATION_DASHBOARD=false"
 php artisan optimize --no-ansi
 if errorlevel 1 goto :optimize_fail
@@ -21,12 +21,17 @@ if errorlevel 1 goto :fail
 set "FOUNDATION_DASHBOARD="
 
 echo.
-echo [3/4] Produktionsnahe Regressionstests
+echo [3/5] Produktionsnahe Regressionstests
 php artisan test tests\Feature\Production
 if errorlevel 1 goto :fail
 
 echo.
-echo [4/4] Optionaler MariaDB-Smoke-Test
+echo [4/5] Finaler Release-Status
+call composer release:status
+if errorlevel 1 goto :fail
+
+echo.
+echo [5/5] Optionaler MariaDB-Smoke-Test
 if /I "%~1"=="--with-mariadb" (
     call scripts\production\mariadb-smoke.cmd
     if errorlevel 1 goto :fail

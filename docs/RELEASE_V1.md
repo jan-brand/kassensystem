@@ -124,3 +124,33 @@ v1.0.0
 ```
 
 V1-008 und anschließend der v1-Epic werden erst geschlossen, wenn die manuelle Abnahme dokumentiert ist.
+
+## 8. Release-Status und Final-Guard
+
+Der Repository-Stand ist als `1.0.0-rc.1` markiert. Den aktuellen Status zeigt:
+
+```bat
+composer release:status
+```
+
+Dieser Status-Befehl darf im RC1-Zustand Blocker anzeigen und endet trotzdem erfolgreich. Das ist beabsichtigt: die technische RC1-Freigabe ist von der finalen manuellen Freigabe getrennt.
+
+Nach der vollständigen manuellen Checkliste wird `release\v1-acceptance.json` ausgefüllt. Erforderlich sind:
+
+- `status` = `passed`
+- Datum und Tester
+- der exakt geprüfte Commit
+- Desktop-Browser geprüft
+- Smartphone oder Tablet real geprüft
+- Backup/Restore praktisch geprüft
+- Produktionscheck bewertet
+
+Danach werden in einem finalen Release-Commit die Release-Metadaten von `1.0.0-rc.1` auf `1.0.0` gesetzt sowie V1-008 und V1-000 geschlossen.
+
+Erst dann muss der harte Guard erfolgreich sein:
+
+```bat
+composer release:final-check
+```
+
+Ein `v1.0.0`-Tag darf nicht erstellt werden, solange dieser Befehl einen Blocker meldet.

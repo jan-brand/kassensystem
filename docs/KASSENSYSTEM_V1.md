@@ -1,50 +1,93 @@
-# Kassensystem v1 – fachlicher Kern
+# Kassensystem v1 – Funktionsumfang
 
-Dieser Stand bildet den Backend-Kern für die erste Version des Schulcafeteria-Kassensystems.
+Das Kassensystem v1 ist ein tablet-orientiertes Bargeld-POS mit rollenbasierter Administration für eine Schulcafeteria bzw. einen kleinen gastronomischen Betrieb.
 
-## Enthalten
+## Release-Status
 
-- Audit mit Redaction sensibler Daten und Unveränderlichkeit.
-- Benutzer mit Rollen, PIN-Hashing, Aktivierung/Deaktivierung und PIN-Anmeldung.
-- Kategorien und Produkte mit Preisen in Cent und 0-Euro-Produkten.
-- Kassenplätze, Kassenschichten, Einlagen, Entnahmen und Soll-/Ist-Abschluss.
-- Warenkorb und Bargeldverkauf mit Preis-Snapshots, Rückgeld, Verkaufsnummer und Doppelabschluss-Schutz.
+Der Repository-Stand ist als `1.0.0-rc.1` vorbereitet. Die automatisierten Release-Gates und der RC1-Preflight sind Bestandteil des Projekts. Der finale Stand `v1.0.0` wird erst nach der dokumentierten manuellen Acceptance freigegeben.
 
-## Bewusst noch nicht enthalten
+Der maschinenlesbare Acceptance-Record liegt unter `release/v1-acceptance.json`.
 
-- POS- und Verwaltungsoberfläche.
-- Storno abgeschlossener Verkäufe.
-- Schülerguthaben und andere Zahlungsmethoden.
-- Lagerverwaltung.
-- QR- oder Druckbelege.
-- TSE.
-- Reporting/CSV.
+## Identity und Berechtigungen
+
+- PIN-basierte Anmeldung mit gehashten PINs.
+- Rollen `cashier`, `manager` und `administrator`.
+- zentrale Permission-Matrix und serverseitige Durchsetzung.
+- Aktivierung/Deaktivierung von Benutzern.
+- Login-Sperre nach konfigurierbaren Fehlversuchen.
+- Benutzerwechsel im POS nur ohne offenen Warenkorb.
+
+## Catalog und POS
+
+- Kategorien und Produkte mit Sortierung und Aktivstatus.
+- Preise werden als Cent-Werte gespeichert.
+- 0-Euro-Produkte werden unterstützt.
+- Tablet-POS mit Kategorienavigation, Produktsuche, Warenkorb und Mengensteuerung.
+- ein offener Warenkorb pro Kassenplatz.
+- Barzahlung mit erhaltenem Betrag und Rückgeld.
+- abgeschlossene Verkäufe verwenden gespeicherte Produktnamen und Preise als Snapshots.
+- Schutz gegen Doppelabschluss eines Verkaufs.
+
+## CashRegister
+
+- Kassenöffnung mit Anfangsbestand.
+- Einlagen und Entnahmen mit Pflichtgrund.
+- Entnahmen dürfen den erwarteten Bargeldbestand nicht negativ machen.
+- Anzeige von Startbestand, Barumsatz, Einlagen, Entnahmen und Sollbestand.
+- Abschlussmodus sperrt neue Verkäufe und Kassenbewegungen.
+- Soll-/Ist-Abschluss mit Pflichtkommentar bei Differenz.
+- abgeschlossene Kassenschichten und Kassenbewegungen sind unveränderlich.
+
+## Administration
+
+Die Administration umfasst:
+
+- Katalogverwaltung,
+- Kassierer-/Benutzerverwaltung im Rahmen der Rolle,
+- Verkaufssuche und Belegdetails,
+- Tagesreporting und CSV-Export,
+- Kassen-/Schichtauswertungen,
+- Systemeinstellungen für Cafeteria, Kassenname, Logo und POS-Darstellung,
+- Audit-Protokoll für Administratoren.
+
+## Audit und Nachvollziehbarkeit
+
+Relevante Vorgänge werden mit Actor, Subject und fachlichen Änderungen protokolliert. Sensible Felder wie PINs und Secrets werden aus Audit-Payloads entfernt. Audit-Datensätze sind unveränderlich.
+
+## Produktion und Betrieb
+
+- lokale Entwicklung und Tests mit SQLite,
+- Produktionsziel MySQL/MariaDB,
+- Datenbank-Backup und Restore,
+- `/up` als Framework-Health-Check und `/health` mit Datenbankprüfung,
+- Produktionscheck für Environment, Datenbank, Migrationen, Storage, Demo-Konten und Release-Artefakte,
+- RC1-Preflight inklusive `artisan optimize`,
+- optionaler isolierter MariaDB-/MySQL-Migrationstest.
 
 ## Modulabhängigkeiten
 
+`Audit -> []`
+
 `Identity -> Audit`
 
-`Catalog -> Audit`
+`Catalog -> Identity, Audit`
 
 `CashRegister -> Identity, Audit`
 
 `Sales -> Identity, Catalog, CashRegister, Audit`
 
-Die Kassenlogik kennt das Sales-Modul nicht. Der Barumsatz wird beim Abschluss eines Verkaufs auf der Kassenschicht fortgeschrieben. Dadurch bleibt der Modulgraph azyklisch.
+`Reporting -> Sales, Catalog, CashRegister, Identity`
 
-## POS-Kassenführung
+`Settings -> Identity, Audit`
 
-Die POS-Oberfläche unterstützt neben Verkäufen auch die laufende Bargeldführung:
+Die Kassenlogik kennt das Sales-Modul nicht. Der Barumsatz wird beim Abschluss eines Verkaufs auf der Kassenschicht fortgeschrieben. Dadurch bleibt der fachliche Modulgraph azyklisch.
 
-- Einlagen und Entnahmen mit positivem Betrag und Pflichtgrund,
-- Anzeige von Startbestand, Barumsatz, Einlagen, Entnahmen und Sollbestand,
-- Beginn des Kassenabschlusses nur ohne offenen Warenkorb,
-- Sperre für neue Verkäufe und Kassenbewegungen während des Abschlusses,
-- Abbruch eines begonnenen Abschlusses,
-- Erfassung des gezählten Bargeldbestands,
-- Pflichtkommentar bei Kassendifferenz,
-- unveränderlicher abgeschlossener Kassenschicht-Datensatz.
+## Bewusst nicht Bestandteil von v1
 
-### Systemeinstellungen
+- Storno bereits abgeschlossener Verkäufe.
+- Kartenzahlung, Schülerguthaben oder weitere Zahlungsarten.
+- Lager- und Bestandsführung.
+- TSE-/Fiskalisierungsintegration.
+- spezialisierte Bondrucker- oder Hardware-Anbindungen.
 
-Die Administration stellt eine Einstellungsseite für Cafeteria-/Systemname, Kassenname, optionales Logo und die Produktkachel-Darstellung bereit. Währung (`EUR`) und Zeitzone (`Europe/Berlin`) bleiben technische Konfiguration. Änderungen werden auditierbar gespeichert und direkt im POS verwendet.
+Erweiterungen dieser Art gehören in eine Folgerelease und verändern nicht den v1-Release-Scope.

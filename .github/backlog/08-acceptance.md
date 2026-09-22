@@ -16,6 +16,6 @@ Die v1 als zusammenhaengenden realistischen Ablauf testen.
 
 ## Akzeptanzkriterien
 - [ ] Dokumentierte manuelle Abnahme-Checkliste.
-- [ ] Automatisierte Test-Suite vollstaendig gruen.
-- [ ] Demo-Daten enthalten keine produktiven Zugangsdaten.
-- [ ] Keine offenen P0/P1-Fehler fuer den Probebetrieb.
+- [x] Automatisierte Test-Suite vollstaendig gruen.
+- [x] Demo-Daten enthalten keine produktiven Zugangsdaten.
+- [x] Keine offenen P0/P1-Fehler fuer den Probebetrieb.

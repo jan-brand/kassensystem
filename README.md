@@ -1,133 +1,115 @@
-# Webapp Foundation
+# Kassensystem
 
-Ein neutrales Laravel-Grundkonstrukt für sehr unterschiedliche Webanwendungen. Der Schwerpunkt liegt nicht auf vorgefertigten Fachfunktionen, sondern auf **Architektur, Generatoren, Designsystem, Surfaces, Pages, Umgebungsmanagement, Diagnose und sicherem Refactoring**.
+Tablet-optimiertes Laravel-Kassensystem für Schulcafeteria und Gastronomie. Der v1-Fokus liegt auf einem schnellen, robusten Bargeld-POS mit nachvollziehbarer Kassenführung sowie einer rollenbasierten Administration.
 
-Die Foundation ist bewusst kein Vereinsportal-, CRM-, Shop- oder SaaS-Template. Fachmodule werden erst im jeweiligen Projekt erzeugt.
+**Release-Stand:** `1.0.0-rc.1`. Der technische RC1-Preflight ist vorhanden; `v1.0.0` bleibt bis zur dokumentierten manuellen Geräte-/Browser-Abnahme gesperrt.
 
-## Kernidee
+## Funktionsumfang v1
 
-Die Anwendung kennt ihre eigene Struktur. Manifeste beschreiben Module, Surfaces, Pages, Designbausteine, Navigation und Permissions. Konsolenbefehle können diese Struktur erzeugen, prüfen, anzeigen und teilweise sicher verändern.
+- PIN-Anmeldung mit Rollen `cashier`, `manager` und `administrator`
+- Tablet-POS mit Kategorien, Produktsuche, Warenkorb und Mengensteuerung
+- reine Barzahlung in v1 inklusive Received/Change und 0-Euro-Verkäufen
+- Kassenöffnung, Einlagen, Entnahmen und Soll-/Ist-Kassenabschluss
+- unveränderliche abgeschlossene Verkäufe, Payments, Kassenbewegungen und Audit-Ereignisse
+- Administration für Katalog, Kassierer, Sales/Belegansicht, Reporting/CSV, Einstellungen und Audit
+- Demo-Daten für lokale Acceptance-Tests
+- SQLite für lokale Entwicklung/Tests sowie MySQL/MariaDB als Produktionsziel
+- Backup/Restore, Health-Checks, Production-Check und RC1-Release-Gates
 
-```text
-Tokens → Components → Patterns → Templates → Pages
-                                  ↑
-                              Surfaces
-
-Modules → Actions / Queries / Models / Jobs / Policies / …
-
-.env.example → env:sync → .env / .env.testing / weitere Ziele
-```
-
-## Enthaltene Verbesserungen
-
-Neben den ursprünglich geplanten Generatoren sind drei zusätzliche Qualitätsfunktionen eingebaut:
-
-- **Interaktive Projektkonfiguration** über `app:configure`, damit sich Defaults pro Projekt personalisieren lassen.
-- **Lokales Foundation Dashboard** unter `/__foundation`, das Module, Pages, Surfaces, Designbausteine und Permissions sichtbar macht.
-- **Generator-Historie mit Undo** über `tooling:history` und `tooling:undo`. Dateiverändernde Foundation-Befehle protokollieren ihren vorherigen Zustand und können den letzten Schritt zurücknehmen.
-
-Dazu kommen Dry-Run-Unterstützung, Architekturchecks, Design-Abhängigkeitsprüfung und ein geschützter `.env`-Synchronisierer.
-
-## Voraussetzungen
+## Technischer Stack
 
 - PHP 8.4+
-- Composer 2
-- Node.js 22+ empfohlen
-- npm
-- standardmäßig SQLite; MySQL kann normal über `.env` konfiguriert werden
+- Laravel 13
+- Livewire 4
+- Tailwind CSS 4 / Vite
+- Pest
+- Larastan / PHPStan
+- Laravel Pint
 
-## Installation
+## Lokaler Start unter Windows CMD
 
-Alternativ steht unter Linux/macOS `./bin/setup.sh` und unter Windows PowerShell `./bin/setup.ps1` bereit. Manuell:
-
-```bash
-cp .env.example .env
+```bat
+cd /d C:\xampp\htdocs\kassensystem
+copy .env.example .env
 composer install
 php artisan key:generate
-php artisan env:sync --yes
+php artisan migrate
 npm install
 npm run build
-php artisan app:init
-php artisan app:doctor
+php artisan storage:link
 php artisan serve
 ```
 
-Danach:
+Die Anwendung startet anschließend über die konfigurierte `APP_URL`. Der POS leitet nicht angemeldete Benutzer auf den Login um.
 
-- Anwendung: `http://127.0.0.1:8000`
-- lokales Architektur-Dashboard: `http://127.0.0.1:8000/__foundation`
+## Demo- und Acceptance-Daten
 
-Das Dashboard wird standardmäßig nur im `local` Environment registriert.
+Nur in `local` oder `testing`:
 
-## Typischer Start eines neuen Projekts
-
-```bash
-php artisan app:configure
-php artisan surface:make portal --prefix=app
-php artisan module:make Projects
-php artisan module:make:model Projects Project
-php artisan module:make:action Projects CreateProject
-php artisan module:make:query Projects FindProjects
-php artisan design:make component Button
-php artisan design:make pattern PageHeader --uses=Button
-php artisan design:make template AdministrationList --uses=PageHeader
-php artisan page:make projects.index --surface=portal --uri=/projects
-php artisan app:check
+```bat
+php artisan app:demo:seed
 ```
 
-## Environment-Synchronisation
+Die Demo-Zugangsdaten und der vollständige manuelle Ablauf stehen in `docs/ACCEPTANCE_V1.md`. Demo-Konten sind für Produktion ausdrücklich nicht vorgesehen; `app:production-check` blockiert bekannte Demo-Benutzernamen.
 
-Normaler Modus erhält vorhandene Werte:
+## Qualität und Release
 
-```bash
-php artisan env:sync
+Vollständiges automatisiertes Release-Gate:
+
+```bat
+composer qa:release
 ```
 
-Beispiel: Steht in `.env` bereits `DB_PASSWORD=secret`, bleibt dieser Wert bestehen, während neue Schlüssel und die Struktur aus `.env.example` übernommen werden.
+Technischer Windows-RC1-Preflight inklusive Laravel Optimize/Route-Cache:
 
-Destruktiver Reset auf Beispielwerte:
-
-```bash
-php artisan env:sync --force
+```bat
+scripts\production\rc1-check.cmd
 ```
 
-`--force` legt vor dem Überschreiben automatisch eine Sicherung unter `.foundation/env-backups/` an. Für Automatisierung kann zusätzlich `--yes` verwendet werden. Vor jeder Veränderung ist `--dry-run` verfügbar.
+Optional mit isoliertem MariaDB-/MySQL-Migrationstest:
 
-## Qualitätsprüfung
-
-```bash
-php artisan app:check
-php artisan quality:check
+```bat
+scripts\production\rc1-check.cmd --with-mariadb
 ```
 
-Oder über Composer:
+Aktueller Final-Release-Status:
 
-```bash
-composer qa
+```bat
+composer release:status
 ```
+
+Der harte Final-Release-Check ist absichtlich erst nach dokumentierter manueller Acceptance erfolgreich:
+
+```bat
+composer release:final-check
+```
+
+## Release-Regel
+
+`v1.0.0` darf erst vorbereitet werden, wenn:
+
+- die manuelle Checkliste vollständig durchgeführt wurde,
+- ein Desktop-Browser sowie ein reales Smartphone oder Tablet geprüft wurden,
+- Backup und Restore praktisch geprüft wurden,
+- der Production-Check bewertet wurde,
+- V1-008 und anschließend der v1-Epic geschlossen sind,
+- `composer release:final-check` ohne Blocker endet.
+
+Der nachvollziehbare Acceptance-Record liegt unter `release/v1-acceptance.json`.
 
 ## Dokumentation
 
-Die ausführliche Dokumentation liegt unter `docs/`:
+Einstiegspunkte:
 
-- `docs/ARCHITECTURE.md`
-- `docs/CLI_REFERENCE.md`
-- `docs/DESIGN_SYSTEM.md`
-- `docs/ENVIRONMENT.md`
-- `docs/MODULES.md`
-- `docs/PAGES_AND_SURFACES.md`
-- `docs/GENERATOR_CONTRACT.md`
-- `docs/HISTORY_AND_UNDO.md`
-- `docs/DEVELOPMENT.md`
-- `docs/EXTENDING.md`
-- `docs/TESTING.md`
-- `docs/SECURITY.md`
+- `docs/KASSENSYSTEM_V1.md` – fachlicher v1-Umfang
+- `docs/ACCEPTANCE_V1.md` – manuelle und automatisierte Abnahme
+- `docs/RELEASE_V1.md` – Release-Candidate- und Final-Release-Ablauf
+- `docs/PRODUCTION.md` – Produktion, Backup und Restore
+- `docs/MARIADB_SMOKE_TEST.md` – isolierter MySQL-/MariaDB-Test
+- `docs/MOBILE_TESTING.md` – Geräteprüfung
+- `CHANGELOG.md` – Versionshistorie
 
-`php artisan docs:index` erzeugt zusätzlich einen Index, `php artisan docs:build` einen aus den Manifesten generierten Projektkatalog.
-
-## Projektstatus
-
-Dies ist eine funktionsfähige Foundation-Version 1. Sie konzentriert sich auf die strukturellen Werkzeuge. Authentifizierung, konkrete Rollen, Billing, Membership, Produkte, Events, Kunden oder andere Fachfunktionen gehören bewusst **nicht** zum Grundsystem.
+Die generische Foundation bleibt als internes Entwicklungswerkzeug erhalten. Projektname, Standardsurface und Modulstruktur sind in `foundation.json` auf das Kassensystem ausgerichtet.
 
 ## Lizenz
 
