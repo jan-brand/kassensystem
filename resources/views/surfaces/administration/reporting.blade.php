@@ -3,7 +3,7 @@
     use App\Support\Money;
 @endphp
 
-<main class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:py-8">
+<main class="admin-page admin-page--dense space-y-6">
     <section class="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
         <div class="flex flex-wrap items-start justify-between gap-5">
             <div>

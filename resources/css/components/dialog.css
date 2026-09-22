@@ -217,3 +217,315 @@ html[data-theme='gastro-dark'] .pos-dialog-action {
         border-bottom: 0;
     }
 }
+/* ------------------------------------------------------------------
+ * Remaining POS dialog variants
+ * ------------------------------------------------------------------ */
+
+html[data-theme='gastro-dark'] .pos-dialog-card--wide {
+    width: min(100%, 46rem);
+}
+
+html[data-theme='gastro-dark'] .pos-dialog-card--compact {
+    width: min(100%, 32rem);
+}
+
+html[data-theme='gastro-dark'] .pos-dialog-title {
+    margin-top: 0.35rem;
+    color: var(--text-primary);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--leading-tight);
+}
+
+html[data-theme='gastro-dark'] .pos-cash-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-top: 1.25rem;
+}
+
+html[data-theme='gastro-dark'] .pos-cash-stat {
+    min-width: 0;
+    padding: 0.9rem;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel-raised);
+}
+
+html[data-theme='gastro-dark'] .pos-cash-stat--expected {
+    box-shadow: inset 0 0.18rem 0 var(--accent-active);
+}
+
+html[data-theme='gastro-dark'] .pos-cash-stat__label {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+html[data-theme='gastro-dark'] .pos-cash-stat__value {
+    margin-top: 0.3rem;
+    color: var(--text-primary);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+html[data-theme='gastro-dark'] .pos-cash-actions {
+    display: grid;
+    gap: 0.65rem;
+    margin-top: 1.25rem;
+}
+
+html[data-theme='gastro-dark'] .pos-cash-action {
+    position: relative;
+    min-height: 7rem;
+    padding: 1rem 1rem 1rem 1.25rem !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--text-primary) !important;
+    text-align: start;
+}
+
+html[data-theme='gastro-dark'] .pos-cash-action::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.7rem;
+    top: 1.35rem;
+    width: 0.35rem;
+    height: 0.35rem;
+    border-radius: var(--radius-full);
+    background: var(--text-secondary);
+}
+
+html[data-theme='gastro-dark'] .pos-cash-action--deposit::before {
+    background: var(--action-success);
+}
+
+html[data-theme='gastro-dark'] .pos-cash-action--withdrawal::before {
+    background: var(--action-danger);
+}
+
+html[data-theme='gastro-dark'] .pos-cash-action--closing::before {
+    background: var(--accent-active);
+}
+
+html[data-theme='gastro-dark'] .pos-cash-action:hover {
+    border-color: var(--border-strong) !important;
+    background: var(--bg-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-cash-action__title {
+    display: block;
+    padding-inline-start: 0.35rem;
+    color: var(--text-primary);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-bold);
+}
+
+html[data-theme='gastro-dark'] .pos-cash-action__copy {
+    display: block;
+    margin-top: 0.35rem;
+    padding-inline-start: 0.35rem;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+    line-height: var(--leading-body);
+}
+
+html[data-theme='gastro-dark'] .pos-dialog-section {
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border-default);
+}
+
+html[data-theme='gastro-dark'] .pos-dialog-section__title {
+    color: var(--text-primary);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-bold);
+}
+
+html[data-theme='gastro-dark'] .pos-movement-list {
+    margin-top: 0.5rem;
+}
+
+html[data-theme='gastro-dark'] .pos-movement-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-block: 0.75rem;
+    border-top: 1px solid var(--border-default);
+}
+
+html[data-theme='gastro-dark'] .pos-movement-row:first-child {
+    border-top: 0;
+}
+
+html[data-theme='gastro-dark'] .pos-movement-reason {
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+}
+
+html[data-theme='gastro-dark'] .pos-movement-meta {
+    margin-top: 0.15rem;
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+}
+
+html[data-theme='gastro-dark'] .pos-movement-amount {
+    flex: 0 0 auto;
+    color: var(--text-primary);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+html[data-theme='gastro-dark'] .pos-movement-amount--deposit {
+    color: color-mix(in srgb, var(--text-primary) 72%, var(--action-success));
+}
+
+html[data-theme='gastro-dark'] .pos-movement-amount--withdrawal {
+    color: color-mix(in srgb, var(--text-primary) 72%, var(--action-danger));
+}
+
+html[data-theme='gastro-dark'] .pos-context-note {
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border-default);
+    border-inline-start-width: 0.25rem;
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel-raised);
+    color: var(--text-secondary);
+}
+
+html[data-theme='gastro-dark'] .pos-context-note--deposit {
+    border-inline-start-color: var(--action-success);
+}
+
+html[data-theme='gastro-dark'] .pos-context-note--withdrawal {
+    border-inline-start-color: var(--action-danger);
+}
+
+html[data-theme='gastro-dark'] .pos-context-note__title {
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+html[data-theme='gastro-dark'] .pos-context-note__copy {
+    margin-top: 0.25rem;
+    color: var(--text-secondary);
+    font-size: var(--text-sm);
+}
+
+html[data-theme='gastro-dark'] .pos-text-input {
+    width: 100%;
+    min-height: 3.5rem;
+    padding: 0.75rem 1rem !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+}
+
+html[data-theme='gastro-dark'] .pos-text-input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.55;
+}
+
+html[data-theme='gastro-dark'] .pos-text-input:focus {
+    border-color: var(--accent-active) !important;
+    outline: 2px solid color-mix(in srgb, var(--accent-active) 32%, transparent);
+    outline-offset: 2px;
+}
+
+html[data-theme='gastro-dark'] .pos-secondary-action {
+    width: 100%;
+    min-height: 4rem;
+    padding: 0.75rem 1rem !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    background: var(--bg-panel-raised) !important;
+    color: var(--text-primary) !important;
+    font-weight: var(--font-weight-bold);
+}
+
+html[data-theme='gastro-dark'] .pos-secondary-action:hover {
+    border-color: var(--border-strong) !important;
+    background: var(--bg-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] .pos-sale-complete {
+    text-align: center;
+}
+
+html[data-theme='gastro-dark'] .pos-eyebrow--success {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+html[data-theme='gastro-dark'] .pos-eyebrow--success::before {
+    content: "";
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: var(--radius-full);
+    background: var(--action-success);
+}
+
+html[data-theme='gastro-dark'] .pos-sale-number {
+    margin-top: 0.55rem;
+    color: var(--text-primary);
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+}
+
+html[data-theme='gastro-dark'] .pos-sale-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+html[data-theme='gastro-dark'] .pos-sale-metric {
+    padding: 1rem;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel-raised);
+}
+
+html[data-theme='gastro-dark'] .pos-sale-metric--change {
+    box-shadow: inset 0 0.18rem 0 var(--action-success);
+}
+
+html[data-theme='gastro-dark'] .pos-sale-metric__label {
+    color: var(--text-secondary);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+html[data-theme='gastro-dark'] .pos-sale-metric__value {
+    margin-top: 0.45rem;
+    color: var(--text-primary);
+    font-size: clamp(1.75rem, 8vw, 2.6rem);
+    font-weight: var(--font-weight-bold);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+}
+
+@media (min-width: 640px) {
+    html[data-theme='gastro-dark'] .pos-cash-summary {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    html[data-theme='gastro-dark'] .pos-cash-actions {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}

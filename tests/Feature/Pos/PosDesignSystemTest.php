@@ -35,3 +35,23 @@ it('uses tokens css as the canonical stylesheet token source', function () {
         ->toContain("@import './tokens.css';")
         ->not->toContain('foundation-tokens.css');
 });
+
+
+it('routes remaining POS overlays through the shared neutral design layer', function () {
+    $register = file_get_contents(resource_path('views/surfaces/pos/register.blade.php'));
+    $dialogs = file_get_contents(resource_path('css/components/dialog.css'));
+    $bottomSheet = file_get_contents(resource_path('css/components/bottom-sheet.css'));
+
+    expect($register)
+        ->toContain('pos-dialog-card pos-dialog-card--wide')
+        ->toContain('pos-cash-summary')
+        ->toContain('pos-cash-action')
+        ->toContain('pos-sale-complete')
+        ->and($dialogs)
+        ->toContain('.pos-dialog-card--wide')
+        ->toContain('.pos-cash-summary')
+        ->toContain('.pos-cash-action')
+        ->toContain('.pos-sale-complete')
+        ->and($bottomSheet)
+        ->toContain('[data-pos-mobile-cart]');
+});

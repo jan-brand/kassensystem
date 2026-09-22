@@ -3,19 +3,39 @@
  */
 
 html[data-theme='gastro-dark'] [data-pos-mobile-cart] {
-    background: rgb(0 0 0 / 68%) !important;
+    background: color-mix(in srgb, var(--raw-color-black) 76%, transparent) !important;
 }
 
 html[data-theme='gastro-dark'] [data-pos-mobile-cart] > section {
     border: 1px solid var(--border-default);
+    border-bottom: 0;
     background: var(--bg-panel) !important;
     color: var(--text-primary);
+    box-shadow: var(--shadow-lg) !important;
 }
 
 html[data-theme='gastro-dark'] [data-pos-mobile-cart] header,
 html[data-theme='gastro-dark'] [data-pos-mobile-cart] footer {
     border-color: var(--border-default) !important;
     background: var(--bg-panel-raised) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] .pos-mobile-cart__body {
+    border-color: var(--border-default) !important;
+    background: var(--bg-panel) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] .pos-mobile-cart__row {
+    border-color: var(--border-default) !important;
+    color: var(--text-primary);
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] .pos-mobile-cart__meta {
+    color: var(--text-secondary) !important;
+}
+
+html[data-theme='gastro-dark'] [data-pos-mobile-cart] .pos-cart__unit {
+    color: var(--text-secondary) !important;
 }
 
 html[data-theme='gastro-dark'] [data-pos-mobile-cart] p,

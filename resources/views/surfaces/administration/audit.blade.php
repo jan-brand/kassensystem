@@ -1,4 +1,4 @@
-<main class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:py-8">
+<main class="admin-page admin-page--dense space-y-6">
     <section class="rounded-3xl bg-slate-950 p-6 text-white shadow-sm sm:p-8">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -145,15 +145,15 @@
     </section>
 
     @if($selectedEvent)
-        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 p-4 sm:p-8" wire:click.self="closeEvent">
-            <section class="mx-auto max-w-5xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-                <header class="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-7">
+        <div class="admin-overlay fixed inset-0 z-50 overflow-y-auto p-4 sm:p-8" wire:click.self="closeEvent">
+            <section class="admin-dialog mx-auto max-w-5xl overflow-hidden rounded-3xl">
+                <header class="admin-dialog__header flex items-start justify-between gap-4 border-b px-5 py-5 sm:px-7">
                     <div>
                         <p class="text-xs font-bold uppercase tracking-widest text-slate-500">Audit #{{ $selectedEvent->id }}</p>
                         <h3 class="mt-1 break-all text-xl font-black">{{ $selectedEvent->event_key }}</h3>
                         <p class="mt-1 text-sm text-slate-500">{{ $selectedEvent->created_at?->format('d.m.Y H:i:s') }}</p>
                     </div>
-                    <button type="button" wire:click="closeEvent" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-black hover:bg-slate-50">Schließen</button>
+                    <button type="button" wire:click="closeEvent" class="admin-dialog__close px-3 py-2 text-sm">Schließen</button>
                 </header>
 
                 <div class="space-y-6 p-5 sm:p-7">
@@ -183,8 +183,8 @@
                     @php($jsonOptions = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
                     <div class="grid gap-4 xl:grid-cols-3">
                         @foreach(['before' => 'Vorher', 'after' => 'Nachher', 'metadata' => 'Metadaten'] as $field => $label)
-                            <div class="min-w-0 rounded-2xl border border-slate-200">
-                                <div class="border-b border-slate-200 px-4 py-3 text-sm font-black">{{ $label }}</div>
+                            <div class="admin-dialog__data-card min-w-0 rounded-2xl border">
+                                <div class="border-b px-4 py-3 text-sm font-black">{{ $label }}</div>
                                 <pre class="max-h-80 overflow-auto whitespace-pre-wrap break-words p-4 text-xs leading-5 text-slate-700">{{ $selectedEvent->{$field} === null ? '—' : json_encode($selectedEvent->{$field}, $jsonOptions) }}</pre>
                             </div>
                         @endforeach

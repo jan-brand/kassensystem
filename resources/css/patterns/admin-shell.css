@@ -15,8 +15,8 @@
     position: sticky;
     top: 0;
     z-index: var(--z-header);
-    border-bottom: 1px solid var(--raw-color-neutral-300);
-    background: color-mix(in srgb, var(--raw-color-white) 96%, transparent);
+    border-bottom: 1px solid var(--raw-color-neutral-800);
+    background: color-mix(in srgb, var(--raw-color-black) 96%, transparent);
     backdrop-filter: blur(0.75rem);
 }
 
@@ -28,7 +28,7 @@
 
 .admin-brand-kicker {
     margin: 0;
-    color: var(--raw-color-neutral-500);
+    color: var(--raw-color-neutral-300);
     font-size: 0.68rem;
     font-weight: var(--font-weight-bold);
     letter-spacing: 0.16em;
@@ -37,7 +37,7 @@
 
 .admin-brand-title {
     margin-top: 0.2rem;
-    color: var(--raw-color-black);
+    color: var(--raw-color-white);
     font-size: var(--text-xl);
     font-weight: var(--font-weight-bold);
     line-height: var(--leading-tight);
@@ -60,7 +60,7 @@
     border: 1px solid transparent;
     border-radius: var(--radius-md);
     background: transparent;
-    color: var(--raw-color-black);
+    color: var(--raw-color-neutral-300);
     font-size: var(--text-sm);
     font-weight: var(--font-weight-semibold);
     text-decoration: none;
@@ -71,29 +71,37 @@
 }
 
 .admin-nav__link:hover {
-    background: var(--raw-color-white);
-    border-color: var(--raw-color-neutral-300);
-}
-
-.admin-nav__link.is-active {
-    border-color: var(--raw-color-black);
-    background: var(--raw-color-black);
+    border-color: var(--raw-color-neutral-700);
+    background: var(--raw-color-neutral-900);
     color: var(--raw-color-white);
 }
 
-.admin-nav__link--pos {
-    border-color: var(--raw-color-neutral-300);
+.admin-nav__link.is-active {
+    border-color: var(--raw-color-white);
     background: var(--raw-color-white);
-    box-shadow: inset 0 -0.15rem 0 var(--accent-active);
+    color: var(--raw-color-black);
+    box-shadow: inset 0 -0.16rem 0 var(--accent-active);
+}
+
+.admin-nav__link--pos {
+    border-color: var(--raw-color-neutral-700);
+    background: var(--raw-color-neutral-900);
+    color: var(--raw-color-white);
+    box-shadow: inset 0 -0.16rem 0 var(--accent-active);
+}
+
+.admin-nav__link--pos:hover {
+    border-color: var(--raw-color-neutral-500);
+    background: var(--raw-color-neutral-800);
 }
 
 .admin-mobile-summary {
     min-height: 2.75rem;
     padding: 0.6rem 0.9rem;
-    border: 1px solid var(--raw-color-neutral-300);
+    border: 1px solid var(--raw-color-neutral-700);
     border-radius: var(--radius-md);
-    background: var(--raw-color-white);
-    color: var(--raw-color-black);
+    background: var(--raw-color-neutral-900);
+    color: var(--raw-color-white);
     font-size: var(--text-sm);
     font-weight: var(--font-weight-bold);
     cursor: pointer;
@@ -106,10 +114,10 @@
     margin-top: 0.5rem;
     padding: 0.5rem;
     overflow: hidden;
-    border: 1px solid var(--raw-color-neutral-300);
+    border: 1px solid var(--raw-color-neutral-800);
     border-radius: var(--radius-lg);
-    background: var(--raw-color-white);
-    box-shadow: var(--shadow-md);
+    background: var(--raw-color-black);
+    box-shadow: var(--shadow-lg);
 }
 
 .admin-mobile-nav .admin-nav__link {
@@ -186,4 +194,92 @@
     .admin-stat-grid {
         grid-template-columns: repeat(4, minmax(0, 1fr));
     }
+}
+/* ------------------------------------------------------------------
+ * Administration overlays
+ * ------------------------------------------------------------------ */
+
+.admin-overlay {
+    background: color-mix(in srgb, var(--raw-color-black) 78%, transparent) !important;
+    backdrop-filter: blur(0.2rem);
+}
+
+.admin-dialog,
+.admin-receipt {
+    border: 1px solid var(--raw-color-neutral-300);
+    background: var(--raw-color-white);
+    color: var(--raw-color-black);
+    box-shadow: var(--shadow-lg);
+}
+
+.admin-dialog__header {
+    border-color: var(--raw-color-neutral-300) !important;
+    background: var(--raw-color-white);
+}
+
+.admin-dialog__close,
+.admin-dialog__button-secondary {
+    min-height: 2.75rem;
+    border: 1px solid var(--raw-color-neutral-300) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--raw-color-white) !important;
+    color: var(--raw-color-black) !important;
+    font-weight: var(--font-weight-bold);
+}
+
+.admin-dialog__close:hover,
+.admin-dialog__button-secondary:hover {
+    border-color: var(--raw-color-neutral-500) !important;
+    background: var(--raw-color-neutral-100) !important;
+}
+
+.admin-dialog__button-primary {
+    min-height: 2.75rem;
+    border: 1px solid var(--raw-color-black) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--raw-color-black) !important;
+    color: var(--raw-color-white) !important;
+    font-weight: var(--font-weight-bold);
+    box-shadow: inset 0 -0.15rem 0 var(--accent-active);
+}
+
+.admin-dialog__button-primary:hover {
+    background: var(--raw-color-neutral-900) !important;
+}
+
+.admin-dialog__footer {
+    border-color: var(--raw-color-neutral-300) !important;
+    background: var(--raw-color-neutral-100) !important;
+}
+
+.admin-dialog__meta-card {
+    border: 1px solid var(--raw-color-neutral-300);
+    background: var(--raw-color-neutral-100) !important;
+}
+
+.admin-dialog__data-card {
+    border-color: var(--raw-color-neutral-300) !important;
+    background: var(--raw-color-white);
+}
+
+.admin-dialog__data-card > div {
+    border-color: var(--raw-color-neutral-300) !important;
+}
+
+.admin-receipt {
+    border-radius: var(--radius-xl);
+}
+
+.admin-receipt header,
+.admin-receipt footer {
+    border-color: var(--raw-color-neutral-300) !important;
+}
+
+.admin-receipt footer {
+    background: var(--raw-color-neutral-100) !important;
+}
+
+.admin-dialog .bg-slate-50 {
+    border: 1px solid var(--raw-color-neutral-300);
+    background: var(--raw-color-neutral-100) !important;
 }

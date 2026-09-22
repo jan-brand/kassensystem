@@ -1,0 +1,220 @@
+/*
+ * Administration controls and content surfaces.
+ *
+ * Administration stays deliberately neutral: white / black / gray carry the
+ * interface. Ocher, green and red are reserved for focus and state accents.
+ */
+
+.admin-page {
+    width: min(100%, var(--layout-content-wide-max));
+    margin-inline: auto;
+    padding: clamp(2rem, 5vw, 4rem) var(--layout-page-gutter);
+}
+
+.admin-page--dense {
+    padding-block: clamp(1.5rem, 3vw, 2.5rem);
+}
+
+.admin-page--narrow {
+    max-width: var(--layout-content-max);
+}
+
+.admin-page > h2,
+.admin-page__heading {
+    color: var(--raw-color-black);
+    font-size: clamp(2.1rem, 5vw, 3.35rem);
+    font-weight: var(--font-weight-bold);
+    letter-spacing: -0.035em;
+    line-height: var(--leading-tight);
+}
+
+.admin-page__date {
+    margin-top: 0.5rem;
+    color: var(--raw-color-neutral-500);
+    font-size: var(--text-base);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Surfaces */
+.admin-page :is(section, article).bg-white,
+.admin-page > .bg-white {
+    border: 1px solid var(--raw-color-neutral-300);
+    background: var(--raw-color-white) !important;
+    box-shadow: none !important;
+}
+
+.admin-page section.bg-slate-950 {
+    border: 1px solid var(--raw-color-black);
+    background: var(--raw-color-black) !important;
+    box-shadow: none !important;
+}
+
+.admin-page section.bg-slate-950 :is(.text-slate-300, .text-slate-400) {
+    color: var(--raw-color-neutral-300) !important;
+}
+
+.admin-page .bg-slate-50,
+.admin-page .bg-slate-100 {
+    background: var(--raw-color-neutral-100) !important;
+}
+
+.admin-page .ring-slate-200 {
+    --tw-ring-color: var(--raw-color-neutral-300) !important;
+}
+
+.admin-page .border-slate-200,
+.admin-page .border-slate-300,
+.admin-page .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+.admin-page .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--raw-color-neutral-300) !important;
+}
+
+/* State messages */
+.admin-page :is(.bg-emerald-50, .bg-red-50, .bg-amber-50) {
+    border: 1px solid var(--raw-color-neutral-300) !important;
+    border-inline-start-width: 0.25rem !important;
+    background: var(--raw-color-white) !important;
+    color: var(--raw-color-black) !important;
+}
+
+.admin-page .bg-emerald-50 {
+    border-inline-start-color: var(--action-success) !important;
+}
+
+.admin-page .bg-red-50 {
+    border-inline-start-color: var(--action-danger) !important;
+}
+
+.admin-page .bg-amber-50 {
+    border-inline-start-color: var(--accent-active) !important;
+}
+
+/* Inputs */
+.admin-page :is(input, select, textarea) {
+    border-color: var(--raw-color-neutral-300) !important;
+    background: var(--raw-color-white) !important;
+    color: var(--raw-color-black) !important;
+    box-shadow: none !important;
+}
+
+.admin-page :is(input, select, textarea)::placeholder {
+    color: var(--raw-color-neutral-500);
+    opacity: 0.78;
+}
+
+.admin-page :is(input, select, textarea):focus {
+    border-color: var(--raw-color-black) !important;
+    outline: 2px solid color-mix(in srgb, var(--accent-active) 42%, transparent);
+    outline-offset: 2px;
+    box-shadow: none !important;
+}
+
+.admin-page input[type='checkbox'] {
+    accent-color: var(--raw-color-black);
+}
+
+/* Buttons */
+.admin-page button {
+    border: 1px solid var(--raw-color-neutral-300);
+    background: var(--raw-color-white);
+    color: var(--raw-color-black);
+    box-shadow: none;
+    transition:
+        background-color var(--transition-fast),
+        border-color var(--transition-fast),
+        color var(--transition-fast);
+}
+
+.admin-page button:hover:not(:disabled) {
+    border-color: var(--raw-color-neutral-500);
+    background: var(--raw-color-neutral-100);
+}
+
+.admin-page button:is(.bg-slate-950, .bg-emerald-600, .bg-amber-600),
+.admin-page button[type='submit'] {
+    border-color: var(--raw-color-black) !important;
+    background: var(--raw-color-black) !important;
+    color: var(--raw-color-white) !important;
+}
+
+.admin-page button.bg-emerald-600 {
+    box-shadow: inset 0 -0.16rem 0 var(--action-success) !important;
+}
+
+.admin-page button.bg-amber-600 {
+    box-shadow: inset 0 -0.16rem 0 var(--accent-active) !important;
+}
+
+.admin-page button:is(.bg-slate-950, .bg-emerald-600, .bg-amber-600):hover:not(:disabled),
+.admin-page button[type='submit']:hover:not(:disabled) {
+    background: var(--raw-color-neutral-900) !important;
+}
+
+/* Tables */
+.admin-page table {
+    color: var(--raw-color-black);
+}
+
+.admin-page thead.bg-slate-50 {
+    background: var(--raw-color-neutral-100) !important;
+}
+
+.admin-page tbody tr {
+    transition: background-color var(--transition-fast);
+}
+
+.admin-page tbody tr:hover {
+    background: color-mix(in srgb, var(--raw-color-neutral-100) 72%, transparent);
+}
+
+.admin-page :is(.text-slate-400, .text-slate-500, .text-slate-600, .text-slate-700) {
+    color: var(--raw-color-neutral-500) !important;
+}
+
+.admin-page .text-slate-900 {
+    color: var(--raw-color-black) !important;
+}
+
+/* Keep status colours small and semantic rather than surface-filling. */
+.admin-page :is(.text-emerald-700, .text-emerald-800, .text-emerald-900) {
+    color: var(--action-success) !important;
+}
+
+.admin-page :is(.text-red-600, .text-red-700, .text-red-800, .text-red-900) {
+    color: var(--action-danger) !important;
+}
+
+.admin-page :is(.text-amber-700, .text-amber-800, .text-amber-900, .text-amber-950) {
+    color: var(--accent-active-hover) !important;
+}
+
+/* Administration overlays enhanced after admin-shell.css. */
+.admin-overlay {
+    background: color-mix(in srgb, var(--raw-color-black) 82%, transparent) !important;
+}
+
+.admin-dialog .bg-slate-50 {
+    border: 1px solid var(--raw-color-neutral-300);
+    background: var(--raw-color-neutral-100) !important;
+}
+
+.admin-dialog .border-slate-200,
+.admin-receipt .border-slate-200,
+.admin-receipt .border-slate-300 {
+    border-color: var(--raw-color-neutral-300) !important;
+}
+
+.admin-receipt footer {
+    background: var(--raw-color-neutral-100) !important;
+}
+
+@media (max-width: 767px) {
+    .admin-page {
+        padding-inline: var(--layout-page-gutter-mobile);
+    }
+
+    .admin-mobile-nav {
+        max-height: min(70dvh, 32rem);
+        overflow-y: auto;
+    }
+}

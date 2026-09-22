@@ -1,5 +1,5 @@
 @php use App\Support\Money; @endphp
-<main class="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:py-8">
+<main class="admin-page admin-page--dense space-y-6">
     <style>
         @media print {
             body * { visibility: hidden !important; }
@@ -114,10 +114,10 @@
     </section>
 
     @if($selectedSale)
-        <div class="fixed inset-0 z-50 overflow-y-auto bg-slate-950/70 p-4 sm:p-8" wire:click.self="closeSale">
+        <div class="admin-overlay fixed inset-0 z-50 overflow-y-auto p-4 sm:p-8" wire:click.self="closeSale">
             <div class="mx-auto flex max-w-5xl justify-center gap-6">
-                <section id="sale-receipt" class="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-2xl">
-                    <header class="border-b border-dashed border-slate-300 px-6 py-6 text-center">
+                <section id="sale-receipt" class="admin-receipt w-full max-w-md overflow-hidden">
+                    <header class="border-b border-dashed px-6 py-6 text-center">
                         <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Beleg</p>
                         <h3 class="mt-2 text-2xl font-black">{{ $cafeteriaName }}</h3>
                         <p class="mt-1 font-mono text-sm font-bold">{{ $selectedSale->number }}</p>
@@ -169,9 +169,9 @@
                         </p>
                     </div>
 
-                    <footer class="receipt-no-print flex gap-2 border-t border-slate-200 bg-slate-50 p-4">
-                        <button type="button" onclick="window.print()" class="flex-1 rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white hover:bg-slate-800">Drucken</button>
-                        <button type="button" wire:click="closeSale" class="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-black hover:bg-white">Schließen</button>
+                    <footer class="admin-dialog__footer receipt-no-print flex gap-2 border-t p-4">
+                        <button type="button" onclick="window.print()" class="admin-dialog__button-primary flex-1 px-4 py-2.5 text-sm">Drucken</button>
+                        <button type="button" wire:click="closeSale" class="admin-dialog__button-secondary flex-1 px-4 py-2.5 text-sm">Schließen</button>
                     </footer>
                 </section>
             </div>

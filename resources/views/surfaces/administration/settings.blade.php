@@ -1,4 +1,4 @@
-<main class="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+<main class="admin-page admin-page--narrow">
     <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <p class="text-sm font-bold uppercase tracking-[0.18em] text-slate-500">Administration</p>

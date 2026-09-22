@@ -383,27 +383,43 @@
     </main>
 
     @if ($mobileCartOpen && $session?->status === CashSessionStatus::Open)
-        <div data-pos-mobile-cart class="fixed inset-0 z-50 flex items-end bg-slate-950/50 xl:hidden" wire:click.self="closeMobileCart">
-            <section class="max-h-[88dvh] w-full overflow-hidden rounded-t-3xl bg-white shadow-2xl">
-                <header class="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-4">
+        <div data-pos-mobile-cart class="fixed inset-0 z-50 flex items-end xl:hidden" wire:click.self="closeMobileCart">
+            <section class="max-h-[88dvh] w-full overflow-hidden rounded-t-3xl">
+                <header class="flex items-center justify-between gap-3 border-b px-4 py-4">
                     <div>
-                        <p class="text-xs font-bold uppercase tracking-wide text-slate-500">{{ $cartItemCount }} Artikel</p>
+                        <p class="pos-mobile-cart__meta text-xs font-bold uppercase tracking-wide">{{ $cartItemCount }} Artikel</p>
                         <h2 class="text-xl font-black">Warenkorb</h2>
                     </div>
-                    <button type="button" wire:click="closeMobileCart" class="touch-manipulation rounded-xl bg-slate-100 px-4 py-2.5 text-sm font-black">Schließen</button>
+                    <button type="button" wire:click="closeMobileCart" class="pos-dialog-close touch-manipulation">Schließen</button>
                 </header>
 
-                <div class="max-h-[52dvh] divide-y divide-slate-100 overflow-y-auto overscroll-contain">
+                <div class="pos-mobile-cart__body max-h-[52dvh] overflow-y-auto overscroll-contain">
                     @if (! $sale || $sale->items->isEmpty())
-                        <div class="pos-cart__empty p-8 text-center text-slate-500">Noch keine Produkte ausgewählt.</div>
+                        <div class="pos-cart__empty text-center">
+                            <svg
+                                class="pos-cart__empty-icon"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.6"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H6.1" />
+                                <circle cx="9" cy="20" r="1" />
+                                <circle cx="18" cy="20" r="1" />
+                            </svg>
+                            <p class="pos-cart__empty-text">Noch keine Produkte ausgewählt.</p>
+                        </div>
                     @else
                         @foreach ($sale->items as $item)
-                            <div wire:key="cart-item-mobile-{{ $item->id }}" class="flex items-center gap-3 px-4 py-4">
+                            <div wire:key="cart-item-mobile-{{ $item->id }}" class="pos-mobile-cart__row flex items-center gap-3 border-t px-4 py-4 first:border-t-0">
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate font-bold">{{ $item->product_name }}</p>
-                                    <p class="pos-cart__unit text-sm text-slate-500">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
+                                    <p class="pos-cart__unit text-sm">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
                                 </div>
-                                <div class="flex shrink-0 items-center rounded-xl bg-slate-100 p-1">
+                                <div class="pos-quantity flex shrink-0 items-center rounded-xl p-1">
                                     <button type="button" wire:click="decreaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-11 w-11 touch-manipulation rounded-lg text-xl font-black disabled:opacity-50">−</button>
                                     <span class="w-9 text-center font-black">{{ $item->quantity }}</span>
                                     <button type="button" wire:click="increaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-11 w-11 touch-manipulation rounded-lg text-xl font-black disabled:opacity-50">+</button>
@@ -413,21 +429,21 @@
                     @endif
                 </div>
 
-                <footer class="border-t border-slate-200 bg-slate-50 px-4 pt-4" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
+                <footer class="border-t px-4 pt-4" style="padding-bottom: max(1rem, env(safe-area-inset-bottom));">
                     <div class="flex items-end justify-between gap-4">
-                        <span class="pos-cart__total-label font-bold text-slate-600">Gesamt</span>
+                        <span class="pos-cart__total-label font-bold">Gesamt</span>
                         <span class="text-3xl font-black">{{ Money::format($sale?->total_cents ?? 0, $currency) }}</span>
                     </div>
                     <div class="mt-4 grid grid-cols-[auto_1fr] gap-2">
                         @if ($sale && ! $foreignSale)
-                            <button type="button" wire:click="discardSale" wire:loading.attr="disabled" class="touch-manipulation rounded-2xl border border-red-200 bg-white px-4 py-4 text-sm font-black text-red-700 disabled:opacity-50">Verwerfen</button>
+                            <button type="button" wire:click="discardSale" wire:loading.attr="disabled" class="pos-cart__discard touch-manipulation px-4 py-4 text-sm font-black disabled:opacity-50">Verwerfen</button>
                         @endif
                         <button
                             type="button"
                             wire:click="showPayment"
                             wire:loading.attr="disabled"
                             @disabled(! $sale || $sale->items->isEmpty() || $foreignSale)
-                            class="touch-manipulation rounded-2xl bg-emerald-600 px-5 py-4 text-lg font-black text-white disabled:bg-slate-300"
+                            class="pos-pay-button touch-manipulation px-5 py-4 text-lg font-black disabled:cursor-not-allowed"
                         >
                             Bezahlen
                         </button>
@@ -438,63 +454,63 @@
     @endif
 
     @if ($cashMenuOpen && $session?->status === CashSessionStatus::Open)
-        <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4">
-            <div class="max-h-[92dvh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-6" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom));">
-                <div class="flex items-start justify-between gap-4">
+        <div class="pos-dialog-backdrop fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+            <div class="pos-dialog-card pos-dialog-card--wide" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom));">
+                <div class="pos-dialog-header">
                     <div>
-                        <p class="text-sm font-bold uppercase tracking-[0.15em] text-slate-500">Bargeld</p>
-                        <h2 class="mt-1 text-2xl font-black">Kassenmenü</h2>
+                        <p class="pos-eyebrow">Bargeld</p>
+                        <h2 class="pos-dialog-title">Kassenmenü</h2>
                     </div>
-                    <button type="button" wire:click="closeCashMenu" class="rounded-xl bg-slate-100 px-3 py-2 font-bold">Schließen</button>
+                    <button type="button" wire:click="closeCashMenu" class="pos-dialog-close">Schließen</button>
                 </div>
 
                 @if ($cashMovementMode === null)
                     @if ($cashSummary)
-                        <div class="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                            <div class="rounded-2xl bg-slate-50 p-4">
-                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Start</p>
-                                <p class="mt-1 font-black">{{ Money::format($cashSummary['opening_cash_cents'], $currency) }}</p>
+                        <div class="pos-cash-summary">
+                            <div class="pos-cash-stat">
+                                <p class="pos-cash-stat__label">Start</p>
+                                <p class="pos-cash-stat__value">{{ Money::format($cashSummary['opening_cash_cents'], $currency) }}</p>
                             </div>
-                            <div class="rounded-2xl bg-slate-50 p-4">
-                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Barumsatz</p>
-                                <p class="mt-1 font-black">{{ Money::format($cashSummary['cash_sales_cents'], $currency) }}</p>
+                            <div class="pos-cash-stat">
+                                <p class="pos-cash-stat__label">Barumsatz</p>
+                                <p class="pos-cash-stat__value">{{ Money::format($cashSummary['cash_sales_cents'], $currency) }}</p>
                             </div>
-                            <div class="rounded-2xl bg-slate-50 p-4">
-                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Einlagen − Entnahmen</p>
-                                <p class="mt-1 font-black">{{ Money::format($cashSummary['deposits_cents'] - $cashSummary['withdrawals_cents'], $currency) }}</p>
+                            <div class="pos-cash-stat">
+                                <p class="pos-cash-stat__label">Einlagen − Entnahmen</p>
+                                <p class="pos-cash-stat__value">{{ Money::format($cashSummary['deposits_cents'] - $cashSummary['withdrawals_cents'], $currency) }}</p>
                             </div>
-                            <div class="rounded-2xl bg-slate-950 p-4 text-white">
-                                <p class="text-xs font-bold uppercase tracking-wide text-slate-300">Sollbestand</p>
-                                <p class="mt-1 font-black">{{ Money::format($cashSummary['expected_cash_cents'], $currency) }}</p>
+                            <div class="pos-cash-stat pos-cash-stat--expected">
+                                <p class="pos-cash-stat__label">Sollbestand</p>
+                                <p class="pos-cash-stat__value">{{ Money::format($cashSummary['expected_cash_cents'], $currency) }}</p>
                             </div>
                         </div>
                     @endif
 
-                    <div class="mt-5 grid gap-3 sm:grid-cols-3">
-                        <button type="button" wire:click="prepareCashMovement('deposit')" class="rounded-2xl bg-emerald-50 px-4 py-5 text-left ring-1 ring-emerald-200 hover:bg-emerald-100">
-                            <span class="block text-lg font-black text-emerald-900">+ Einlage</span>
-                            <span class="mt-1 block text-sm text-emerald-800">Zusätzliches Bargeld in die Kasse legen.</span>
+                    <div class="pos-cash-actions">
+                        <button type="button" wire:click="prepareCashMovement('deposit')" class="pos-cash-action pos-cash-action--deposit">
+                            <span class="pos-cash-action__title">+ Einlage</span>
+                            <span class="pos-cash-action__copy">Zusätzliches Bargeld in die Kasse legen.</span>
                         </button>
-                        <button type="button" wire:click="prepareCashMovement('withdrawal')" class="rounded-2xl bg-red-50 px-4 py-5 text-left ring-1 ring-red-200 hover:bg-red-100">
-                            <span class="block text-lg font-black text-red-900">− Entnahme</span>
-                            <span class="mt-1 block text-sm text-red-800">Bargeld dokumentiert aus der Kasse nehmen.</span>
+                        <button type="button" wire:click="prepareCashMovement('withdrawal')" class="pos-cash-action pos-cash-action--withdrawal">
+                            <span class="pos-cash-action__title">− Entnahme</span>
+                            <span class="pos-cash-action__copy">Bargeld dokumentiert aus der Kasse nehmen.</span>
                         </button>
-                        <button type="button" wire:click="startCashClosing" class="rounded-2xl bg-amber-50 px-4 py-5 text-left ring-1 ring-amber-200 hover:bg-amber-100">
-                            <span class="block text-lg font-black text-amber-950">Kasse abschließen</span>
-                            <span class="mt-1 block text-sm text-amber-900">Verkäufe sperren, zählen und Schicht beenden.</span>
+                        <button type="button" wire:click="startCashClosing" class="pos-cash-action pos-cash-action--closing">
+                            <span class="pos-cash-action__title">Kasse abschließen</span>
+                            <span class="pos-cash-action__copy">Verkäufe sperren, zählen und Schicht beenden.</span>
                         </button>
                     </div>
 
-                    <div class="mt-6 border-t border-slate-200 pt-5">
-                        <h3 class="font-black">Letzte Kassenbewegungen</h3>
-                        <div class="mt-2 divide-y divide-slate-100">
+                    <div class="pos-dialog-section">
+                        <h3 class="pos-dialog-section__title">Letzte Kassenbewegungen</h3>
+                        <div class="pos-movement-list">
                             @forelse ($recentMovements as $movement)
-                                <div class="flex items-start justify-between gap-4 py-3">
+                                <div class="pos-movement-row">
                                     <div class="min-w-0">
-                                        <p class="text-sm font-bold">{{ $movement->reason }}</p>
-                                        <p class="mt-0.5 text-xs text-slate-500">{{ $movement->user?->auditDisplayName() }} · {{ $movement->created_at?->format('d.m.Y H:i') }}</p>
+                                        <p class="pos-movement-reason">{{ $movement->reason }}</p>
+                                        <p class="pos-movement-meta">{{ $movement->user?->auditDisplayName() }} · {{ $movement->created_at?->format('d.m.Y H:i') }}</p>
                                     </div>
-                                    <span class="shrink-0 font-black {{ $movement->type === CashMovementType::Deposit ? 'text-emerald-700' : 'text-red-700' }}">
+                                    <span class="pos-movement-amount {{ $movement->type === CashMovementType::Deposit ? 'pos-movement-amount--deposit' : 'pos-movement-amount--withdrawal' }}">
                                         {{ $movement->type === CashMovementType::Deposit ? '+' : '−' }} {{ Money::format($movement->amount_cents, $currency) }}
                                     </span>
                                 </div>
@@ -505,36 +521,36 @@
                     </div>
                 @else
                     <form wire:submit="recordCashMovement" class="mt-6">
-                        <div class="rounded-2xl p-4 {{ $cashMovementMode === 'deposit' ? 'bg-emerald-50 text-emerald-950' : 'bg-red-50 text-red-950' }}">
-                            <p class="text-sm font-bold uppercase tracking-wide">{{ $cashMovementMode === 'deposit' ? 'Einlage' : 'Entnahme' }}</p>
-                            <p class="mt-1 text-sm">Betrag und Grund werden unveränderlich protokolliert.</p>
+                        <div class="pos-context-note {{ $cashMovementMode === 'deposit' ? 'pos-context-note--deposit' : 'pos-context-note--withdrawal' }}">
+                            <p class="pos-context-note__title">{{ $cashMovementMode === 'deposit' ? 'Einlage' : 'Entnahme' }}</p>
+                            <p class="pos-context-note__copy">Betrag und Grund werden unveränderlich protokolliert.</p>
                         </div>
 
-                        <label for="cashMovementAmount" class="mt-5 block text-sm font-bold">Betrag</label>
-                        <div class="relative mt-2">
+                        <label for="cashMovementAmount" class="pos-field-label mt-5">Betrag</label>
+                        <div class="pos-money-input">
                             <input
                                 id="cashMovementAmount"
                                 type="text"
                                 inputmode="decimal"
                                 wire:model="cashMovementAmount"
                                 placeholder="0,00"
-                                class="w-full rounded-2xl border border-slate-300 px-4 py-4 pr-14 text-right text-3xl font-black outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
+                                class="pos-money-input__control"
                             >
-                            <span class="pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-xl font-bold text-slate-500">€</span>
+                            <span class="pos-money-input__currency">€</span>
                         </div>
 
-                        <label for="cashMovementReason" class="mt-5 block text-sm font-bold">Grund</label>
+                        <label for="cashMovementReason" class="pos-field-label mt-5">Grund</label>
                         <input
                             id="cashMovementReason"
                             type="text"
                             wire:model="cashMovementReason"
                             placeholder="z. B. zusätzliches Wechselgeld"
-                            class="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
+                            class="pos-text-input"
                         >
 
                         <div class="mt-6 grid grid-cols-2 gap-3">
-                            <button type="button" wire:click="$set('cashMovementMode', null)" class="rounded-2xl border border-slate-300 px-5 py-4 font-black hover:bg-slate-50">Zurück</button>
-                            <button type="submit" class="rounded-2xl bg-slate-950 px-5 py-4 font-black text-white hover:bg-slate-800">Buchen</button>
+                            <button type="button" wire:click="$set('cashMovementMode', null)" class="pos-secondary-action">Zurück</button>
+                            <button type="submit" class="pos-primary-action">Buchen</button>
                         </div>
                     </form>
                 @endif
@@ -593,15 +609,23 @@
     @endif
 
     @if ($lastSaleNumber)
-        <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4">
-            <div class="w-full max-w-md rounded-t-3xl bg-white p-6 text-center shadow-2xl sm:rounded-3xl sm:p-7" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom));">
-                <p class="text-sm font-bold uppercase tracking-[0.15em] text-emerald-700">Verkauf abgeschlossen</p>
-                <h2 class="mt-2 text-2xl font-black">{{ $lastSaleNumber }}</h2>
-                <p class="mt-5 text-sm font-bold text-slate-500">Gesamt</p>
-                <p class="text-3xl font-black">{{ Money::format($lastSaleTotalCents ?? 0, $currency) }}</p>
-                <p class="mt-5 text-sm font-bold text-slate-500">Rückgeld</p>
-                <p class="text-5xl font-black text-emerald-700">{{ Money::format($lastChangeCents ?? 0, $currency) }}</p>
-                <button type="button" wire:click="$set('lastSaleNumber', null)" class="mt-7 w-full rounded-2xl bg-slate-950 px-5 py-4 text-lg font-black text-white">
+        <div class="pos-dialog-backdrop fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
+            <div class="pos-dialog-card pos-dialog-card--compact pos-sale-complete" style="padding-bottom: max(1.5rem, env(safe-area-inset-bottom));">
+                <p class="pos-eyebrow pos-eyebrow--success">Verkauf abgeschlossen</p>
+                <h2 class="pos-sale-number">{{ $lastSaleNumber }}</h2>
+
+                <div class="pos-sale-metrics">
+                    <div class="pos-sale-metric">
+                        <p class="pos-sale-metric__label">Gesamt</p>
+                        <p class="pos-sale-metric__value">{{ Money::format($lastSaleTotalCents ?? 0, $currency) }}</p>
+                    </div>
+                    <div class="pos-sale-metric pos-sale-metric--change">
+                        <p class="pos-sale-metric__label">Rückgeld</p>
+                        <p class="pos-sale-metric__value">{{ Money::format($lastChangeCents ?? 0, $currency) }}</p>
+                    </div>
+                </div>
+
+                <button type="button" wire:click="$set('lastSaleNumber', null)" class="pos-dialog-action">
                     Nächster Verkauf
                 </button>
             </div>

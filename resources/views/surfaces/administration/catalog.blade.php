@@ -1,5 +1,5 @@
 @php use App\Support\Money; @endphp
-<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+<main class="admin-page admin-page--dense">
 <h2 class="text-3xl font-black">Katalog</h2>
 @if($notice)<div class="mt-4 rounded-xl bg-emerald-50 p-3 font-bold text-emerald-900">{{ $notice }}</div>@endif
 @if($screenError)<div class="mt-4 rounded-xl bg-red-50 p-3 font-bold text-red-900">{{ $screenError }}</div>@endif
