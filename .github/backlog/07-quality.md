@@ -10,7 +10,7 @@ Den vorhandenen Code ohne grosse Ignore-Listen auf einen sauberen Qualitaetsstan
 - bestehende Artisan-Options-Warnungen untersuchen und korrigieren
 
 ## Akzeptanzkriterien
-- [ ] `php vendor/bin/pint --test` laeuft erfolgreich.
-- [ ] `php vendor/bin/phpstan analyse --no-progress` laeuft erfolgreich.
-- [ ] Keine pauschalen Ignore-Regeln fuer neue Kassensystemfehler.
-- [ ] Alle funktionalen Tests bleiben gruen.
+- [x] `php vendor/bin/pint --test` laeuft erfolgreich.
+- [x] `php vendor/bin/phpstan analyse --no-progress` laeuft erfolgreich.
+- [x] Keine pauschalen Ignore-Regeln fuer neue Kassensystemfehler.
+- [x] Alle funktionalen Tests bleiben gruen.

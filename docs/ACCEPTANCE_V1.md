@@ -46,13 +46,25 @@ Die PINs werden in der Datenbank ausschließlich gehasht gespeichert.
 
 ## 3. Automatisierte Abnahme
 
+Der vollständige technische Release-Check wird über einen einzigen Composer-Befehl ausgeführt:
+
 ```bat
+composer qa:release
+```
+
+Dieser Befehl umfasst Pint, PHPStan, die vollständige Test-Suite, `app:check`, den Frontend-Build und zusätzlich die Modul-, Architektur-, Permission-, Navigation-, Page- und Acceptance-Checks.
+
+Für gezielte Fehlersuche können die Gates weiterhin einzeln ausgeführt werden:
+
+```bat
+composer qa:static
 php artisan app:check
 php artisan module:check
 php artisan architecture:check
 php artisan permission:check
 php artisan navigation:check
 php artisan page:check
+php artisan test tests\Feature\Acceptance
 php artisan test
 npm run build
 ```

@@ -2,15 +2,15 @@
 Die erste produktnahe Version des Kassensystems vollstaendig abschliessen.
 
 ## Arbeitsbereiche
-- [ ] Systemeinstellungen in der Administration
-- [ ] Audit-Protokoll-Browser
-- [ ] Reporting und CSV-Oberflaeche
-- [ ] Verkaufsdetails und Belegansicht
-- [ ] Berechtigungen zentralisieren
-- [ ] Backup und Produktionsvorbereitung
-- [ ] Pint und PHPStan bereinigen
+- [x] Systemeinstellungen in der Administration
+- [x] Audit-Protokoll-Browser
+- [x] Reporting und CSV-Oberflaeche
+- [x] Verkaufsdetails und Belegansicht
+- [x] Berechtigungen zentralisieren
+- [x] Backup und Produktionsvorbereitung
+- [x] Pint und PHPStan bereinigen
 - [ ] Demo-Daten und vollstaendige v1-Abnahme
-- [ ] POS-Finalisierung
+- [x] POS-Finalisierung
 
 ## Definition of Done
 - [ ] Alle v1-Funktionen sind ueber Browser/POS bedienbar.

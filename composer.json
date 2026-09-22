@@ -62,6 +62,18 @@
       "@php artisan app:check",
       "npm run build"
     ],
+    "qa:acceptance": [
+      "@php artisan module:check",
+      "@php artisan architecture:check",
+      "@php artisan permission:check",
+      "@php artisan navigation:check",
+      "@php artisan page:check",
+      "@php artisan test tests/Feature/Acceptance"
+    ],
+    "qa:release": [
+      "@qa",
+      "@qa:acceptance"
+    ],
     "security": [
       "composer audit --locked",
       "npm audit --audit-level=high"
