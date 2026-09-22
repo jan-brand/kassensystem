@@ -38,7 +38,11 @@ it('provides one reproducible release quality command', function () {
         ->toContain('@php artisan page:check')
         ->toContain('@php artisan test tests/Feature/Acceptance')
         ->and($composer['scripts']['qa:release'] ?? null)
-        ->toBe(['@qa', '@qa:acceptance']);
+        ->toBe([
+            '@qa',
+            '@php scripts/production/release-artifacts.php',
+            '@qa:acceptance',
+        ]);
 });
 
 it('keeps manual device acceptance explicit in the release documentation', function () {

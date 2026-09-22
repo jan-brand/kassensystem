@@ -35,10 +35,13 @@ KASSENSYSTEM_TIMEZONE=Europe/Berlin
 Nach der Konfiguration und nach jedem Deployment:
 
 ```bat
+php scripts\production\release-artifacts.php
 php artisan app:production-check
 ```
 
-Der Check prüft unter anderem Environment, Debug-Modus, APP_KEY/APP_URL, Datenbankzugriff, MySQL/MariaDB-Treiber, ausstehende Migrationen, Storage-Schreibrechte, den Public-Storage-Link, Währung, Zeitzone und Repository-Schutz für Secrets/Backups.
+Der Artefakt-Check prüft unter anderem den Vite-Build, Lockfiles, Bootstrap-Cache, Backup-Ziel, Release-Dokumentation und versehentlich öffentlich abgelegte `.env`-Dateien.
+
+Der Produktionscheck prüft zusätzlich Environment, Debug-Modus, APP_KEY/APP_URL, Datenbankzugriff, MySQL/MariaDB-Treiber, ausstehende Migrationen, Demo-Konten, Storage-Schreibrechte, den Public-Storage-Link, Währung, Zeitzone und Repository-Schutz für Secrets/Backups.
 
 `WARN` ist ein Hinweis. `FAIL` beendet den Befehl mit Fehlercode 1 und muss vor dem Probebetrieb behoben werden.
 
@@ -80,7 +83,7 @@ Optional können Verbindung und Ziel explizit angegeben werden:
 
 ```bat
 php artisan app:backup --connection=mysql
-php artisan app:backup --path=storageppackups\databaseor-update.sql
+php artisan app:backup --path=storage\app\backups\database\vor-update.sql
 ```
 
 Zusätzlich zur Datenbank muss `storage/app/public/` gesichert werden, wenn dort produktive Uploads wie das Cafeteria-Logo liegen. Diese Dateien gehören nicht in das Datenbank-Backup.
@@ -90,7 +93,7 @@ Zusätzlich zur Datenbank muss `storage/app/public/` gesichert werden, wenn dort
 Restore ist absichtlich destruktiv und benötigt `--force`:
 
 ```bat
-php artisan app:restore storageppackups\database60921_120000_mysql.sql --force
+php artisan app:restore storage\app\backups\database\20260921_120000_mysql.sql --force
 ```
 
 Vor dem Restore erzeugt der Befehl automatisch ein Sicherheitsbackup des aktuellen Datenbankstands. Nur wenn die aktuelle Datenbank so beschädigt ist, dass kein Backup mehr möglich ist, darf bewusst darauf verzichtet werden:
@@ -119,6 +122,18 @@ php artisan app:production-check
 Erst wenn alle Migrationen erfolgreich angewendet wurden, darf dieselbe Release-Version produktiv migriert werden. `migrate:fresh` ist auf produktiven oder anderweitig wertvollen Datenbanken verboten.
 
 ## Deployment / Update
+
+Vor dem Deployment den technischen RC1-Preflight auf dem freizugebenden Commit ausführen:
+
+```bat
+scripts\production\rc1-check.cmd
+```
+
+Für den zusätzlichen isolierten MySQL-/MariaDB-Migrationstest:
+
+```bat
+scripts\production\rc1-check.cmd --with-mariadb
+```
 
 Empfohlener Ablauf:
 

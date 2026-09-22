@@ -22,9 +22,21 @@ cd /d C:\xampp\htdocs\kassensystem
 composer qa:release
 ```
 
-`composer qa:release` führt die statische Analyse, Pint, die vollständige Test-Suite, den Foundation-App-Check, den Frontend-Build sowie die zusätzlichen Modul-, Architektur-, Permission-, Navigation-, Page- und Acceptance-Checks aus.
+`composer qa:release` führt die statische Analyse, Pint, die vollständige Test-Suite, den Foundation-App-Check, den Frontend-Build, den Release-Artefakt-Check sowie die zusätzlichen Modul-, Architektur-, Permission-, Navigation-, Page- und Acceptance-Checks aus.
 
 Ein Release Candidate darf nur vorbereitet werden, wenn der Befehl mit Exit-Code 0 endet.
+
+Für den vollständigen technischen Windows-RC1-Preflight inklusive `artisan optimize`:
+
+```bat
+scripts\production\rc1-check.cmd
+```
+
+Optional kann direkt danach auch der isolierte MariaDB-/MySQL-Migrationstest ausgeführt werden:
+
+```bat
+scripts\production\rc1-check.cmd --with-mariadb
+```
 
 ## 3. Demo-Abnahme
 
@@ -70,6 +82,7 @@ Besonders relevant:
 Auf dem vorgesehenen Produktionssystem:
 
 ```bat
+php scripts\production\release-artifacts.php
 php artisan app:production-check
 ```
 

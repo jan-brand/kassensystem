@@ -8,6 +8,10 @@ use Throwable;
 
 final class ProductionCheckService
 {
+    public function __construct(
+        private readonly ReleaseArtifactCheckService $releaseArtifacts,
+    ) {}
+
     /**
      * @return list<array{name: string, status: 'pass'|'warn'|'fail', message: string}>
      */
@@ -79,6 +83,11 @@ final class ProductionCheckService
             'The repository must ignore environment files and database backups.',
         );
 
+        $results = array_merge(
+            $results,
+            $this->releaseArtifacts->runtimeChecks(),
+        );
+
         return $results;
     }
 
@@ -109,12 +118,52 @@ final class ProductionCheckService
             }
 
             $results[] = $this->migrationCheck($connectionName);
+            $results[] = $this->demoAccountsCheck($connectionName);
 
             return $results;
         } catch (Throwable) {
             return [
                 $this->result('Database connectivity', 'fail', 'Database connection failed. Check the production DB settings.'),
             ];
+        }
+    }
+
+    /** @return array{name: string, status: 'pass'|'warn'|'fail', message: string} */
+    private function demoAccountsCheck(string $connectionName): array
+    {
+        try {
+            $connection = DB::connection($connectionName);
+
+            if (! $connection->getSchemaBuilder()->hasTable('users')) {
+                return $this->result(
+                    'Demo accounts',
+                    'fail',
+                    'The users table does not exist.',
+                );
+            }
+
+            $count = $connection
+                ->table('users')
+                ->whereIn('username', [
+                    'demo-admin',
+                    'demo-manager',
+                    'demo-kasse',
+                ])
+                ->count();
+
+            return $this->result(
+                'Demo accounts',
+                $count === 0 ? 'pass' : 'fail',
+                $count === 0
+                    ? 'No built-in demo accounts are present.'
+                    : $count.' demo account(s) must be removed before production use.',
+            );
+        } catch (Throwable) {
+            return $this->result(
+                'Demo accounts',
+                'fail',
+                'Demo-account status could not be checked.',
+            );
         }
     }
 

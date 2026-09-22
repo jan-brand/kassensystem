@@ -72,6 +72,7 @@
     ],
     "qa:release": [
       "@qa",
+      "@php scripts/production/release-artifacts.php",
       "@qa:acceptance"
     ],
     "security": [
