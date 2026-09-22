@@ -5,6 +5,7 @@ namespace App\Modules\Identity\Models;
 use App\Modules\Identity\Enums\UserRole;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -17,8 +18,8 @@ use Illuminate\Notifications\Notifiable;
  * @property string|null $phone
  * @property UserRole $role
  * @property bool $active
- * @property \Illuminate\Support\Carbon|null $last_login_at
- * @property \Illuminate\Support\Carbon|null $pin_changed_at
+ * @property Carbon|null $last_login_at
+ * @property Carbon|null $pin_changed_at
  */
 final class User extends Authenticatable
 {

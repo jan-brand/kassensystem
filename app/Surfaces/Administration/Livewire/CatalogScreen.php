@@ -25,25 +25,39 @@ use Throwable;
 final class CatalogScreen extends Component
 {
     public string $categoryName = '';
+
     public int $categorySortOrder = 0;
+
     public ?int $editingCategoryId = null;
+
     public string $editCategoryName = '';
+
     public int $editCategorySortOrder = 0;
 
     public ?int $productCategoryId = null;
+
     public string $productName = '';
+
     public string $productShortName = '';
+
     public string $productPrice = '0,00';
+
     public int $productSortOrder = 0;
 
     public ?int $editingProductId = null;
+
     public ?int $editProductCategoryId = null;
+
     public string $editProductName = '';
+
     public string $editProductShortName = '';
+
     public string $editProductPrice = '0,00';
+
     public int $editProductSortOrder = 0;
 
     public ?string $notice = null;
+
     public ?string $screenError = null;
 
     public function boot(): void

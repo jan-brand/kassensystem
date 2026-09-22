@@ -1,3 +1,32 @@
 <?php
-namespace App\Foundation\Console;use App\Foundation\Generation\FilePlan;use App\Foundation\Registry\ProjectRegistry;
-final class DocsBuildCommand extends FoundationCommand{protected $signature='docs:build {--dry-run} {--force}';protected $description='Generate catalog documentation from project manifests.';public function handle(FilePlan $p,ProjectRegistry $r):int{$md="# Generated Project Catalog\n\n> Generated from manifests. Do not edit manually.\n\n## Modules\n\n";foreach($r->modules() as $m)$md.="- **{$m['name']}** — depends on: ".(implode(', ',$m['depends_on']??[])?:'none')."\n";$md.="\n## Surfaces\n\n";foreach($r->surfaces() as $s)$md.="- **{$s['name']}** — prefix `".($s['prefix']??'')."`\n";$md.="\n## Pages\n\n";foreach($r->pages() as $x)$md.="- **{$x['name']}** — `{$x['surface']}` — `{$x['uri']}`\n";$md.="\n## Design System\n\n";foreach($r->design() as $d)$md.="- **{$d['name']}** — {$d['type']} ({$d['status']})\n";$p->write('docs/generated/catalog.md',$md,true);return $this->runPlan($p,'docs:build');}}
+
+namespace App\Foundation\Console;
+
+use App\Foundation\Generation\FilePlan;
+use App\Foundation\Registry\ProjectRegistry;
+
+final class DocsBuildCommand extends FoundationCommand
+{
+    protected $signature = 'docs:build {--dry-run} {--force}';
+
+    protected $description = 'Generate catalog documentation from project manifests.';
+
+    public function handle(FilePlan $p, ProjectRegistry $r): int
+    {
+        $md = "# Generated Project Catalog\n\n> Generated from manifests. Do not edit manually.\n\n## Modules\n\n";
+        foreach ($r->modules() as $m) {
+            $md .= "- **{$m['name']}** — depends on: ".(implode(', ', $m['depends_on'] ?? []) ?: 'none')."\n";
+        }$md .= "\n## Surfaces\n\n";
+        foreach ($r->surfaces() as $s) {
+            $md .= "- **{$s['name']}** — prefix `".($s['prefix'] ?? '')."`\n";
+        }$md .= "\n## Pages\n\n";
+        foreach ($r->pages() as $x) {
+            $md .= "- **{$x['name']}** — `{$x['surface']}` — `{$x['uri']}`\n";
+        }$md .= "\n## Design System\n\n";
+        foreach ($r->design() as $d) {
+            $md .= "- **{$d['name']}** — {$d['type']} ({$d['status']})\n";
+        }$p->write('docs/generated/catalog.md', $md, true);
+
+        return $this->runPlan($p, 'docs:build');
+    }
+}

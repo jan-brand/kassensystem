@@ -19,7 +19,7 @@ final class DailyReportCsvExporter
      *     free_sales_count: int,
      *     products: list<array{product_id: int, product_name: string, quantity: int, revenue_cents: int}>
      * } $summary
-     * @param Collection<int, CashSession> $sessions
+     * @param  Collection<int, CashSession>  $sessions
      */
     public function export(array $summary, Collection $sessions): string
     {
@@ -75,9 +75,9 @@ final class DailyReportCsvExporter
                 Money::decimal((int) $session->closing_expected_cash_cents),
                 Money::decimal((int) $session->closing_counted_cash_cents),
                 Money::decimal((int) $session->closing_difference_cents),
-                $session->openedBy?->auditDisplayName() ?? '',
+                $session->openedBy->auditDisplayName(),
                 $session->closedBy?->auditDisplayName() ?? '',
-                $session->opened_at?->format('d.m.Y H:i:s') ?? '',
+                $session->opened_at->format('d.m.Y H:i:s'),
                 $session->closed_at?->format('d.m.Y H:i:s') ?? '',
                 $session->closing_comment ?? '',
             ];

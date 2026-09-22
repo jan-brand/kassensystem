@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Foundation\Console;
 
 use App\Foundation\Generation\FilePlan;
@@ -8,6 +9,7 @@ use App\Foundation\Support\Names;
 final class AppConfigureCommand extends FoundationCommand
 {
     protected $signature = 'app:configure {--name=} {--default-surface=} {--tests=} {--docs=} {--dashboard=} {--env-target=*} {--dry-run} {--force}';
+
     protected $description = 'Interactively configure project-specific Foundation defaults.';
 
     public function handle(FilePlan $plan): int
@@ -41,6 +43,7 @@ final class AppConfigureCommand extends FoundationCommand
         $data['dashboard'] = array_merge($data['dashboard'] ?? [], ['enabled' => $dashboard, 'local_only' => true]);
 
         $plan->write('foundation.json', JsonFile::encode($data), true);
+
         return $this->runPlan($plan, 'app:configure');
     }
 }

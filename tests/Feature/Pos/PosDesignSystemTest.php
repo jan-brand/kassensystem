@@ -36,7 +36,6 @@ it('uses tokens css as the canonical stylesheet token source', function () {
         ->not->toContain('foundation-tokens.css');
 });
 
-
 it('routes remaining POS overlays through the shared neutral design layer', function () {
     $register = file_get_contents(resource_path('views/surfaces/pos/register.blade.php'));
     $dialogs = file_get_contents(resource_path('css/components/dialog.css'));

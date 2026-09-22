@@ -8,7 +8,7 @@ use RuntimeException;
 
 final class ModuleArtifactGenerator
 {
-    public const TYPES = ['model','action','query','service','event','listener','job','policy','request','exception','enum','contract','dto','migration','factory','seeder','command','controller'];
+    public const TYPES = ['model', 'action', 'query', 'service', 'event', 'listener', 'job', 'policy', 'request', 'exception', 'enum', 'contract', 'dto', 'migration', 'factory', 'seeder', 'command', 'controller'];
 
     public function plan(FilePlan $plan, string $module, string $type, string $name): FilePlan
     {
@@ -16,8 +16,12 @@ final class ModuleArtifactGenerator
         $type = strtolower($type);
         $name = Names::studly($name);
         $moduleDir = 'app/Modules/'.$module;
-        if (! is_file(base_path($moduleDir.'/module.json'))) { throw new RuntimeException("Module {$module} does not exist."); }
-        if (! in_array($type, self::TYPES, true)) { throw new RuntimeException('Unsupported type: '.$type); }
+        if (! is_file(base_path($moduleDir.'/module.json'))) {
+            throw new RuntimeException("Module {$module} does not exist.");
+        }
+        if (! in_array($type, self::TYPES, true)) {
+            throw new RuntimeException('Unsupported type: '.$type);
+        }
 
         [$dir, $class, $suffix] = match ($type) {
             'model' => ['Models', $name, ''],
@@ -42,6 +46,7 @@ final class ModuleArtifactGenerator
 
         $path = $moduleDir.'/'.$dir.'/'.($type === 'migration' ? date('Y_m_d_His').'_'.$this->snake($name).'.php' : $class.'.php');
         $content = $this->content($module, $type, $class, $dir);
+
         return $plan->write($path, $content);
     }
 
@@ -51,6 +56,7 @@ final class ModuleArtifactGenerator
             return "<?php\n\nuse Illuminate\\Database\\Migrations\\Migration;\nuse Illuminate\\Database\\Schema\\Blueprint;\nuse Illuminate\\Support\\Facades\\Schema;\n\nreturn new class extends Migration {\n    public function up(): void { /* Schema changes */ }\n    public function down(): void { /* Reverse changes */ }\n};\n";
         }
         $ns = 'App\\Modules\\'.$module.'\\'.str_replace('/', '\\', $dir);
+
         return match ($type) {
             'model' => "<?php\n\nnamespace {$ns};\n\nuse Illuminate\\Database\\Eloquent\\Model;\n\nfinal class {$class} extends Model\n{\n    protected \$guarded = [];\n}\n",
             'action' => "<?php\n\nnamespace {$ns};\n\nfinal class {$class}\n{\n    public function execute(mixed ...\$arguments): mixed\n    {\n        // Perform one explicit state-changing use case.\n        return null;\n    }\n}\n",

@@ -2,7 +2,105 @@
 
 namespace App\Providers;
 
+use App\Foundation\Console\AppCheckCommand;
+use App\Foundation\Console\AppConfigureCommand;
+use App\Foundation\Console\AppDoctorCommand;
+use App\Foundation\Console\AppInfoCommand;
+use App\Foundation\Console\AppInitCommand;
+use App\Foundation\Console\AppStatusCommand;
+use App\Foundation\Console\ArchitectureCheckCommand;
+use App\Foundation\Console\ArchitectureCyclesCommand;
+use App\Foundation\Console\ArchitectureDependenciesCommand;
+use App\Foundation\Console\ArchitectureGraphCommand;
+use App\Foundation\Console\DesignCheckCommand;
+use App\Foundation\Console\DesignGraphCommand;
+use App\Foundation\Console\DesignListCommand;
+use App\Foundation\Console\DesignMakeCommand;
+use App\Foundation\Console\DesignRemoveCommand;
+use App\Foundation\Console\DesignRenameCommand;
+use App\Foundation\Console\DesignShowCommand;
+use App\Foundation\Console\DesignTokenCheckCommand;
+use App\Foundation\Console\DesignTokenListCommand;
+use App\Foundation\Console\DesignTokenMakeCommand;
+use App\Foundation\Console\DesignTokenRemoveCommand;
+use App\Foundation\Console\DesignTokenRenameCommand;
+use App\Foundation\Console\DesignTokenShowCommand;
+use App\Foundation\Console\DesignTokenSyncCommand;
+use App\Foundation\Console\DesignUnusedCommand;
+use App\Foundation\Console\DesignUsesCommand;
+use App\Foundation\Console\DocsBuildCommand;
+use App\Foundation\Console\DocsCheckCommand;
+use App\Foundation\Console\DocsIndexCommand;
+use App\Foundation\Console\DocsUnusedCommand;
+use App\Foundation\Console\EnvBackupCommand;
+use App\Foundation\Console\EnvCheckCommand;
+use App\Foundation\Console\EnvDiffCommand;
+use App\Foundation\Console\EnvRestoreCommand;
+use App\Foundation\Console\EnvSyncCommand;
+use App\Foundation\Console\GeneratedCheckCommand;
+use App\Foundation\Console\GeneratedClearCommand;
+use App\Foundation\Console\GeneratedRebuildCommand;
+use App\Foundation\Console\ManifestBuildCommand;
+use App\Foundation\Console\ManifestCheckCommand;
+use App\Foundation\Console\ManifestDiffCommand;
+use App\Foundation\Console\ModuleCheckCommand;
+use App\Foundation\Console\ModuleGraphCommand;
+use App\Foundation\Console\ModuleListCommand;
+use App\Foundation\Console\ModuleMakeActionCommand;
+use App\Foundation\Console\ModuleMakeArtifactCommand;
+use App\Foundation\Console\ModuleMakeCommand;
+use App\Foundation\Console\ModuleMakeCommandCommand;
+use App\Foundation\Console\ModuleMakeContractCommand;
+use App\Foundation\Console\ModuleMakeControllerCommand;
+use App\Foundation\Console\ModuleMakeDtoCommand;
+use App\Foundation\Console\ModuleMakeEnumCommand;
+use App\Foundation\Console\ModuleMakeEventCommand;
+use App\Foundation\Console\ModuleMakeExceptionCommand;
+use App\Foundation\Console\ModuleMakeFactoryCommand;
+use App\Foundation\Console\ModuleMakeJobCommand;
+use App\Foundation\Console\ModuleMakeListenerCommand;
+use App\Foundation\Console\ModuleMakeMigrationCommand;
+use App\Foundation\Console\ModuleMakeModelCommand;
+use App\Foundation\Console\ModuleMakePolicyCommand;
+use App\Foundation\Console\ModuleMakeQueryCommand;
+use App\Foundation\Console\ModuleMakeRequestCommand;
+use App\Foundation\Console\ModuleMakeSeederCommand;
+use App\Foundation\Console\ModuleMakeServiceCommand;
+use App\Foundation\Console\ModuleRemoveCommand;
+use App\Foundation\Console\ModuleRenameCommand;
+use App\Foundation\Console\ModuleShowCommand;
+use App\Foundation\Console\NavigationAddCommand;
+use App\Foundation\Console\NavigationCheckCommand;
+use App\Foundation\Console\NavigationListCommand;
+use App\Foundation\Console\NavigationRemoveCommand;
+use App\Foundation\Console\PageCheckCommand;
+use App\Foundation\Console\PageListCommand;
+use App\Foundation\Console\PageMakeCommand;
+use App\Foundation\Console\PageMoveCommand;
+use App\Foundation\Console\PageRemoveCommand;
+use App\Foundation\Console\PageRenameCommand;
+use App\Foundation\Console\PageShowCommand;
+use App\Foundation\Console\PermissionCheckCommand;
+use App\Foundation\Console\PermissionListCommand;
+use App\Foundation\Console\PermissionMakeCommand;
+use App\Foundation\Console\PermissionRemoveCommand;
+use App\Foundation\Console\PermissionSyncCommand;
+use App\Foundation\Console\QualityCheckCommand;
+use App\Foundation\Console\QualityFixCommand;
+use App\Foundation\Console\RouteCheckCommand;
+use App\Foundation\Console\RouteManifestCommand;
+use App\Foundation\Console\RouteUnusedCommand;
+use App\Foundation\Console\SurfaceCheckCommand;
+use App\Foundation\Console\SurfaceListCommand;
+use App\Foundation\Console\SurfaceMakeCommand;
+use App\Foundation\Console\SurfaceRemoveCommand;
+use App\Foundation\Console\SurfaceRenameCommand;
+use App\Foundation\Console\SurfaceShowCommand;
+use App\Foundation\Console\ToolingHistoryCommand;
+use App\Foundation\Console\ToolingUndoCommand;
 use App\Foundation\Registry\ProjectRegistry;
+use App\Foundation\Support\JsonFile;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
@@ -23,11 +121,9 @@ final class FoundationServiceProvider extends ServiceProvider
         $this->registerDashboard($registry);
     }
 
-
-
     private function applyProjectSettings(): void
     {
-        $settings = \App\Foundation\Support\JsonFile::read(base_path('foundation.json'));
+        $settings = JsonFile::read(base_path('foundation.json'));
         if (isset($settings['project']['default_surface'])) {
             config(['foundation.default_surface' => $settings['project']['default_surface']]);
         }
@@ -74,8 +170,12 @@ final class FoundationServiceProvider extends ServiceProvider
 
     private function registerDashboard(ProjectRegistry $registry): void
     {
-        if (! config('foundation.dashboard.enabled')) { return; }
-        if (config('foundation.dashboard.local_only') && ! $this->app->environment('local')) { return; }
+        if (! config('foundation.dashboard.enabled')) {
+            return;
+        }
+        if (config('foundation.dashboard.local_only') && ! $this->app->environment('local')) {
+            return;
+        }
 
         Route::get('/'.trim(config('foundation.dashboard.path'), '/'), function () use ($registry) {
             return view('foundation.dashboard', [
@@ -129,105 +229,106 @@ final class FoundationServiceProvider extends ServiceProvider
         }
     }
 
+    /** @return list<class-string<Command>> */
     private function commandClasses(): array
     {
         return [
-            \App\Foundation\Console\AppInitCommand::class,
-            \App\Foundation\Console\AppConfigureCommand::class,
-            \App\Foundation\Console\AppDoctorCommand::class,
-            \App\Foundation\Console\AppCheckCommand::class,
-            \App\Foundation\Console\AppInfoCommand::class,
-            \App\Foundation\Console\AppStatusCommand::class,
-            \App\Foundation\Console\EnvSyncCommand::class,
-            \App\Foundation\Console\EnvCheckCommand::class,
-            \App\Foundation\Console\EnvDiffCommand::class,
-            \App\Foundation\Console\EnvBackupCommand::class,
-            \App\Foundation\Console\EnvRestoreCommand::class,
-            \App\Foundation\Console\ModuleMakeCommand::class,
-            \App\Foundation\Console\ModuleListCommand::class,
-            \App\Foundation\Console\ModuleShowCommand::class,
-            \App\Foundation\Console\ModuleCheckCommand::class,
-            \App\Foundation\Console\ModuleGraphCommand::class,
-            \App\Foundation\Console\ModuleRenameCommand::class,
-            \App\Foundation\Console\ModuleRemoveCommand::class,
-            \App\Foundation\Console\ModuleMakeArtifactCommand::class,
-            \App\Foundation\Console\ModuleMakeModelCommand::class,
-            \App\Foundation\Console\ModuleMakeActionCommand::class,
-            \App\Foundation\Console\ModuleMakeQueryCommand::class,
-            \App\Foundation\Console\ModuleMakeServiceCommand::class,
-            \App\Foundation\Console\ModuleMakeEventCommand::class,
-            \App\Foundation\Console\ModuleMakeListenerCommand::class,
-            \App\Foundation\Console\ModuleMakeJobCommand::class,
-            \App\Foundation\Console\ModuleMakePolicyCommand::class,
-            \App\Foundation\Console\ModuleMakeRequestCommand::class,
-            \App\Foundation\Console\ModuleMakeExceptionCommand::class,
-            \App\Foundation\Console\ModuleMakeEnumCommand::class,
-            \App\Foundation\Console\ModuleMakeContractCommand::class,
-            \App\Foundation\Console\ModuleMakeDtoCommand::class,
-            \App\Foundation\Console\ModuleMakeMigrationCommand::class,
-            \App\Foundation\Console\ModuleMakeFactoryCommand::class,
-            \App\Foundation\Console\ModuleMakeSeederCommand::class,
-            \App\Foundation\Console\ModuleMakeCommandCommand::class,
-            \App\Foundation\Console\ModuleMakeControllerCommand::class,
-            \App\Foundation\Console\DesignMakeCommand::class,
-            \App\Foundation\Console\DesignListCommand::class,
-            \App\Foundation\Console\DesignShowCommand::class,
-            \App\Foundation\Console\DesignCheckCommand::class,
-            \App\Foundation\Console\DesignUsesCommand::class,
-            \App\Foundation\Console\DesignUnusedCommand::class,
-            \App\Foundation\Console\DesignRenameCommand::class,
-            \App\Foundation\Console\DesignRemoveCommand::class,
-            \App\Foundation\Console\DesignTokenMakeCommand::class,
-            \App\Foundation\Console\DesignTokenListCommand::class,
-            \App\Foundation\Console\SurfaceMakeCommand::class,
-            \App\Foundation\Console\SurfaceListCommand::class,
-            \App\Foundation\Console\SurfaceShowCommand::class,
-            \App\Foundation\Console\SurfaceCheckCommand::class,
-            \App\Foundation\Console\SurfaceRenameCommand::class,
-            \App\Foundation\Console\SurfaceRemoveCommand::class,
-            \App\Foundation\Console\PageMakeCommand::class,
-            \App\Foundation\Console\PageListCommand::class,
-            \App\Foundation\Console\PageShowCommand::class,
-            \App\Foundation\Console\PageCheckCommand::class,
-            \App\Foundation\Console\PageRenameCommand::class,
-            \App\Foundation\Console\PageRemoveCommand::class,
-            \App\Foundation\Console\NavigationAddCommand::class,
-            \App\Foundation\Console\NavigationListCommand::class,
-            \App\Foundation\Console\NavigationCheckCommand::class,
-            \App\Foundation\Console\NavigationRemoveCommand::class,
-            \App\Foundation\Console\PermissionMakeCommand::class,
-            \App\Foundation\Console\PermissionListCommand::class,
-            \App\Foundation\Console\PermissionCheckCommand::class,
-            \App\Foundation\Console\PermissionRemoveCommand::class,
-            \App\Foundation\Console\ArchitectureCheckCommand::class,
-            \App\Foundation\Console\ArchitectureGraphCommand::class,
-            \App\Foundation\Console\ArchitectureCyclesCommand::class,
-            \App\Foundation\Console\DocsBuildCommand::class,
-            \App\Foundation\Console\DocsCheckCommand::class,
-            \App\Foundation\Console\QualityCheckCommand::class,
-            \App\Foundation\Console\ToolingHistoryCommand::class,
-            \App\Foundation\Console\ToolingUndoCommand::class,
-            \App\Foundation\Console\DesignGraphCommand::class,
-            \App\Foundation\Console\DesignTokenShowCommand::class,
-            \App\Foundation\Console\DesignTokenCheckCommand::class,
-            \App\Foundation\Console\DesignTokenSyncCommand::class,
-            \App\Foundation\Console\DesignTokenRenameCommand::class,
-            \App\Foundation\Console\DesignTokenRemoveCommand::class,
-            \App\Foundation\Console\PageMoveCommand::class,
-            \App\Foundation\Console\PermissionSyncCommand::class,
-            \App\Foundation\Console\RouteCheckCommand::class,
-            \App\Foundation\Console\RouteManifestCommand::class,
-            \App\Foundation\Console\RouteUnusedCommand::class,
-            \App\Foundation\Console\ArchitectureDependenciesCommand::class,
-            \App\Foundation\Console\ManifestBuildCommand::class,
-            \App\Foundation\Console\ManifestCheckCommand::class,
-            \App\Foundation\Console\ManifestDiffCommand::class,
-            \App\Foundation\Console\GeneratedClearCommand::class,
-            \App\Foundation\Console\GeneratedRebuildCommand::class,
-            \App\Foundation\Console\GeneratedCheckCommand::class,
-            \App\Foundation\Console\DocsIndexCommand::class,
-            \App\Foundation\Console\DocsUnusedCommand::class,
-            \App\Foundation\Console\QualityFixCommand::class,
+            AppInitCommand::class,
+            AppConfigureCommand::class,
+            AppDoctorCommand::class,
+            AppCheckCommand::class,
+            AppInfoCommand::class,
+            AppStatusCommand::class,
+            EnvSyncCommand::class,
+            EnvCheckCommand::class,
+            EnvDiffCommand::class,
+            EnvBackupCommand::class,
+            EnvRestoreCommand::class,
+            ModuleMakeCommand::class,
+            ModuleListCommand::class,
+            ModuleShowCommand::class,
+            ModuleCheckCommand::class,
+            ModuleGraphCommand::class,
+            ModuleRenameCommand::class,
+            ModuleRemoveCommand::class,
+            ModuleMakeArtifactCommand::class,
+            ModuleMakeModelCommand::class,
+            ModuleMakeActionCommand::class,
+            ModuleMakeQueryCommand::class,
+            ModuleMakeServiceCommand::class,
+            ModuleMakeEventCommand::class,
+            ModuleMakeListenerCommand::class,
+            ModuleMakeJobCommand::class,
+            ModuleMakePolicyCommand::class,
+            ModuleMakeRequestCommand::class,
+            ModuleMakeExceptionCommand::class,
+            ModuleMakeEnumCommand::class,
+            ModuleMakeContractCommand::class,
+            ModuleMakeDtoCommand::class,
+            ModuleMakeMigrationCommand::class,
+            ModuleMakeFactoryCommand::class,
+            ModuleMakeSeederCommand::class,
+            ModuleMakeCommandCommand::class,
+            ModuleMakeControllerCommand::class,
+            DesignMakeCommand::class,
+            DesignListCommand::class,
+            DesignShowCommand::class,
+            DesignCheckCommand::class,
+            DesignUsesCommand::class,
+            DesignUnusedCommand::class,
+            DesignRenameCommand::class,
+            DesignRemoveCommand::class,
+            DesignTokenMakeCommand::class,
+            DesignTokenListCommand::class,
+            SurfaceMakeCommand::class,
+            SurfaceListCommand::class,
+            SurfaceShowCommand::class,
+            SurfaceCheckCommand::class,
+            SurfaceRenameCommand::class,
+            SurfaceRemoveCommand::class,
+            PageMakeCommand::class,
+            PageListCommand::class,
+            PageShowCommand::class,
+            PageCheckCommand::class,
+            PageRenameCommand::class,
+            PageRemoveCommand::class,
+            NavigationAddCommand::class,
+            NavigationListCommand::class,
+            NavigationCheckCommand::class,
+            NavigationRemoveCommand::class,
+            PermissionMakeCommand::class,
+            PermissionListCommand::class,
+            PermissionCheckCommand::class,
+            PermissionRemoveCommand::class,
+            ArchitectureCheckCommand::class,
+            ArchitectureGraphCommand::class,
+            ArchitectureCyclesCommand::class,
+            DocsBuildCommand::class,
+            DocsCheckCommand::class,
+            QualityCheckCommand::class,
+            ToolingHistoryCommand::class,
+            ToolingUndoCommand::class,
+            DesignGraphCommand::class,
+            DesignTokenShowCommand::class,
+            DesignTokenCheckCommand::class,
+            DesignTokenSyncCommand::class,
+            DesignTokenRenameCommand::class,
+            DesignTokenRemoveCommand::class,
+            PageMoveCommand::class,
+            PermissionSyncCommand::class,
+            RouteCheckCommand::class,
+            RouteManifestCommand::class,
+            RouteUnusedCommand::class,
+            ArchitectureDependenciesCommand::class,
+            ManifestBuildCommand::class,
+            ManifestCheckCommand::class,
+            ManifestDiffCommand::class,
+            GeneratedClearCommand::class,
+            GeneratedRebuildCommand::class,
+            GeneratedCheckCommand::class,
+            DocsIndexCommand::class,
+            DocsUnusedCommand::class,
+            QualityFixCommand::class,
         ];
     }
 }

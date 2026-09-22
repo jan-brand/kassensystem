@@ -8,9 +8,9 @@ use InvalidArgumentException;
 final class WriteAuditEventAction
 {
     /**
-     * @param array<string, mixed> $before
-     * @param array<string, mixed> $after
-     * @param array<string, mixed> $metadata
+     * @param  array<string, mixed>  $before
+     * @param  array<string, mixed>  $after
+     * @param  array<string, mixed>  $metadata
      */
     public function execute(
         string $eventKey,
@@ -59,7 +59,7 @@ final class WriteAuditEventAction
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>
      */
     private function sanitize(array $data): array
@@ -78,8 +78,7 @@ final class WriteAuditEventAction
 
         foreach ($data as $key => $value) {
             if (
-                is_string($key)
-                && in_array(
+                in_array(
                     strtolower($key),
                     $sensitiveKeys,
                     true
@@ -99,7 +98,7 @@ final class WriteAuditEventAction
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param  array<string, mixed>  $data
      * @return array<string, mixed>|null
      */
     private function nullableArray(array $data): ?array

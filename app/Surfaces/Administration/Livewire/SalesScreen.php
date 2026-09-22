@@ -104,7 +104,7 @@ final class SalesScreen extends Component
             return null;
         }
 
-        if ($date === false || $date->format('Y-m-d') !== $value) {
+        if ($date === null || $date->format('Y-m-d') !== $value) {
             return null;
         }
 

@@ -19,24 +19,37 @@ use Throwable;
 final class CashiersScreen extends Component
 {
     public string $username = '';
+
     public string $pin = '';
+
     public string $firstName = '';
+
     public string $lastName = '';
+
     public string $email = '';
+
     public string $phone = '';
 
     public ?int $editingId = null;
+
     public string $editUsername = '';
+
     public string $editFirstName = '';
+
     public string $editLastName = '';
+
     public string $editDisplayName = '';
+
     public string $editEmail = '';
+
     public string $editPhone = '';
 
     public ?int $resetPinId = null;
+
     public string $newPin = '';
 
     public ?string $notice = null;
+
     public ?string $screenError = null;
 
     public function boot(): void

@@ -3,6 +3,7 @@
 namespace App\Modules\Audit\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
@@ -18,7 +19,7 @@ use LogicException;
  * @property array<array-key, mixed>|null $metadata
  * @property string|null $ip_address
  * @property string|null $user_agent
- * @property \Illuminate\Support\Carbon $created_at
+ * @property Carbon $created_at
  */
 final class AuditEvent extends Model
 {
@@ -28,11 +29,11 @@ final class AuditEvent extends Model
 
     protected static function booted(): void
     {
-        static::updating(static function (): never {
+        self::updating(static function (): never {
             throw new LogicException('Audit events are immutable.');
         });
 
-        static::deleting(static function (): never {
+        self::deleting(static function (): never {
             throw new LogicException('Audit events cannot be deleted.');
         });
     }

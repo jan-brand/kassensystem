@@ -6,6 +6,7 @@ use App\Modules\CashRegister\Enums\CashMovementType;
 use App\Modules\Identity\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
@@ -15,7 +16,7 @@ use LogicException;
  * @property CashMovementType $type
  * @property int $amount_cents
  * @property string $reason
- * @property \Illuminate\Support\Carbon $created_at
+ * @property Carbon $created_at
  * @property-read CashSession $cashSession
  * @property-read User $user
  */
@@ -37,11 +38,11 @@ final class CashMovement extends Model
 
     protected static function booted(): void
     {
-        static::updating(static function (): never {
+        self::updating(static function (): never {
             throw new LogicException('Cash movements are immutable.');
         });
 
-        static::deleting(static function (): never {
+        self::deleting(static function (): never {
             throw new LogicException('Cash movements cannot be deleted.');
         });
     }

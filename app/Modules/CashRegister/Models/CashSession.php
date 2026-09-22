@@ -5,9 +5,11 @@ namespace App\Modules\CashRegister\Models;
 use App\Modules\CashRegister\Enums\CashMovementType;
 use App\Modules\CashRegister\Enums\CashSessionStatus;
 use App\Modules\Identity\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
@@ -22,13 +24,13 @@ use LogicException;
  * @property int|null $closing_counted_cash_cents
  * @property int|null $closing_difference_cents
  * @property string|null $closing_comment
- * @property \Illuminate\Support\Carbon $opened_at
- * @property \Illuminate\Support\Carbon|null $closing_started_at
- * @property \Illuminate\Support\Carbon|null $closed_at
+ * @property Carbon $opened_at
+ * @property Carbon|null $closing_started_at
+ * @property Carbon|null $closed_at
  * @property-read Register $register
  * @property-read User $openedBy
  * @property-read User|null $closedBy
- * @property-read \Illuminate\Database\Eloquent\Collection<int, CashMovement> $movements
+ * @property-read Collection<int, CashMovement> $movements
  */
 final class CashSession extends Model
 {
@@ -52,13 +54,13 @@ final class CashSession extends Model
 
     protected static function booted(): void
     {
-        static::updating(static function (CashSession $session): void {
+        self::updating(static function (CashSession $session): void {
             if ($session->getRawOriginal('status') === CashSessionStatus::Closed->value) {
                 throw new LogicException('Closed cash sessions are immutable.');
             }
         });
 
-        static::deleting(static function (CashSession $session): void {
+        self::deleting(static function (CashSession $session): void {
             if ($session->status === CashSessionStatus::Closed) {
                 throw new LogicException('Closed cash sessions cannot be deleted.');
             }

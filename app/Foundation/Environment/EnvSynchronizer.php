@@ -68,8 +68,8 @@ final class EnvSynchronizer
 
         return [
             'content' => $result,
-            'missing' => array_values(array_keys(array_diff_key($templateValues, $targetValues))),
-            'extra' => array_values(array_keys(array_diff_key($targetValues, $templateValues))),
+            'missing' => array_keys(array_diff_key($templateValues, $targetValues)),
+            'extra' => array_keys(array_diff_key($targetValues, $templateValues)),
             'changed' => $result !== $targetContent,
         ];
     }
@@ -81,8 +81,8 @@ final class EnvSynchronizer
         $target = $this->parseValues($targetContent);
 
         return [
-            'missing' => array_values(array_keys(array_diff_key($template, $target))),
-            'extra' => array_values(array_keys(array_diff_key($target, $template))),
+            'missing' => array_keys(array_diff_key($template, $target)),
+            'extra' => array_keys(array_diff_key($target, $template)),
         ];
     }
 }

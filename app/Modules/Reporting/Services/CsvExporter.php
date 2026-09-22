@@ -7,8 +7,8 @@ use RuntimeException;
 final class CsvExporter
 {
     /**
-     * @param list<string> $headers
-     * @param iterable<array<int, scalar|null>> $rows
+     * @param  list<string>  $headers
+     * @param  iterable<array<int, scalar|null>>  $rows
      */
     public function export(array $headers, iterable $rows): string
     {

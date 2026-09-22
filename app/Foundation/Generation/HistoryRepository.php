@@ -27,7 +27,7 @@ final class HistoryRepository
     }
 
     /**
-     * @param list<HistoryOperation> $operations
+     * @param  list<HistoryOperation>  $operations
      */
     public function record(string $label, array $operations): string
     {
@@ -89,7 +89,7 @@ final class HistoryRepository
     }
 
     /**
-     * @param array<array-key, mixed> $data
+     * @param  array<array-key, mixed>  $data
      * @return HistoryEntry
      */
     private function entry(array $data, string $path): array

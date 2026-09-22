@@ -32,12 +32,12 @@ if (! extension_loaded('pdo_mysql')) {
 $database = $prefix.date('Ymd_His').'_'.bin2hex(random_bytes(3));
 assertSafeIdentifier($database);
 
-echo "Kassensystem MariaDB/MySQL Smoke-Test".PHP_EOL;
+echo 'Kassensystem MariaDB/MySQL Smoke-Test'.PHP_EOL;
 echo str_repeat('=', 39).PHP_EOL;
 echo "Server:    {$host}:{$port}".PHP_EOL;
 echo "Benutzer:  {$user}".PHP_EOL;
 echo "Datenbank: {$database}".PHP_EOL;
-echo "Passwort:  ".($password === '' ? 'leer' : 'über Umgebungsvariable gesetzt').PHP_EOL;
+echo 'Passwort:  '.($password === '' ? 'leer' : 'über Umgebungsvariable gesetzt').PHP_EOL;
 echo PHP_EOL;
 
 $server = null;
@@ -54,7 +54,7 @@ try {
         ],
     );
 
-    echo "[OK] Verbindung zum Datenbankserver".PHP_EOL;
+    echo '[OK] Verbindung zum Datenbankserver'.PHP_EOL;
 
     $server->exec(sprintf(
         'CREATE DATABASE `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci',
@@ -62,7 +62,7 @@ try {
     ));
     $databaseCreated = true;
 
-    echo "[OK] Temporäre Datenbank erstellt".PHP_EOL;
+    echo '[OK] Temporäre Datenbank erstellt'.PHP_EOL;
 
     $environment = array_merge(
         is_array(getenv()) ? getenv() : [],
@@ -137,7 +137,7 @@ try {
     if ($keep) {
         echo PHP_EOL;
         echo "[HINWEIS] --keep gesetzt: Datenbank {$database} bleibt bestehen.".PHP_EOL;
-        echo "Manuell löschen, sobald sie nicht mehr benötigt wird.".PHP_EOL;
+        echo 'Manuell löschen, sobald sie nicht mehr benötigt wird.'.PHP_EOL;
         $databaseCreated = false;
     } else {
         $server->exec("DROP DATABASE `{$database}`");
@@ -153,11 +153,11 @@ try {
     if ($databaseCreated && $server instanceof PDO) {
         try {
             $server->exec("DROP DATABASE `{$database}`");
-            fwrite(STDERR, "[CLEANUP] Temporäre Datenbank wurde entfernt.".PHP_EOL);
+            fwrite(STDERR, '[CLEANUP] Temporäre Datenbank wurde entfernt.'.PHP_EOL);
         } catch (Throwable $cleanupException) {
             fwrite(
                 STDERR,
-                "[WARNUNG] Temporäre Datenbank konnte nicht automatisch entfernt werden: "
+                '[WARNUNG] Temporäre Datenbank konnte nicht automatisch entfernt werden: '
                 .$cleanupException->getMessage().PHP_EOL,
             );
         }
@@ -204,11 +204,13 @@ function parseOptions(array $arguments): array
     foreach ($arguments as $argument) {
         if ($argument === '--help' || $argument === '-h') {
             $options['help'] = true;
+
             continue;
         }
 
         if ($argument === '--keep') {
             $options['keep'] = true;
+
             continue;
         }
 

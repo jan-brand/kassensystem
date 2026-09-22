@@ -149,8 +149,8 @@ it('keeps completed sales and their items immutable', function () {
     $item = $completed->items->first();
 
     expect(fn () => $completed->update(['total_cents' => 999]))
-        ->toThrow(\LogicException::class);
+        ->toThrow(LogicException::class);
 
     expect(fn () => $item->update(['quantity' => 99]))
-        ->toThrow(\LogicException::class);
+        ->toThrow(LogicException::class);
 });

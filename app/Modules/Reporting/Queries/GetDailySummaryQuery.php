@@ -24,7 +24,7 @@ final class GetDailySummaryQuery
         $timezone = (string) config('kassensystem.timezone', 'Europe/Berlin');
         $day = CarbonImmutable::createFromFormat('!Y-m-d', $date, $timezone);
 
-        if ($day === false || $day->format('Y-m-d') !== $date) {
+        if ($day === null || $day->format('Y-m-d') !== $date) {
             throw new InvalidArgumentException('Date must use the format YYYY-MM-DD.');
         }
 

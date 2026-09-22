@@ -25,13 +25,13 @@ final class SaleItem extends Model
 
     protected static function booted(): void
     {
-        static::updating(static function (SaleItem $item): void {
+        self::updating(static function (SaleItem $item): void {
             if ($item->sale()->where('status', SaleStatus::Completed->value)->exists()) {
                 throw new LogicException('Items of completed sales are immutable.');
             }
         });
 
-        static::deleting(static function (SaleItem $item): void {
+        self::deleting(static function (SaleItem $item): void {
             if ($item->sale()->where('status', SaleStatus::Completed->value)->exists()) {
                 throw new LogicException('Items of completed sales cannot be deleted.');
             }

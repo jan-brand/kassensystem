@@ -61,7 +61,6 @@ Artisan::command(
     },
 )->purpose('Restore a database backup; requires --force and creates a safety backup by default');
 
-
 Artisan::command('app:demo:seed {--no-history}', function (DemoDataSeeder $demo): int {
     try {
         $result = $demo->seed(withHistory: ! $this->option('no-history'));

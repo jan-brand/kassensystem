@@ -53,7 +53,7 @@ final class UpdateSystemSettingsAction
             ]) ?? [];
 
             if ($settings === null) {
-                $settings = new SystemSetting();
+                $settings = new SystemSetting;
                 $settings->id = 1;
             }
 

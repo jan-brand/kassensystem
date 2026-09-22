@@ -20,8 +20,8 @@ final class QualityFixCommand extends Command
         $process->setTimeout(300);
         $process->run(
             function (string $type, string $buffer): void {
-                    $this->output->write($buffer);
-                },
+                $this->output->write($buffer);
+            },
         );
 
         return $process->isSuccessful()

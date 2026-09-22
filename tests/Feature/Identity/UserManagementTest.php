@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Audit\Models\AuditEvent;
 use App\Modules\Identity\Actions\ChangeUserRoleAction;
 use App\Modules\Identity\Actions\CreateUserAction;
 use App\Modules\Identity\Actions\ResetUserPinAction;
@@ -52,7 +53,7 @@ it('can reset a pin without exposing it in the audit log', function () {
     app(ResetUserPinAction::class)->execute($user, '654321');
 
     expect(Hash::check('654321', $user->refresh()->pin_hash))->toBeTrue()
-        ->and(\App\Modules\Audit\Models\AuditEvent::query()
+        ->and(AuditEvent::query()
             ->where('event_key', 'user.pin_reset')
             ->exists())->toBeTrue();
 });

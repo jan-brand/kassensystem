@@ -72,7 +72,7 @@ final class ReportingScreen extends Component
         $csv = $exporter->export($summary, $sessions);
 
         return response()->streamDownload(
-            static fn () => print($csv),
+            static fn () => print ($csv),
             'kassenbericht-'.$this->reportDate.'.csv',
             ['Content-Type' => 'text/csv; charset=UTF-8'],
         );
@@ -95,7 +95,7 @@ final class ReportingScreen extends Component
         $timezone = (string) config('kassensystem.timezone', 'Europe/Berlin');
         $day = CarbonImmutable::createFromFormat('!Y-m-d', $this->reportDate, $timezone);
 
-        if ($day === false) {
+        if ($day === null) {
             $day = CarbonImmutable::now($timezone)->startOfDay();
         }
 

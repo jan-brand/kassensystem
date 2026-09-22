@@ -1,3 +1,28 @@
 <?php
-namespace App\Foundation\Console;use Illuminate\Console\Command;
-final class DocsUnusedCommand extends Command{protected $signature='docs:unused';protected $description='List docs files not linked from docs/INDEX.md.';public function handle():int{$index=is_file(base_path('docs/INDEX.md'))?(string)file_get_contents(base_path('docs/INDEX.md')):'';$it=new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(base_path('docs'),\FilesystemIterator::SKIP_DOTS));foreach($it as $f){if(!$f->isFile()||$f->getExtension()!=='md'||$f->getFilename()==='INDEX.md'||str_contains($f->getPathname(),'/generated/'))continue;$rel=str_replace(base_path('docs').'/','',$f->getPathname());if(!str_contains($index,'('.$rel.')'))$this->line($rel);}return self::SUCCESS;}}
+
+namespace App\Foundation\Console;
+
+use Illuminate\Console\Command;
+
+final class DocsUnusedCommand extends Command
+{
+    protected $signature = 'docs:unused';
+
+    protected $description = 'List docs files not linked from docs/INDEX.md.';
+
+    public function handle(): int
+    {
+        $index = is_file(base_path('docs/INDEX.md')) ? (string) file_get_contents(base_path('docs/INDEX.md')) : '';
+        $it = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(base_path('docs'), \FilesystemIterator::SKIP_DOTS));
+        foreach ($it as $f) {
+            if (! $f->isFile() || $f->getExtension() !== 'md' || $f->getFilename() === 'INDEX.md' || str_contains($f->getPathname(), '/generated/')) {
+                continue;
+            }$rel = str_replace(base_path('docs').'/', '', $f->getPathname());
+            if (! str_contains($index, '('.$rel.')')) {
+                $this->line($rel);
+            }
+        }
+
+return self::SUCCESS;
+    }
+}

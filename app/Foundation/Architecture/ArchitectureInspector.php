@@ -41,7 +41,7 @@ final class ArchitectureInspector
         $cycles = [];
 
         /**
-         * @param list<string> $path
+         * @param  list<string>  $path
          */
         $visit = function (string $node, array $path) use (&$visit, &$cycles, $graph): void {
             if (in_array($node, $path, true)) {

@@ -8,7 +8,7 @@ use RuntimeException;
 final class JsonFile
 {
     /**
-     * @param array<array-key, mixed> $default
+     * @param  array<array-key, mixed>  $default
      * @return array<array-key, mixed>
      */
     public static function read(string $path, array $default = []): array
@@ -40,7 +40,7 @@ final class JsonFile
     }
 
     /**
-     * @param array<array-key, mixed> $data
+     * @param  array<array-key, mixed>  $data
      */
     public static function encode(array $data): string
     {

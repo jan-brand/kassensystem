@@ -1,3 +1,26 @@
 <?php
-namespace App\Foundation\Console;use App\Foundation\Generation\FilePlan;use App\Foundation\Support\JsonFile;use App\Foundation\Support\Names;
-final class SurfaceMakeCommand extends FoundationCommand{protected $signature='surface:make {name} {--prefix=} {--domain=} {--middleware=*} {--dry-run} {--force}';protected $description='Create an application surface with manifest and layout.';public function handle(FilePlan $p):int{$n=Names::kebab($this->argument('name'));$m=$this->option('middleware')?:['web'];$manifest=['name'=>$n,'description'=>ucfirst($n).' surface','prefix'=>$this->option('prefix')??$n,'domain'=>$this->option('domain'),'middleware'=>$m,'layout'=>$n];$p->write("resources/surfaces/{$n}/surface.json",JsonFile::encode($manifest));$p->write("resources/views/layouts/{$n}.blade.php","<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>@yield('title', config('app.name'))</title>@vite(['resources/css/app.css','resources/js/app.js'])</head><body><main>@yield('content')</main></body></html>\n");$p->write("resources/navigation/{$n}.json",JsonFile::encode(['items'=>[]]));return $this->runPlan($p,"surface:make {$n}");}}
+
+namespace App\Foundation\Console;
+
+use App\Foundation\Generation\FilePlan;
+use App\Foundation\Support\JsonFile;
+use App\Foundation\Support\Names;
+
+final class SurfaceMakeCommand extends FoundationCommand
+{
+    protected $signature = 'surface:make {name} {--prefix=} {--domain=} {--middleware=*} {--dry-run} {--force}';
+
+    protected $description = 'Create an application surface with manifest and layout.';
+
+    public function handle(FilePlan $p): int
+    {
+        $n = Names::kebab($this->argument('name'));
+        $m = $this->option('middleware') ?: ['web'];
+        $manifest = ['name' => $n, 'description' => ucfirst($n).' surface', 'prefix' => $this->option('prefix') ?? $n, 'domain' => $this->option('domain'), 'middleware' => $m, 'layout' => $n];
+        $p->write("resources/surfaces/{$n}/surface.json", JsonFile::encode($manifest));
+        $p->write("resources/views/layouts/{$n}.blade.php", "<!doctype html><html lang=\"de\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>@yield('title', config('app.name'))</title>@vite(['resources/css/app.css','resources/js/app.js'])</head><body><main>@yield('content')</main></body></html>\n");
+        $p->write("resources/navigation/{$n}.json", JsonFile::encode(['items' => []]));
+
+        return $this->runPlan($p, "surface:make {$n}");
+    }
+}

@@ -152,6 +152,7 @@ function commandNext(array $store, string $root): void
 
     if ($issues === []) {
         echo "No open work items.\n";
+
         return;
     }
 
@@ -190,6 +191,7 @@ function commandShow(array $store, string $root, string $id): void
     $bodyPath = pathFromRoot($root, (string) $issue['body_file']);
     if (! is_file($bodyPath)) {
         echo "[Body file missing]\n";
+
         return;
     }
 
@@ -209,6 +211,7 @@ function updateStatus(array $store, string $storePath, string $id, string $statu
 
     if ($current === $status) {
         echo "{$id} is already {$status}.\n";
+
         return;
     }
 
@@ -312,6 +315,7 @@ function commandDoctor(array $store, string $root): void
         if ($id === '') {
             echo "ERROR: Issue without ID.\n";
             $errors++;
+
             continue;
         }
 
@@ -368,6 +372,7 @@ function parseOptions(array $args): array
     foreach ($args as $arg) {
         if ($arg === '--all') {
             $options['all'] = true;
+
             continue;
         }
         if (str_starts_with($arg, '--') && str_contains($arg, '=')) {
@@ -435,6 +440,7 @@ function promptRequired(string $label): string
 function promptDefault(string $label, string $default): string
 {
     $value = trim(prompt("{$label} [{$default}]: "));
+
     return $value === '' ? $default : $value;
 }
 

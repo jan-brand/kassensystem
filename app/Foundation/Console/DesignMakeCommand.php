@@ -1,3 +1,32 @@
 <?php
-namespace App\Foundation\Console;use App\Foundation\Generation\FilePlan;use App\Foundation\Support\JsonFile;use App\Foundation\Support\Names;
-final class DesignMakeCommand extends FoundationCommand{protected $signature='design:make {type} {name} {--uses=*} {--status=experimental} {--dry-run} {--force}';protected $description='Create a component, pattern or template with manifest, Blade implementation, docs and test placeholder.';public function handle(FilePlan $p):int{$type=strtolower($this->argument('type'));if(!in_array($type,['component','pattern','template'],true)){$this->error('Type must be component, pattern or template.');return self::FAILURE;}$name=Names::studly($this->argument('name'));$plural=$type.'s';$manifest=['name'=>$name,'type'=>$type,'status'=>$this->option('status'),'uses'=>array_map([Names::class,'studly'],$this->option('uses')),'description'=>"Generated {$type}"];$p->write("resources/design/{$plural}/{$name}/{$type}.json",JsonFile::encode($manifest));$tag=Names::kebab($name);$p->write("resources/views/components/design/{$plural}/{$tag}.blade.php","<div {{ \$attributes }}>\n    {{ \$slot }}\n</div>\n");$p->write("docs/design-system/{$plural}/{$tag}.md","# {$name}\n\nType: `{$type}`  \nStatus: `{$this->option('status')}`\n\n## Purpose\n\nDescribe intended use and accessibility requirements.\n");return $this->runPlan($p,"design:make {$type} {$name}");}}
+
+namespace App\Foundation\Console;
+
+use App\Foundation\Generation\FilePlan;
+use App\Foundation\Support\JsonFile;
+use App\Foundation\Support\Names;
+
+final class DesignMakeCommand extends FoundationCommand
+{
+    protected $signature = 'design:make {type} {name} {--uses=*} {--status=experimental} {--dry-run} {--force}';
+
+    protected $description = 'Create a component, pattern or template with manifest, Blade implementation, docs and test placeholder.';
+
+    public function handle(FilePlan $p): int
+    {
+        $type = strtolower($this->argument('type'));
+        if (! in_array($type, ['component', 'pattern', 'template'], true)) {
+            $this->error('Type must be component, pattern or template.');
+
+            return self::FAILURE;
+        }$name = Names::studly($this->argument('name'));
+        $plural = $type.'s';
+        $manifest = ['name' => $name, 'type' => $type, 'status' => $this->option('status'), 'uses' => array_map([Names::class, 'studly'], $this->option('uses')), 'description' => "Generated {$type}"];
+        $p->write("resources/design/{$plural}/{$name}/{$type}.json", JsonFile::encode($manifest));
+        $tag = Names::kebab($name);
+        $p->write("resources/views/components/design/{$plural}/{$tag}.blade.php", "<div {{ \$attributes }}>\n    {{ \$slot }}\n</div>\n");
+        $p->write("docs/design-system/{$plural}/{$tag}.md", "# {$name}\n\nType: `{$type}`  \nStatus: `{$this->option('status')}`\n\n## Purpose\n\nDescribe intended use and accessibility requirements.\n");
+
+        return $this->runPlan($p, "design:make {$type} {$name}");
+    }
+}

@@ -349,7 +349,7 @@ final class RegisterScreen extends Component
 
             $this->lastSaleNumber = $completed->number;
             $this->lastSaleTotalCents = $completed->total_cents;
-            $this->lastChangeCents = $completed->payment?->change_cents ?? 0;
+            $this->lastChangeCents = $completed->payment->change_cents ?? 0;
             $this->mobileCartOpen = false;
             $this->paymentOpen = false;
             $this->receivedAmount = '';

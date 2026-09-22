@@ -16,7 +16,11 @@ abstract class FoundationCommand extends Command
             $this->line($line);
         }
 
-        if ((bool) $this->option('dry-run')) {
+        $options = $this->input->getOptions();
+        $dryRun = (bool) ($options['dry-run'] ?? false);
+        $force = (bool) ($options['force'] ?? false);
+
+        if ($dryRun) {
             $this->comment('Dry run: no files were changed.');
 
             return self::SUCCESS;
@@ -24,7 +28,7 @@ abstract class FoundationCommand extends Command
 
         $id = $plan->apply(
             $label,
-            (bool) $this->option('force'),
+            $force,
             $recordHistory,
         );
 
@@ -34,8 +38,8 @@ abstract class FoundationCommand extends Command
     }
 
     /**
-     * @param list<string> $headers
-     * @param list<array<int, mixed>> $rows
+     * @param  list<string>  $headers
+     * @param  list<array<int, mixed>>  $rows
      */
     protected function tableOrEmpty(
         array $headers,

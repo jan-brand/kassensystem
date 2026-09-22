@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 final class SearchAuditEventsQuery
 {
-    /** @return LengthAwarePaginator<AuditEvent> */
+    /** @return LengthAwarePaginator<int, AuditEvent> */
     public function execute(
         ?string $eventKey = null,
         ?string $actor = null,

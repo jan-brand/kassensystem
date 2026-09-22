@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Foundation\Console;
 
 use App\Foundation\Architecture\ArchitectureInspector;
@@ -7,10 +8,12 @@ use App\Foundation\Environment\EnvSynchronizer;
 use App\Foundation\Registry\ProjectRegistry;
 use App\Foundation\Support\JsonFile;
 use Illuminate\Console\Command;
+use Livewire\Component;
 
 final class AppCheckCommand extends Command
 {
     protected $signature = 'app:check';
+
     protected $description = 'Run the central Foundation consistency gate.';
 
     public function handle(ProjectRegistry $registry, ArchitectureInspector $architecture, DesignInspector $design, EnvSynchronizer $env): int
@@ -34,6 +37,7 @@ final class AppCheckCommand extends Command
         foreach ($registry->pages() as $page) {
             if (! isset($page['name'], $page['surface'], $page['handler'], $page['route_name'])) {
                 $problems[] = 'Invalid page manifest: '.($page['_file'] ?? '?');
+
                 continue;
             }
             if (! in_array($page['surface'], $surfaceNames, true)) {
@@ -43,7 +47,7 @@ final class AppCheckCommand extends Command
             $handlerTarget = $page['handler']['target'] ?? '';
             if ($handlerType === 'view' && ! is_file(resource_path('views/'.str_replace('.', '/', $handlerTarget).'.blade.php'))) {
                 $problems[] = "Page {$page['name']} references missing view {$handlerTarget}.";
-            } elseif ($handlerType === 'livewire' && (! class_exists($handlerTarget) || ! is_subclass_of($handlerTarget, \Livewire\Component::class))) {
+            } elseif ($handlerType === 'livewire' && (! class_exists($handlerTarget) || ! is_subclass_of($handlerTarget, Component::class))) {
                 $problems[] = "Page {$page['name']} references invalid Livewire component {$handlerTarget}.";
             } elseif (! in_array($handlerType, ['view', 'livewire'], true)) {
                 $problems[] = "Page {$page['name']} uses unsupported handler type {$handlerType}.";
@@ -92,6 +96,7 @@ final class AppCheckCommand extends Command
                 $targetPath = base_path($target);
                 if (! is_file($targetPath)) {
                     $problems[] = "Missing environment file: {$target}";
+
                     continue;
                 }
                 $diff = $env->diff($templateContent, (string) file_get_contents($targetPath));
@@ -113,10 +118,12 @@ final class AppCheckCommand extends Command
             }
             $this->newLine();
             $this->error(count(array_unique($problems)).' Foundation issue(s) found.');
+
             return self::FAILURE;
         }
 
         $this->info('All Foundation checks passed.');
+
         return self::SUCCESS;
     }
 }

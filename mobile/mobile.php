@@ -159,7 +159,7 @@ function showInfo(string $projectRoot, int $port): int
     echo "Port:    {$port}".PHP_EOL;
 
     if ($url === null) {
-        echo "LAN-IP:  nicht automatisch ermittelbar".PHP_EOL;
+        echo 'LAN-IP:  nicht automatisch ermittelbar'.PHP_EOL;
         echo "Bitte mit 'ipconfig' die IPv4-Adresse des WLAN-Adapters prüfen.".PHP_EOL;
 
         return 1;
@@ -169,7 +169,7 @@ function showInfo(string $projectRoot, int $port): int
 
     echo "LAN-IP:  {$ip}".PHP_EOL;
     echo PHP_EOL;
-    echo "Handy-URLs:".PHP_EOL;
+    echo 'Handy-URLs:'.PHP_EOL;
     echo "  App:       {$url}/".PHP_EOL;
     echo "  POS:       {$url}/pos".PHP_EOL;
     echo "  Login:     {$url}/pos/login".PHP_EOL;
@@ -181,7 +181,7 @@ function showInfo(string $projectRoot, int $port): int
 
 function doctor(string $projectRoot, int $port): int
 {
-    echo "Kassensystem Mobile LAN - Diagnose".PHP_EOL;
+    echo 'Kassensystem Mobile LAN - Diagnose'.PHP_EOL;
     echo str_repeat('=', 38).PHP_EOL;
 
     $problems = 0;
@@ -202,7 +202,7 @@ function doctor(string $projectRoot, int $port): int
     ];
 
     foreach ($checks as [$label, $ok, $detail]) {
-        echo sprintf("[%s] %-24s %s", $ok ? 'OK' : '!!', $label, $detail).PHP_EOL;
+        echo sprintf('[%s] %-24s %s', $ok ? 'OK' : '!!', $label, $detail).PHP_EOL;
         if (! $ok) {
             $problems++;
         }
@@ -212,7 +212,7 @@ function doctor(string $projectRoot, int $port): int
 
     $url = mobileUrl($port);
     if ($url === null) {
-        echo "[!!] Keine LAN-IP automatisch gefunden.".PHP_EOL;
+        echo '[!!] Keine LAN-IP automatisch gefunden.'.PHP_EOL;
         echo "     'ipconfig' ausführen und die IPv4-Adresse des WLAN-Adapters verwenden.".PHP_EOL;
         $problems++;
     } else {
@@ -221,17 +221,17 @@ function doctor(string $projectRoot, int $port): int
 
     $listening = isPortListening($port);
     echo sprintf(
-        "[%s] Port %d %s".PHP_EOL,
+        '[%s] Port %d %s'.PHP_EOL,
         $listening ? 'OK' : '--',
         $port,
         $listening ? 'ist lokal erreichbar.' : 'ist noch nicht belegt; Server ist vermutlich noch nicht gestartet.',
     );
 
     echo PHP_EOL;
-    echo "Firewall-Regel (einmalig, Administrator-CMD):".PHP_EOL;
+    echo 'Firewall-Regel (einmalig, Administrator-CMD):'.PHP_EOL;
     echo "  scripts\\mobile\\mobile.cmd firewall-add {$port}".PHP_EOL;
     echo PHP_EOL;
-    echo "Server starten:".PHP_EOL;
+    echo 'Server starten:'.PHP_EOL;
     echo "  scripts\\mobile\\mobile.cmd start {$port}".PHP_EOL;
 
     if ($problems > 0) {
@@ -240,7 +240,7 @@ function doctor(string $projectRoot, int $port): int
         return 1;
     }
 
-    echo PHP_EOL."Diagnose: Grundvoraussetzungen sind erfüllt.".PHP_EOL;
+    echo PHP_EOL.'Diagnose: Grundvoraussetzungen sind erfüllt.'.PHP_EOL;
 
     return 0;
 }
@@ -294,15 +294,15 @@ function startServer(string $projectRoot, int $port, bool $debug): int
         throw new RuntimeException("Port {$port} ist bereits belegt.");
     }
 
-    echo "Kassensystem Mobile LAN".PHP_EOL;
+    echo 'Kassensystem Mobile LAN'.PHP_EOL;
     echo str_repeat('=', 24).PHP_EOL;
     echo "Handy: {$url}/".PHP_EOL;
     echo "POS:   {$url}/pos".PHP_EOL;
     echo "Health:{$url}/health".PHP_EOL;
-    echo "Debug: ".($debug ? 'AN' : 'AUS').PHP_EOL;
+    echo 'Debug: '.($debug ? 'AN' : 'AUS').PHP_EOL;
     echo PHP_EOL;
     echo "Server läuft auf 0.0.0.0:{$port}.".PHP_EOL;
-    echo "Mit Strg+C beenden.".PHP_EOL.PHP_EOL;
+    echo 'Mit Strg+C beenden.'.PHP_EOL.PHP_EOL;
 
     // Konfigurationscache entfernen, damit die Prozessvariablen sicher greifen.
     $clearCommand = quote(PHP_BINARY).' artisan config:clear';
@@ -335,8 +335,8 @@ function firewallAdd(int $port): int
 
     $name = firewallRuleName($port);
 
-    echo "Windows-Firewall-Regel wird eingerichtet.".PHP_EOL;
-    echo "Diese Aktion benötigt eine als Administrator gestartete CMD.".PHP_EOL.PHP_EOL;
+    echo 'Windows-Firewall-Regel wird eingerichtet.'.PHP_EOL;
+    echo 'Diese Aktion benötigt eine als Administrator gestartete CMD.'.PHP_EOL.PHP_EOL;
 
     // Gleiche benannte Regel zuerst entfernen, damit der Befehl wiederholbar bleibt.
     passthru('netsh advfirewall firewall delete rule name='.quote($name).' >NUL 2>&1');

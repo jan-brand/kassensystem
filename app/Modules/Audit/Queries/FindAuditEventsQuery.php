@@ -7,7 +7,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 final class FindAuditEventsQuery
 {
-    /** @return LengthAwarePaginator<AuditEvent> */
+    /** @return LengthAwarePaginator<int, AuditEvent> */
     public function execute(
         ?string $eventKey = null,
         ?string $subjectType = null,

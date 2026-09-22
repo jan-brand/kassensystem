@@ -2,6 +2,7 @@
 
 namespace App\Modules\Catalog\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $name
  * @property bool $active
  * @property int $sort_order
- * @property-read \Illuminate\Database\Eloquent\Collection<int, Product> $products
+ * @property-read Collection<int, Product> $products
  */
 final class Category extends Model
 {

@@ -1,3 +1,25 @@
 <?php
-namespace App\Foundation\Console;use App\Foundation\Registry\ProjectRegistry;use Illuminate\Console\Command;
-final class RouteManifestCommand extends Command{protected $signature='route:manifest {--json}';protected $description='Show routes described by page manifests.';public function handle(ProjectRegistry $r):int{$rows=array_map(fn($p)=>['name'=>$p['route_name'],'uri'=>$p['uri'],'surface'=>$p['surface']],$r->pages());if($this->option('json')){$this->line(json_encode($rows,JSON_PRETTY_PRINT));}else{$this->table(['Name','URI','Surface'],array_map(fn($x)=>array_values($x),$rows));}return self::SUCCESS;}}
+
+namespace App\Foundation\Console;
+
+use App\Foundation\Registry\ProjectRegistry;
+use Illuminate\Console\Command;
+
+final class RouteManifestCommand extends Command
+{
+    protected $signature = 'route:manifest {--json}';
+
+    protected $description = 'Show routes described by page manifests.';
+
+    public function handle(ProjectRegistry $r): int
+    {
+        $rows = array_map(fn ($p) => ['name' => $p['route_name'], 'uri' => $p['uri'], 'surface' => $p['surface']], $r->pages());
+        if ($this->option('json')) {
+            $this->line(json_encode($rows, JSON_PRETTY_PRINT));
+        } else {
+            $this->table(['Name', 'URI', 'Surface'], array_map(fn ($x) => array_values($x), $rows));
+        }
+
+return self::SUCCESS;
+    }
+}

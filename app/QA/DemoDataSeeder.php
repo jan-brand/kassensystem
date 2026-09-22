@@ -247,7 +247,7 @@ final class DemoDataSeeder
     }
 
     /**
-     * @param array<string, Product> $products
+     * @param  array<string, Product>  $products
      */
     private function seedHistory(Register $register, User $cashier, array $products): bool
     {

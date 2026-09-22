@@ -5,6 +5,7 @@ namespace App\Modules\Sales\Models;
 use App\Modules\Sales\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
@@ -14,8 +15,8 @@ use LogicException;
  * @property int $amount_cents
  * @property int $received_cents
  * @property int $change_cents
- * @property \Illuminate\Support\Carbon $completed_at
- * @property \Illuminate\Support\Carbon $created_at
+ * @property Carbon $completed_at
+ * @property Carbon $created_at
  * @property-read Sale $sale
  */
 final class Payment extends Model
@@ -39,11 +40,11 @@ final class Payment extends Model
 
     protected static function booted(): void
     {
-        static::updating(static function (): never {
+        self::updating(static function (): never {
             throw new LogicException('Payments are immutable.');
         });
 
-        static::deleting(static function (): never {
+        self::deleting(static function (): never {
             throw new LogicException('Payments cannot be deleted.');
         });
     }

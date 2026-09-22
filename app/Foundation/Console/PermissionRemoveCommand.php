@@ -1,3 +1,30 @@
 <?php
-namespace App\Foundation\Console;use App\Foundation\Generation\FilePlan;use App\Foundation\Registry\ProjectRegistry;use App\Foundation\Support\JsonFile;
-final class PermissionRemoveCommand extends FoundationCommand{protected $signature='permission:remove {name} {--dry-run} {--force}';protected $description='Remove a permission after reference checks.';public function handle(FilePlan $p,ProjectRegistry $r):int{$name=$this->argument('name');$used=array_filter($r->pages(),fn($x)=>($x['permission']??null)===$name);if($used&&!$this->option('force')){$this->error('Permission is still used by pages.');return self::FAILURE;}$rel='resources/permissions/permissions.json';$d=JsonFile::read(base_path($rel),['permissions'=>[]]);$d['permissions']=array_values(array_filter($d['permissions'],fn($x)=>$x!==$name));$p->write($rel,JsonFile::encode($d),true);return $this->runPlan($p,'permission:remove');}}
+
+namespace App\Foundation\Console;
+
+use App\Foundation\Generation\FilePlan;
+use App\Foundation\Registry\ProjectRegistry;
+use App\Foundation\Support\JsonFile;
+
+final class PermissionRemoveCommand extends FoundationCommand
+{
+    protected $signature = 'permission:remove {name} {--dry-run} {--force}';
+
+    protected $description = 'Remove a permission after reference checks.';
+
+    public function handle(FilePlan $p, ProjectRegistry $r): int
+    {
+        $name = $this->argument('name');
+        $used = array_filter($r->pages(), fn ($x) => ($x['permission'] ?? null) === $name);
+        if ($used && ! $this->option('force')) {
+            $this->error('Permission is still used by pages.');
+
+            return self::FAILURE;
+        }$rel = 'resources/permissions/permissions.json';
+        $d = JsonFile::read(base_path($rel), ['permissions' => []]);
+        $d['permissions'] = array_values(array_filter($d['permissions'], fn ($x) => $x !== $name));
+        $p->write($rel, JsonFile::encode($d), true);
+
+        return $this->runPlan($p, 'permission:remove');
+    }
+}

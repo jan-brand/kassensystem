@@ -32,7 +32,13 @@ final class DatabaseBackupService
             default => throw new RuntimeException("Unsupported backup driver: {$driver}"),
         };
 
-        if (! File::exists($target) || File::size($target) === 0) {
+        if (! is_file($target)) {
+            throw new RuntimeException('Backup file was not created or is empty.');
+        }
+
+        $size = filesize($target);
+
+        if ($size === false || $size === 0) {
             throw new RuntimeException('Backup file was not created or is empty.');
         }
 

@@ -12,8 +12,8 @@ use App\Modules\Settings\Queries\GetSystemSettingsQuery;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -54,11 +54,11 @@ final class SettingsScreen extends Component
             ->orderBy('id')
             ->first();
 
-        $this->cafeteriaName = $settings?->cafeteria_name
+        $this->cafeteriaName = $settings->cafeteria_name
             ?? (string) config('app.name', 'Kassensystem');
-        $this->registerName = $register?->name
+        $this->registerName = $register->name
             ?? (string) config('kassensystem.register_name', 'Kasse 1');
-        $this->posShowShortNames = $settings?->pos_show_short_names ?? true;
+        $this->posShowShortNames = $settings->pos_show_short_names ?? true;
         $this->existingLogoPath = $settings?->logo_path;
     }
 
