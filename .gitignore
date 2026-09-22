@@ -13,6 +13,8 @@
 /public/hot
 /storage/*.key
 /storage/pail
+/storage/framework/cache/data
+/storage/framework/cache/phpstan
 /vendor
 .DS_Store
 Thumbs.db
