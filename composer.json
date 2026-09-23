@@ -58,9 +58,9 @@
       "composer validate --no-check-publish",
       "@lint",
       "@analyse",
+      "npm run build",
       "@test",
-      "@php artisan app:check",
-      "npm run build"
+      "@php artisan app:check"
     ],
     "qa:acceptance": [
       "@php artisan module:check",
