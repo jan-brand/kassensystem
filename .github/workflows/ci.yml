@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Quality
+    name: Release quality gate
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -32,14 +32,18 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - run: composer validate --no-check-publish
+          cache: npm
       - run: composer install --prefer-dist --no-interaction --no-progress
+      - run: npm ci
       - run: cp .env.example .env
       - run: php artisan key:generate
       - run: php artisan env:sync --yes
-      - run: php artisan app:check
-      - run: php artisan test
-      - run: php vendor/bin/pint --test
-      - run: php vendor/bin/phpstan analyse --no-progress
-      - run: npm install
-      - run: npm run build
+      - run: composer qa:release
+      - run: composer release:status
+      - name: Verify Laravel optimize and route cache
+        env:
+          FOUNDATION_DASHBOARD: 'false'
+        run: |
+          php artisan optimize --no-ansi
+          php artisan route:list --name=health --no-ansi
+          php artisan optimize:clear --no-ansi

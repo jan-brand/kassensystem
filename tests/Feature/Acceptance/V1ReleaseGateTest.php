@@ -45,6 +45,24 @@ it('provides one reproducible release quality command', function () {
         ]);
 });
 
+it('binds GitHub CI and security checks to reproducible release commands', function () {
+    $ci = (string) file_get_contents(base_path('.github/workflows/ci.yml'));
+    $security = (string) file_get_contents(
+        base_path('.github/workflows/security.yml'),
+    );
+
+    expect($ci)
+        ->toContain('composer qa:release')
+        ->toContain('composer release:status')
+        ->toContain('npm ci')
+        ->toContain("FOUNDATION_DASHBOARD: 'false'")
+        ->toContain('php artisan optimize --no-ansi')
+        ->toContain('php artisan route:list --name=health --no-ansi')
+        ->and($security)
+        ->toContain('composer audit --locked')
+        ->toContain('npm ci');
+});
+
 it('keeps manual device acceptance explicit in the release documentation', function () {
     $acceptance = file_get_contents(base_path('docs/ACCEPTANCE_V1.md'));
     $release = file_get_contents(base_path('docs/RELEASE_V1.md'));

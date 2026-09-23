@@ -67,7 +67,7 @@ it('documents the current kassensystem product scope and rc1 status', function (
         ->not->toContain('Fachmodule werden erst im jeweiligen Projekt erzeugt.')
         ->and($scope)
         ->toContain('Administration')
-        ->toContain('Reporting und CSV')
+        ->toContain('Tagesreporting und CSV-Export')
         ->not->toContain('- POS- und Verwaltungsoberfläche.')
         ->and($changelog)
         ->toContain('## 1.0.0-rc.1 - 2026-09-22');
