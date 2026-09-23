@@ -21,6 +21,6 @@ final class ModuleMakeEventCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:event');
+        return $this->runPlan($p, 'module:make:event');
     }
 }

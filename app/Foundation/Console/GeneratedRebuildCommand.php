@@ -22,6 +22,6 @@ final class GeneratedRebuildCommand extends Command
             }
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

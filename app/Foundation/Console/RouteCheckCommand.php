@@ -30,6 +30,6 @@ final class RouteCheckCommand extends Command
             $this->info('Manifest routes valid.');
         }
 
-return $bad ? self::FAILURE : self::SUCCESS;
+        return $bad ? self::FAILURE : self::SUCCESS;
     }
 }

@@ -21,6 +21,6 @@ final class ModuleMakeServiceCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:service');
+        return $this->runPlan($p, 'module:make:service');
     }
 }

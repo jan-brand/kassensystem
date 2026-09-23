@@ -21,6 +21,6 @@ final class ModuleMakeActionCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:action');
+        return $this->runPlan($p, 'module:make:action');
     }
 }

@@ -35,6 +35,6 @@ final class EnvCheckCommand extends Command
             }
         }
 
-return $bad ? self::FAILURE : self::SUCCESS;
+        return $bad ? self::FAILURE : self::SUCCESS;
     }
 }

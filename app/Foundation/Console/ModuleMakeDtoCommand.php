@@ -21,6 +21,6 @@ final class ModuleMakeDtoCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:dto');
+        return $this->runPlan($p, 'module:make:dto');
     }
 }

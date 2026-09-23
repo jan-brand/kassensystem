@@ -21,6 +21,6 @@ final class ModuleMakeArtifactCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:artifact');
+        return $this->runPlan($p, 'module:make:artifact');
     }
 }

@@ -23,6 +23,6 @@ final class SurfaceCheckCommand extends Command
             $this->info('Surfaces valid.');
         }
 
-return $bad ? self::FAILURE : self::SUCCESS;
+        return $bad ? self::FAILURE : self::SUCCESS;
     }
 }

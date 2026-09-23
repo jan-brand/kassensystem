@@ -21,6 +21,6 @@ final class NavigationListCommand extends FoundationCommand
             $this->tableOrEmpty(['Label', 'Route', 'Permission'], array_map(fn ($i) => [$i['label'] ?? '', $i['route'] ?? '', $i['permission'] ?? ''], $items));
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

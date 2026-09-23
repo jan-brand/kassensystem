@@ -22,6 +22,6 @@ final class DesignUsesCommand extends Command
             }
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

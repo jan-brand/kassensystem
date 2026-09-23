@@ -30,6 +30,6 @@ final class NavigationCheckCommand extends Command
             $this->info('Navigation valid.');
         }
 
-return $bad ? self::FAILURE : self::SUCCESS;
+        return $bad ? self::FAILURE : self::SUCCESS;
     }
 }

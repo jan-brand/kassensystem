@@ -20,6 +20,6 @@ final class GeneratedClearCommand extends Command
             }
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

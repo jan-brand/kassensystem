@@ -26,6 +26,6 @@ final class DesignUnusedCommand extends Command
             $this->comment('No unused design items.');
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

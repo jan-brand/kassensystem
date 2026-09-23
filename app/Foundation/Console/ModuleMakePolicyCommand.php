@@ -21,6 +21,6 @@ final class ModuleMakePolicyCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:policy');
+        return $this->runPlan($p, 'module:make:policy');
     }
 }

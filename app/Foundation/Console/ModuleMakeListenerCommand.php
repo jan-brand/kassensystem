@@ -21,6 +21,6 @@ final class ModuleMakeListenerCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:listener');
+        return $this->runPlan($p, 'module:make:listener');
     }
 }

@@ -21,6 +21,6 @@ final class ModuleMakeSeederCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:seeder');
+        return $this->runPlan($p, 'module:make:seeder');
     }
 }

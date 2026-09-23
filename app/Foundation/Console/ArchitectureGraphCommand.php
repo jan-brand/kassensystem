@@ -22,6 +22,6 @@ final class ArchitectureGraphCommand extends Command
             $this->line($n.' -> '.($d ? implode(', ', $d) : '(none)'));
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

@@ -23,6 +23,6 @@ final class DocsUnusedCommand extends Command
             }
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

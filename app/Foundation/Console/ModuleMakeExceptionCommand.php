@@ -21,6 +21,6 @@ final class ModuleMakeExceptionCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:exception');
+        return $this->runPlan($p, 'module:make:exception');
     }
 }

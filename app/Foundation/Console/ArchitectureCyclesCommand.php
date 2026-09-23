@@ -22,6 +22,6 @@ final class ArchitectureCyclesCommand extends Command
             $this->error(implode(' -> ', $x));
         }
 
-return self::FAILURE;
+        return self::FAILURE;
     }
 }

@@ -24,6 +24,6 @@ final class PermissionCheckCommand extends Command
             $this->info('Permission references valid.');
         }
 
-return $bad ? self::FAILURE : self::SUCCESS;
+        return $bad ? self::FAILURE : self::SUCCESS;
     }
 }

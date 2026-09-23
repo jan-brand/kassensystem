@@ -27,6 +27,6 @@ final class DesignTokenCheckCommand extends Command
             $this->info('Design tokens valid.');
         }
 
-return $bad ? self::FAILURE : self::SUCCESS;
+        return $bad ? self::FAILURE : self::SUCCESS;
     }
 }

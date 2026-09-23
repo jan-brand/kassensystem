@@ -23,6 +23,6 @@ final class GeneratedCheckCommand extends Command
             $this->info('Generated artifacts present.');
         }
 
-return $bad ? self::FAILURE : self::SUCCESS;
+        return $bad ? self::FAILURE : self::SUCCESS;
     }
 }

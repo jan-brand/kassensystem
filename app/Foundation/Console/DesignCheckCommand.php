@@ -19,7 +19,7 @@ final class DesignCheckCommand extends Command
                 $this->error($x);
             }
 
-return self::FAILURE;
+            return self::FAILURE;
         }$this->info('Design system is valid.');
 
         return self::SUCCESS;

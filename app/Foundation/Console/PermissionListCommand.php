@@ -17,6 +17,6 @@ final class PermissionListCommand extends Command
             $this->line($p);
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

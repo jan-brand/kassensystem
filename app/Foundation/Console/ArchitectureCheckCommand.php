@@ -19,7 +19,7 @@ final class ArchitectureCheckCommand extends Command
                 $this->error($x);
             }
 
-return self::FAILURE;
+            return self::FAILURE;
         }$this->info('Architecture valid.');
 
         return self::SUCCESS;

@@ -21,6 +21,6 @@ final class ModuleMakeRequestCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:request');
+        return $this->runPlan($p, 'module:make:request');
     }
 }

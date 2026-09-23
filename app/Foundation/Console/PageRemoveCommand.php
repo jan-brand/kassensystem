@@ -21,7 +21,7 @@ final class PageRemoveCommand extends FoundationCommand
                     $p->delete('resources/views/'.str_replace('.', '/', $view).'.blade.php');
                 }
 
-return $this->runPlan($p, 'page:remove '.$page['name']);
+                return $this->runPlan($p, 'page:remove '.$page['name']);
             }
         }$this->error('Page not found.');
 

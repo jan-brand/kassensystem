@@ -24,6 +24,6 @@ final class DesignGraphCommand extends Command
             $this->line($n.' -> '.($u ? implode(', ', $u) : '(none)'));
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

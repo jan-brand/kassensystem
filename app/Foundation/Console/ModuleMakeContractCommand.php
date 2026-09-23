@@ -21,6 +21,6 @@ final class ModuleMakeContractCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:contract');
+        return $this->runPlan($p, 'module:make:contract');
     }
 }

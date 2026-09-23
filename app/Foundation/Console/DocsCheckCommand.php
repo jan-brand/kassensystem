@@ -23,6 +23,6 @@ final class DocsCheckCommand extends Command
             $this->info('Documentation baseline present.');
         }
 
-return $bad ? self::FAILURE : self::SUCCESS;
+        return $bad ? self::FAILURE : self::SUCCESS;
     }
 }

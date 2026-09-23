@@ -21,6 +21,6 @@ final class ModuleMakeQueryCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:query');
+        return $this->runPlan($p, 'module:make:query');
     }
 }

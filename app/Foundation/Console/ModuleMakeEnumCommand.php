@@ -21,6 +21,6 @@ final class ModuleMakeEnumCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:enum');
+        return $this->runPlan($p, 'module:make:enum');
     }
 }

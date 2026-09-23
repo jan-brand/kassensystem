@@ -20,7 +20,7 @@ final class ArchitectureDependenciesCommand extends Command
                 $this->line($n.': '.implode(', ', $d));
             }
 
-return self::SUCCESS;
+            return self::SUCCESS;
         }if (! array_key_exists($m, $g)) {
             $this->error('Module not found.');
 

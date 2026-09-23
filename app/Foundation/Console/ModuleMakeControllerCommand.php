@@ -21,6 +21,6 @@ final class ModuleMakeControllerCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:controller');
+        return $this->runPlan($p, 'module:make:controller');
     }
 }

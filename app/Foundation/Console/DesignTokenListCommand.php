@@ -18,6 +18,6 @@ final class DesignTokenListCommand extends Command
             $this->line("{$k} = {$v}");
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

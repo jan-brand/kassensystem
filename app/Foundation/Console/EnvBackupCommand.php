@@ -27,6 +27,6 @@ final class EnvBackupCommand extends Command
             $this->info(str_replace(base_path().'/', '', $dest));
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

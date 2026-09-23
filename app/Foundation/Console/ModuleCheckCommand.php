@@ -19,7 +19,7 @@ final class ModuleCheckCommand extends Command
                 $this->error($x);
             }
 
-return self::FAILURE;
+            return self::FAILURE;
         }$this->info('Module graph is valid.');
 
         return self::SUCCESS;

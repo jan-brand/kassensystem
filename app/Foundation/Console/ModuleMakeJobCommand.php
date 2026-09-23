@@ -21,6 +21,6 @@ final class ModuleMakeJobCommand extends FoundationCommand
             return self::FAILURE;
         }
 
-return $this->runPlan($p, 'module:make:job');
+        return $this->runPlan($p, 'module:make:job');
     }
 }

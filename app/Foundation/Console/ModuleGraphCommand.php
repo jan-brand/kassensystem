@@ -17,6 +17,6 @@ final class ModuleGraphCommand extends Command
             $this->line($m.' -> '.($deps ? implode(', ', $deps) : '(none)'));
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }

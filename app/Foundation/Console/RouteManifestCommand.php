@@ -20,6 +20,6 @@ final class RouteManifestCommand extends Command
             $this->table(['Name', 'URI', 'Surface'], array_map(fn ($x) => array_values($x), $rows));
         }
 
-return self::SUCCESS;
+        return self::SUCCESS;
     }
 }
