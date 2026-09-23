@@ -2,7 +2,7 @@
 
 use App\Foundation\Production\FinalReleaseCheckService;
 
-it('declares the current repository state as v1 rc1', function () {
+it('declares the repository state as final v1', function () {
     $record = json_decode(
         (string) file_get_contents(base_path('release/v1-acceptance.json')),
         true,
@@ -10,32 +10,36 @@ it('declares the current repository state as v1 rc1', function () {
         JSON_THROW_ON_ERROR,
     );
 
-    expect(config('release.version'))->toBe('1.0.0-rc.1')
+    expect(config('release.version'))->toBe('1.0.0')
         ->and(config('release.target_version'))->toBe('1.0.0')
-        ->and(config('release.stage'))->toBe('rc1')
+        ->and(config('release.stage'))->toBe('final')
         ->and(config('foundation.default_surface'))->toBe('pos')
-        ->and($record['release'])->toBe('1.0.0-rc.1')
+        ->and($record['release'])->toBe('1.0.0')
         ->and($record['target'])->toBe('1.0.0')
-        ->and($record['status'])->toBe('pending')
+        ->and($record['status'])->toBe('passed')
+        ->and($record['date'])->toBe('2026-09-23')
+        ->and($record['tester'])->toBe('JB')
+        ->and($record['commit'])
+        ->toBe('d08da7f31553f9c81b79f603243ac6419544b9d0')
         ->and($record['checks'])->toBe([
-            'manual_checklist_complete' => false,
-            'desktop_browser' => false,
-            'smartphone_or_tablet' => false,
-            'backup_restore' => false,
-            'production_check_reviewed' => false,
+            'manual_checklist_complete' => true,
+            'desktop_browser' => true,
+            'smartphone_or_tablet' => true,
+            'backup_restore' => true,
+            'production_check_reviewed' => true,
         ]);
 });
 
-it('keeps the final v1 release blocked until manual acceptance is complete', function () {
+it('passes every final v1 release guard after documented acceptance', function () {
     $results = collect(
         app(FinalReleaseCheckService::class)->run(),
     )->keyBy('name');
 
-    expect(app(FinalReleaseCheckService::class)->isReady())->toBeFalse()
-        ->and($results['Final release metadata']['status'])->toBe('fail')
-        ->and($results['Manual acceptance']['status'])->toBe('fail')
-        ->and($results['Acceptance issue']['status'])->toBe('fail')
-        ->and($results['v1 epic']['status'])->toBe('fail')
+    expect(app(FinalReleaseCheckService::class)->isReady())->toBeTrue()
+        ->and($results['Final release metadata']['status'])->toBe('pass')
+        ->and($results['Manual acceptance']['status'])->toBe('pass')
+        ->and($results['Acceptance issue']['status'])->toBe('pass')
+        ->and($results['v1 epic']['status'])->toBe('pass')
         ->and($results['Blocking issues']['status'])->toBe('pass')
         ->and($results['Changelog']['status'])->toBe('pass');
 });
@@ -56,19 +60,18 @@ it('exposes explicit release status and final release guard commands', function 
         ->toBeTrue();
 });
 
-it('documents the current kassensystem product scope and rc1 status', function () {
+it('documents the final kassensystem v1 release', function () {
     $readme = (string) file_get_contents(base_path('README.md'));
     $scope = (string) file_get_contents(base_path('docs/KASSENSYSTEM_V1.md'));
     $changelog = (string) file_get_contents(base_path('CHANGELOG.md'));
 
     expect($readme)
         ->toContain('# Kassensystem')
-        ->toContain('1.0.0-rc.1')
-        ->not->toContain('Fachmodule werden erst im jeweiligen Projekt erzeugt.')
+        ->toContain('**Release-Stand:** `1.0.0`')
+        ->not->toContain('**Release-Stand:** `1.0.0-rc.1`')
         ->and($scope)
-        ->toContain('Administration')
+        ->toContain('Kassensystem v1 ist als `1.0.0` freigegeben.')
         ->toContain('Tagesreporting und CSV-Export')
-        ->not->toContain('- POS- und Verwaltungsoberfläche.')
         ->and($changelog)
-        ->toContain('## 1.0.0-rc.1 - 2026-09-22');
+        ->toContain('## 1.0.0 - 2026-09-23');
 });

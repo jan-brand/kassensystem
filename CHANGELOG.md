@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.0 - 2026-09-23
+
+- RC1 technisch vollständig grün und Composer-Lock synchronisiert.
+- Manuelle v1-Abnahme durch JB gegen Commit `d08da7f31553f9c81b79f603243ac6419544b9d0` abgeschlossen.
+- Desktop sowie reales Smartphone/Tablet geprüft.
+- Backup/Restore praktisch geprüft und Produktionscheck bewertet.
+- V1-008 und der v1-Epic V1-000 abgeschlossen.
+
 ## 1.0.0-rc.1 - 2026-09-22
 
 ### POS und Kassenführung

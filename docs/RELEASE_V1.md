@@ -1,6 +1,6 @@
-# Kassensystem v1 – Release Candidate Runbook
+# Kassensystem v1 – Release Runbook
 
-Dieses Runbook bündelt die technische Freigabe für einen v1 Release Candidate. Es ersetzt die manuelle Abnahme in `docs/ACCEPTANCE_V1.md` nicht.
+Dieses Runbook dokumentiert die technische und manuelle Freigabe von Kassensystem `v1.0.0`.
 
 ## 1. Ausgangslage
 
@@ -63,7 +63,7 @@ Erwartete Demo-Basis:
 
 Automatisierte Tests können Touch-Bedienung, reale Browserdarstellung, Druckdialoge und Geräteverhalten nicht vollständig abdecken.
 
-Vor `v1.0.0` müssen deshalb die offenen Punkte in `docs/ACCEPTANCE_V1.md` auf einem realen Smartphone oder Tablet und mindestens einem Desktop-Browser geprüft werden.
+Die manuelle v1-Abnahme wurde am 2026-09-23 durch JB gegen Commit `d08da7f31553f9c81b79f603243ac6419544b9d0` auf Desktop sowie einem realen Smartphone/Tablet erfolgreich abgeschlossen.
 
 Besonders relevant:
 
@@ -106,51 +106,34 @@ php artisan app:backup
 
 Mindestens ein Restore-Test muss vorher auf einer separaten Testdatenbank erfolgreich durchgeführt worden sein.
 
-## 7. Release Candidate
+## 7. Finaler Release
 
-Nach erfolgreicher automatischer und manueller Abnahme:
+Der dokumentierte Acceptance-Commit ist der inhaltlich manuell geprüfte RC1-Stand. Ein anschließender Finalisierungscommit darf ausschließlich Release-Metadaten, Dokumentation, Issue-Status und Release-Guard-Tests ändern; fachliche Produktlogik erfordert eine erneute manuelle Abnahme.
+
+Für v1 wurde Commit `d08da7f31553f9c81b79f603243ac6419544b9d0` manuell geprüft. Nach dem Finalisierungscommit müssen erneut ausgeführt werden:
 
 ```bat
+composer qa:release
+composer release:final-check
 git status --short
 git log -1 --oneline
 ```
 
-Der dokumentierte Acceptance-Commit muss exakt dem freizugebenden Commit entsprechen.
-
-Erst danach einen Release Candidate bzw. finalen v1-Tag vorbereiten. Der vorgesehene finale Versionsname ist:
+Der finale Versionsname ist:
 
 ```text
 v1.0.0
 ```
 
-V1-008 und anschließend der v1-Epic werden erst geschlossen, wenn die manuelle Abnahme dokumentiert ist.
-
 ## 8. Release-Status und Final-Guard
 
-Der Repository-Stand ist als `1.0.0-rc.1` markiert. Den aktuellen Status zeigt:
+Der Repository-Stand ist als `1.0.0` finalisiert. `release\v1-acceptance.json` enthält Datum, Tester, geprüften RC1-Commit und alle manuellen Nachweise. V1-008 und V1-000 sind geschlossen.
+
+Der aktuelle Status muss ohne Blocker sein:
 
 ```bat
 composer release:status
-```
-
-Dieser Status-Befehl darf im RC1-Zustand Blocker anzeigen und endet trotzdem erfolgreich. Das ist beabsichtigt: die technische RC1-Freigabe ist von der finalen manuellen Freigabe getrennt.
-
-Nach der vollständigen manuellen Checkliste wird `release\v1-acceptance.json` ausgefüllt. Erforderlich sind:
-
-- `status` = `passed`
-- Datum und Tester
-- der exakt geprüfte Commit
-- Desktop-Browser geprüft
-- Smartphone oder Tablet real geprüft
-- Backup/Restore praktisch geprüft
-- Produktionscheck bewertet
-
-Danach werden in einem finalen Release-Commit die Release-Metadaten von `1.0.0-rc.1` auf `1.0.0` gesetzt sowie V1-008 und V1-000 geschlossen.
-
-Erst dann muss der harte Guard erfolgreich sein:
-
-```bat
 composer release:final-check
 ```
 
-Ein `v1.0.0`-Tag darf nicht erstellt werden, solange dieser Befehl einen Blocker meldet.
+Erst wenn beide Befehle sowie `composer qa:release` erfolgreich sind, darf der finale Commit als `v1.0.0` getaggt werden.

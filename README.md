@@ -2,7 +2,7 @@
 
 Tablet-optimiertes Laravel-Kassensystem für Schulcafeteria und Gastronomie. Der v1-Fokus liegt auf einem schnellen, robusten Bargeld-POS mit nachvollziehbarer Kassenführung sowie einer rollenbasierten Administration.
 
-**Release-Stand:** `1.0.0-rc.1`. Der technische RC1-Preflight ist vorhanden; `v1.0.0` bleibt bis zur dokumentierten manuellen Geräte-/Browser-Abnahme gesperrt.
+**Release-Stand:** `1.0.0`. Die technische und manuelle v1-Abnahme wurde am 2026-09-23 erfolgreich abgeschlossen.
 
 ## Funktionsumfang v1
 
@@ -84,18 +84,16 @@ Der harte Final-Release-Check ist absichtlich erst nach dokumentierter manueller
 composer release:final-check
 ```
 
-## Release-Regel
+## Release-Nachweis
 
-`v1.0.0` darf erst vorbereitet werden, wenn:
+Die v1-Abnahme ist abgeschlossen. Der nachvollziehbare Acceptance-Record liegt unter `release/v1-acceptance.json` und verweist auf den manuell geprüften RC1-Commit `d08da7f31553f9c81b79f603243ac6419544b9d0`.
 
-- die manuelle Checkliste vollständig durchgeführt wurde,
-- ein Desktop-Browser sowie ein reales Smartphone oder Tablet geprüft wurden,
-- Backup und Restore praktisch geprüft wurden,
-- der Production-Check bewertet wurde,
-- V1-008 und anschließend der v1-Epic geschlossen sind,
-- `composer release:final-check` ohne Blocker endet.
+Der finale Repository-Stand muss weiterhin beide Release-Gates ohne Fehler bestehen:
 
-Der nachvollziehbare Acceptance-Record liegt unter `release/v1-acceptance.json`.
+```bat
+composer qa:release
+composer release:final-check
+```
 
 ## Dokumentation
 

@@ -4,9 +4,9 @@ Das Kassensystem v1 ist ein tablet-orientiertes Bargeld-POS mit rollenbasierter 
 
 ## Release-Status
 
-Der Repository-Stand ist als `1.0.0-rc.1` vorbereitet. Die automatisierten Release-Gates und der RC1-Preflight sind Bestandteil des Projekts. Der finale Stand `v1.0.0` wird erst nach der dokumentierten manuellen Acceptance freigegeben.
+Kassensystem v1 ist als `1.0.0` freigegeben. Die automatisierten Release-Gates, der technische RC1-Preflight und die manuelle Geräte-/Browser-Abnahme wurden erfolgreich abgeschlossen.
 
-Der maschinenlesbare Acceptance-Record liegt unter `release/v1-acceptance.json`.
+Die manuelle Abnahme wurde am 2026-09-23 durch JB gegen Commit `d08da7f31553f9c81b79f603243ac6419544b9d0` dokumentiert. Der maschinenlesbare Acceptance-Record liegt unter `release/v1-acceptance.json`.
 
 ## Identity und Berechtigungen
 

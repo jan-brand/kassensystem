@@ -9,11 +9,11 @@ Die erste produktnahe Version des Kassensystems vollstaendig abschliessen.
 - [x] Berechtigungen zentralisieren
 - [x] Backup und Produktionsvorbereitung
 - [x] Pint und PHPStan bereinigen
-- [ ] Demo-Daten und vollstaendige v1-Abnahme
+- [x] Demo-Daten und vollstaendige v1-Abnahme
 - [x] POS-Finalisierung
 
 ## Definition of Done
-- [ ] Alle v1-Funktionen sind ueber Browser/POS bedienbar.
+- [x] Alle v1-Funktionen sind ueber Browser/POS bedienbar.
 - [x] Alle automatisierten Tests sind gruen.
 - [x] Foundation-, Modul-, Architektur- und Page-Checks sind gruen.
 - [x] Produktionsbetrieb und Backup/Restore sind dokumentiert.

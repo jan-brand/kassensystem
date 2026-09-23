@@ -4,7 +4,7 @@
         {
             "id": "V1-000",
             "title": "[EPIC] Kassensystem v1 abschliessen",
-            "status": "open",
+            "status": "closed",
             "priority": "P0",
             "type": "epic",
             "areas": [
@@ -14,7 +14,7 @@
             "body_file": ".github/backlog/00-epic-v1.md",
             "github_number": null,
             "created_at": "2026-09-20",
-            "closed_at": null
+            "closed_at": "2026-09-23"
         },
         {
             "id": "V1-001",
@@ -129,7 +129,7 @@
         {
             "id": "V1-008",
             "title": "[QA] Demo-Daten und vollstaendige v1-Abnahme",
-            "status": "open",
+            "status": "closed",
             "priority": "P1",
             "type": "qa",
             "areas": [
@@ -140,7 +140,7 @@
             "body_file": ".github/backlog/08-acceptance.md",
             "github_number": null,
             "created_at": "2026-09-20",
-            "closed_at": null
+            "closed_at": "2026-09-23"
         },
         {
             "id": "V1-009",

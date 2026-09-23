@@ -1,17 +1,19 @@
 {
   "schema_version": 1,
-  "release": "1.0.0-rc.1",
+  "release": "1.0.0",
   "target": "1.0.0",
-  "status": "pending",
-  "date": null,
-  "tester": null,
-  "commit": null,
+  "status": "passed",
+  "date": "2026-09-23",
+  "tester": "JB",
+  "commit": "d08da7f31553f9c81b79f603243ac6419544b9d0",
   "checks": {
-    "manual_checklist_complete": false,
-    "desktop_browser": false,
-    "smartphone_or_tablet": false,
-    "backup_restore": false,
-    "production_check_reviewed": false
+    "manual_checklist_complete": true,
+    "desktop_browser": true,
+    "smartphone_or_tablet": true,
+    "backup_restore": true,
+    "production_check_reviewed": true
   },
-  "notes": []
+  "notes": [
+    "Manuelle v1-Abnahme gegen den dokumentierten RC1-Commit erfolgreich abgeschlossen."
+  ]
 }

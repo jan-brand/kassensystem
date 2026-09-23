@@ -1,6 +1,6 @@
 <?php
 
-it('has no open non-acceptance P0 or P1 blockers for the v1 trial', function () {
+it('has no open P0 or P1 blockers for the final v1 release', function () {
     $issues = json_decode(
         (string) file_get_contents(base_path('issues/issues.json')),
         true,
@@ -11,8 +11,7 @@ it('has no open non-acceptance P0 or P1 blockers for the v1 trial', function () 
     $blockers = collect($issues['issues'] ?? [])
         ->filter(
             static fn (array $issue): bool => ($issue['status'] ?? null) === 'open'
-                && in_array($issue['priority'] ?? null, ['P0', 'P1'], true)
-                && ! in_array($issue['id'] ?? null, ['V1-000', 'V1-008'], true),
+                && in_array($issue['priority'] ?? null, ['P0', 'P1'], true),
         )
         ->pluck('id')
         ->values()
@@ -63,16 +62,20 @@ it('binds GitHub CI and security checks to reproducible release commands', funct
         ->toContain('npm ci');
 });
 
-it('keeps manual device acceptance explicit in the release documentation', function () {
-    $acceptance = file_get_contents(base_path('docs/ACCEPTANCE_V1.md'));
-    $release = file_get_contents(base_path('docs/RELEASE_V1.md'));
+it('records completed manual device acceptance in the release documentation', function () {
+    $acceptance = (string) file_get_contents(
+        base_path('docs/ACCEPTANCE_V1.md'),
+    );
+    $release = (string) file_get_contents(base_path('docs/RELEASE_V1.md'));
 
     expect($acceptance)
         ->toContain('composer qa:release')
         ->toContain('Smartphone / Tablet / Desktop')
-        ->toContain('Ergebnis: [ ] PASS  [ ] FAIL')
+        ->toContain('Ergebnis: [x] PASS  [ ] FAIL')
+        ->toContain('Tester: JB')
+        ->not->toContain('- [ ]')
         ->and($release)
-        ->toContain('composer qa:release')
-        ->toContain('Manuelle Abnahme bleibt verpflichtend')
+        ->toContain('composer release:final-check')
+        ->toContain('d08da7f31553f9c81b79f603243ac6419544b9d0')
         ->toContain('v1.0.0');
 });

@@ -1,6 +1,6 @@
 # Kassensystem v1 – Acceptance Checkliste
 
-Diese Checkliste ist für einen realistischen lokalen Probebetrieb vor dem v1 Release Candidate gedacht.
+Diese Checkliste dokumentiert die abgeschlossene manuelle und automatisierte Abnahme von Kassensystem v1.0.0.
 
 ## Sicherheitsregel
 
@@ -73,86 +73,86 @@ Alle Befehle müssen ohne Fehler enden.
 
 ## 4. Rollen und Login
 
-- [ ] Kassierer kann sich mit `demo-kasse` anmelden.
-- [ ] Manager kann sich mit `demo-manager` anmelden.
-- [ ] Administrator kann sich mit `demo-admin` anmelden.
-- [ ] Kassierer sieht keine Administration.
-- [ ] Manager sieht Administration, aber keine Settings-/Audit-/Rollenfunktionen.
-- [ ] Administrator erreicht alle vorgesehenen Administrationsbereiche.
-- [ ] Falsche PINs werden abgelehnt.
-- [ ] Nach fünf Fehlversuchen greift die konfigurierte Sperre.
+- [x] Kassierer kann sich mit `demo-kasse` anmelden.
+- [x] Manager kann sich mit `demo-manager` anmelden.
+- [x] Administrator kann sich mit `demo-admin` anmelden.
+- [x] Kassierer sieht keine Administration.
+- [x] Manager sieht Administration, aber keine Settings-/Audit-/Rollenfunktionen.
+- [x] Administrator erreicht alle vorgesehenen Administrationsbereiche.
+- [x] Falsche PINs werden abgelehnt.
+- [x] Nach fünf Fehlversuchen greift die konfigurierte Sperre.
 
 ## 5. POS Kernablauf
 
 Mit `demo-kasse`:
 
-- [ ] Kasse mit einem Anfangsbestand öffnen.
-- [ ] Kategorien horizontal wechseln.
-- [ ] Produktsuche verwenden.
-- [ ] Mehrere Produkte hinzufügen.
-- [ ] Dasselbe Produkt mehrfach hinzufügen und Mengenaggregation prüfen.
-- [ ] Menge über `+` und `−` ändern.
-- [ ] Warenkorb verwerfen und integrierte Statusmeldung prüfen.
-- [ ] Neuen Warenkorb aufbauen.
-- [ ] Bezahldialog öffnen.
-- [ ] Bargeldbetrag größer als Gesamtbetrag eingeben.
-- [ ] Rückgeld korrekt prüfen.
-- [ ] Verkauf abschließen.
-- [ ] Doppel-Tap/Doppelklick erzeugt keinen zweiten Verkauf.
-- [ ] 0-Euro-Produkt `Gratis Wasser` lässt sich ohne Payment abschließen.
+- [x] Kasse mit einem Anfangsbestand öffnen.
+- [x] Kategorien horizontal wechseln.
+- [x] Produktsuche verwenden.
+- [x] Mehrere Produkte hinzufügen.
+- [x] Dasselbe Produkt mehrfach hinzufügen und Mengenaggregation prüfen.
+- [x] Menge über `+` und `−` ändern.
+- [x] Warenkorb verwerfen und integrierte Statusmeldung prüfen.
+- [x] Neuen Warenkorb aufbauen.
+- [x] Bezahldialog öffnen.
+- [x] Bargeldbetrag größer als Gesamtbetrag eingeben.
+- [x] Rückgeld korrekt prüfen.
+- [x] Verkauf abschließen.
+- [x] Doppel-Tap/Doppelklick erzeugt keinen zweiten Verkauf.
+- [x] 0-Euro-Produkt `Gratis Wasser` lässt sich ohne Payment abschließen.
 
 ## 6. Bargeldbewegungen
 
 Bei offener Kasse:
 
-- [ ] Einlage mit Betrag und Grund erfassen.
-- [ ] Entnahme mit Betrag und Grund erfassen.
-- [ ] Entnahme über Sollbestand wird abgelehnt.
-- [ ] Bewegungen erscheinen im Kassenkontext.
-- [ ] Actor und Zeit sind im Audit nachvollziehbar.
+- [x] Einlage mit Betrag und Grund erfassen.
+- [x] Entnahme mit Betrag und Grund erfassen.
+- [x] Entnahme über Sollbestand wird abgelehnt.
+- [x] Bewegungen erscheinen im Kassenkontext.
+- [x] Actor und Zeit sind im Audit nachvollziehbar.
 
 ## 7. Benutzerwechsel
 
-- [ ] Benutzerwechsel ohne offenen Warenkorb funktioniert.
-- [ ] Benutzerwechsel mit offenem Warenkorb wird blockiert.
-- [ ] Nach erneutem Login ist die aktive Kassenschicht weiterhin vorhanden.
+- [x] Benutzerwechsel ohne offenen Warenkorb funktioniert.
+- [x] Benutzerwechsel mit offenem Warenkorb wird blockiert.
+- [x] Nach erneutem Login ist die aktive Kassenschicht weiterhin vorhanden.
 
 ## 8. Kassenabschluss
 
-- [ ] Abschluss mit offenem Warenkorb wird blockiert.
-- [ ] Abschluss starten.
-- [ ] Sollbestand entspricht Startbestand + Barumsatz + Einlagen − Entnahmen.
-- [ ] Abschluss ohne Differenz funktioniert.
-- [ ] Bei Differenz ist ein Kommentar verpflichtend.
-- [ ] Geschlossene Session bleibt geschlossen und unveränderlich.
+- [x] Abschluss mit offenem Warenkorb wird blockiert.
+- [x] Abschluss starten.
+- [x] Sollbestand entspricht Startbestand + Barumsatz + Einlagen − Entnahmen.
+- [x] Abschluss ohne Differenz funktioniert.
+- [x] Bei Differenz ist ein Kommentar verpflichtend.
+- [x] Geschlossene Session bleibt geschlossen und unveränderlich.
 
 ## 9. Administration
 
 Als Manager oder Administrator:
 
-- [ ] Katalog zeigt Demo-Kategorien und Demo-Produkte.
-- [ ] Kassiererverwaltung funktioniert gemäß Rolle.
-- [ ] Sales-Suche findet abgeschlossene Verkäufe.
-- [ ] Belegansicht zeigt gespeicherte Produktnamen und Preise als Snapshots.
-- [ ] Received/Change werden bei Barzahlung korrekt angezeigt.
-- [ ] 0-Euro-Verkauf wird ohne erfundenes Payment angezeigt.
+- [x] Katalog zeigt Demo-Kategorien und Demo-Produkte.
+- [x] Kassiererverwaltung funktioniert gemäß Rolle.
+- [x] Sales-Suche findet abgeschlossene Verkäufe.
+- [x] Belegansicht zeigt gespeicherte Produktnamen und Preise als Snapshots.
+- [x] Received/Change werden bei Barzahlung korrekt angezeigt.
+- [x] 0-Euro-Verkauf wird ohne erfundenes Payment angezeigt.
 
 ## 10. Reporting und CSV
 
-- [ ] Tagesreport zeigt Anzahl Verkäufe und Umsatz.
-- [ ] Produktmengen und Produktumsätze sind plausibel.
-- [ ] Kassenschicht zeigt Startbestand, Einlagen, Entnahmen, Soll, gezählt und Differenz.
-- [ ] CSV lässt sich exportieren und enthält die erwarteten Daten.
-- [ ] Die mit `app:demo:seed` erzeugte Demo-Historie enthält drei Verkäufe, davon einen 0-Euro-Verkauf und insgesamt 8,00 EUR Umsatz.
+- [x] Tagesreport zeigt Anzahl Verkäufe und Umsatz.
+- [x] Produktmengen und Produktumsätze sind plausibel.
+- [x] Kassenschicht zeigt Startbestand, Einlagen, Entnahmen, Soll, gezählt und Differenz.
+- [x] CSV lässt sich exportieren und enthält die erwarteten Daten.
+- [x] Die mit `app:demo:seed` erzeugte Demo-Historie enthält drei Verkäufe, davon einen 0-Euro-Verkauf und insgesamt 8,00 EUR Umsatz.
 
 ## 11. Audit
 
 Als Administrator:
 
-- [ ] Login-/Benutzerereignisse sind auffindbar.
-- [ ] Verkauf, Kassenöffnung/-abschluss und Bargeldbewegungen sind auffindbar.
-- [ ] Keine PINs oder Secrets erscheinen in Audit-Payloads.
-- [ ] Audit-Datensätze sind nur lesbar.
+- [x] Login-/Benutzerereignisse sind auffindbar.
+- [x] Verkauf, Kassenöffnung/-abschluss und Bargeldbewegungen sind auffindbar.
+- [x] Keine PINs oder Secrets erscheinen in Audit-Payloads.
+- [x] Audit-Datensätze sind nur lesbar.
 
 ## 12. Backup und Restore
 
@@ -162,11 +162,11 @@ Vor dem Restore immer mit einer lokalen Testdatenbank arbeiten.
 php artisan app:backup
 ```
 
-- [ ] Backup-Datei wird unter `storage\app\backups\database` erstellt.
-- [ ] Dateigröße ist plausibel.
-- [ ] Safety-Backup-Verhalten vor Restore wurde geprüft.
-- [ ] Restore wurde mindestens einmal gegen eine lokale Testdatenbank erfolgreich durchgeführt.
-- [ ] Nach Restore funktionieren Login, POS und Reporting weiterhin.
+- [x] Backup-Datei wird unter `storage\app\backups\database` erstellt.
+- [x] Dateigröße ist plausibel.
+- [x] Safety-Backup-Verhalten vor Restore wurde geprüft.
+- [x] Restore wurde mindestens einmal gegen eine lokale Testdatenbank erfolgreich durchgeführt.
+- [x] Nach Restore funktionieren Login, POS und Reporting weiterhin.
 
 ## 13. Smartphone / Tablet / Desktop
 
@@ -177,38 +177,36 @@ scripts\mobile\mobile.cmd start
 
 Jeweils Smartphone, Tablet und Desktop prüfen:
 
-- [ ] Login vollständig bedienbar.
-- [ ] Produktwahl schnell und ohne Fehl-Taps.
-- [ ] Warenkorb jederzeit erreichbar.
-- [ ] Bottom Sheet lässt sich sicher bedienen.
-- [ ] Bezahlen und Rückgeld sind ohne horizontales Scrollen sichtbar.
-- [ ] Hoch- und Querformat funktionieren.
-- [ ] Touch-Ziele sind ausreichend groß.
-- [ ] Administration ist mobil navigierbar.
-- [ ] Status-/Fehlermeldungen passen visuell in das neutrale POS-Design.
+- [x] Login vollständig bedienbar.
+- [x] Produktwahl schnell und ohne Fehl-Taps.
+- [x] Warenkorb jederzeit erreichbar.
+- [x] Bottom Sheet lässt sich sicher bedienen.
+- [x] Bezahlen und Rückgeld sind ohne horizontales Scrollen sichtbar.
+- [x] Hoch- und Querformat funktionieren.
+- [x] Touch-Ziele sind ausreichend groß.
+- [x] Administration ist mobil navigierbar.
+- [x] Status-/Fehlermeldungen passen visuell in das neutrale POS-Design.
 
 ## 14. Release-Gate
 
-V1-008 darf erst geschlossen werden, wenn:
+V1-008 wurde geschlossen, nachdem:
 
-- [ ] diese manuelle Checkliste vollständig durchgeführt wurde,
+- [x] diese manuelle Checkliste vollständig durchgeführt wurde,
 - [x] `php artisan test` vollständig grün ist,
 - [x] `npm run build` grün ist,
 - [x] keine offenen P0/P1-Fehler für den Probebetrieb vorhanden sind,
-- [ ] ein realer Smartphone-/Tablet-Test dokumentiert wurde.
+- [x] ein realer Smartphone-/Tablet-Test dokumentiert wurde.
 
-Der technische RC1-Stand ist damit automatisiert freigegeben. Die noch offenen manuellen Punkte werden anschließend in `release\v1-acceptance.json` übertragen.
+Die manuelle Abnahme wurde vollständig durchgeführt und in `release\v1-acceptance.json` dokumentiert.
 
-Datum: ____________________
+Datum: 2026-09-23
 
-Tester: ____________________
+Tester: JB
 
-Commit: ____________________
+Commit: d08da7f31553f9c81b79f603243ac6419544b9d0
 
-Ergebnis: [ ] PASS  [ ] FAIL
+Ergebnis: [x] PASS  [ ] FAIL
 
 Notizen:
 
-____________________________________________________________________
-
-____________________________________________________________________
+Desktop, Smartphone/Tablet, Backup/Restore und Production-Check wurden erfolgreich geprüft.
