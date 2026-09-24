@@ -16,6 +16,8 @@ final class GetCompletedSaleQuery
                 'cashSession',
                 'items',
                 'payment',
+                'reversal.actor',
+                'reversal.cashSession',
             ])
             ->where('status', SaleStatus::Completed->value)
             ->findOrFail($saleId);

@@ -11,6 +11,7 @@ final class GetCashSessionCashSummaryQuery
      * @return array{
      *     opening_cash_cents: int,
      *     cash_sales_cents: int,
+     *     cash_refunds_cents: int,
      *     deposits_cents: int,
      *     withdrawals_cents: int,
      *     expected_cash_cents: int
@@ -29,10 +30,12 @@ final class GetCashSessionCashSummaryQuery
         return [
             'opening_cash_cents' => (int) $session->opening_cash_cents,
             'cash_sales_cents' => (int) $session->cash_sales_cents,
+            'cash_refunds_cents' => (int) $session->cash_refunds_cents,
             'deposits_cents' => $deposits,
             'withdrawals_cents' => $withdrawals,
             'expected_cash_cents' => (int) $session->opening_cash_cents
                 + (int) $session->cash_sales_cents
+                - (int) $session->cash_refunds_cents
                 + $deposits
                 - $withdrawals,
         ];

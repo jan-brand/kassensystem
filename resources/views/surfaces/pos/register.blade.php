@@ -128,6 +128,10 @@
                             <p class="pos-closing-stat__value">+ {{ Money::format($cashSummary['cash_sales_cents'], $currency) }}</p>
                         </div>
                         <div class="pos-closing-stat">
+                            <p class="pos-closing-stat__label">Barstorno</p>
+                            <p class="pos-closing-stat__value">− {{ Money::format($cashSummary['cash_refunds_cents'], $currency) }}</p>
+                        </div>
+                        <div class="pos-closing-stat">
                             <p class="pos-closing-stat__label">Einlagen</p>
                             <p class="pos-closing-stat__value">+ {{ Money::format($cashSummary['deposits_cents'], $currency) }}</p>
                         </div>
@@ -474,6 +478,10 @@
                             <div class="pos-cash-stat">
                                 <p class="pos-cash-stat__label">Barumsatz</p>
                                 <p class="pos-cash-stat__value">{{ Money::format($cashSummary['cash_sales_cents'], $currency) }}</p>
+                            </div>
+                            <div class="pos-cash-stat">
+                                <p class="pos-cash-stat__label">Barstorno</p>
+                                <p class="pos-cash-stat__value">− {{ Money::format($cashSummary['cash_refunds_cents'], $currency) }}</p>
                             </div>
                             <div class="pos-cash-stat">
                                 <p class="pos-cash-stat__label">Einlagen − Entnahmen</p>

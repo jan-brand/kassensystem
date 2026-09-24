@@ -45,6 +45,7 @@ final class OpenCashSessionAction
                 'status' => CashSessionStatus::Open,
                 'opening_cash_cents' => $openingCashCents,
                 'cash_sales_cents' => 0,
+                'cash_refunds_cents' => 0,
                 'opened_at' => now(),
             ]);
 

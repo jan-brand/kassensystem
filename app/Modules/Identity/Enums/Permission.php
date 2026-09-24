@@ -6,6 +6,7 @@ enum Permission: string
 {
     case PosAccess = 'pos.access';
     case SalesCreate = 'sales.create';
+    case SalesReverse = 'sales.reverse';
     case CashSessionsOpen = 'cash_sessions.open';
     case CashSessionsClose = 'cash_sessions.close';
     case CashMovementsCreate = 'cash_movements.create';

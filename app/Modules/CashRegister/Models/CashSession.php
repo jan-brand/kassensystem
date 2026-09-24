@@ -20,6 +20,7 @@ use LogicException;
  * @property CashSessionStatus $status
  * @property int $opening_cash_cents
  * @property int $cash_sales_cents
+ * @property int $cash_refunds_cents
  * @property int|null $closing_expected_cash_cents
  * @property int|null $closing_counted_cash_cents
  * @property int|null $closing_difference_cents
@@ -43,6 +44,7 @@ final class CashSession extends Model
             'status' => CashSessionStatus::class,
             'opening_cash_cents' => 'integer',
             'cash_sales_cents' => 'integer',
+            'cash_refunds_cents' => 'integer',
             'closing_expected_cash_cents' => 'integer',
             'closing_counted_cash_cents' => 'integer',
             'closing_difference_cents' => 'integer',
@@ -103,6 +105,7 @@ final class CashSession extends Model
 
         return $this->opening_cash_cents
             + $this->cash_sales_cents
+            - $this->cash_refunds_cents
             + $deposits
             - $withdrawals;
     }

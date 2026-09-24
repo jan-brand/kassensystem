@@ -15,11 +15,11 @@
                 <p class="text-xs font-bold uppercase tracking-[0.24em] text-slate-400">Administration</p>
                 <h2 class="mt-2 text-3xl font-black">Verkäufe &amp; Belege</h2>
                 <p class="mt-2 max-w-3xl text-sm text-slate-300">
-                    Abgeschlossene Verkäufe nachvollziehen, Preis-Snapshots prüfen und Belege anzeigen.
+                    Abgeschlossene Verkäufe nachvollziehen, Preis-Snapshots prüfen und vollständige Stornos als Gegenbuchung erfassen.
                 </p>
             </div>
             <div class="rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-slate-300">
-                Nur lesender Zugriff
+                {{ $canReverseSale ? 'Storno freigegeben' : 'Nur lesender Zugriff' }}
             </div>
         </div>
     </section>
@@ -76,6 +76,7 @@
                         <th class="px-5 py-3">Zeitpunkt</th>
                         <th class="px-5 py-3">Kassierer</th>
                         <th class="px-5 py-3">Kasse</th>
+                        <th class="px-5 py-3">Status</th>
                         <th class="px-5 py-3 text-right">Gesamt</th>
                         <th class="px-5 py-3 text-right sm:px-6">Beleg</th>
                     </tr>
@@ -90,6 +91,13 @@
                                 <div class="text-xs text-slate-500">{{ $sale->cashier->username }}</div>
                             </td>
                             <td class="px-5 py-4 text-slate-700">{{ $sale->register->name }}</td>
+                            <td class="px-5 py-4">
+                                @if($sale->reversal)
+                                    <span class="rounded-lg bg-red-100 px-2 py-1 text-xs font-black text-red-800">Storniert</span>
+                                @else
+                                    <span class="rounded-lg bg-emerald-100 px-2 py-1 text-xs font-black text-emerald-800">Abgeschlossen</span>
+                                @endif
+                            </td>
                             <td class="whitespace-nowrap px-5 py-4 text-right font-black">{{ Money::format((int) $sale->total_cents, $currency) }}</td>
                             <td class="px-5 py-4 text-right sm:px-6">
                                 <button type="button" wire:click="showSale({{ $sale->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-xs font-black hover:bg-slate-50">
@@ -99,7 +107,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-5 py-12 text-center text-slate-500">Keine abgeschlossenen Verkäufe für diese Filter gefunden.</td>
+                            <td colspan="7" class="px-5 py-12 text-center text-slate-500">Keine abgeschlossenen Verkäufe für diese Filter gefunden.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -121,6 +129,9 @@
                         <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Beleg</p>
                         <h3 class="mt-2 text-2xl font-black">{{ $cafeteriaName }}</h3>
                         <p class="mt-1 font-mono text-sm font-bold">{{ $selectedSale->number }}</p>
+                        @if($selectedSale->reversal)
+                            <span class="mt-3 inline-flex rounded-lg bg-red-100 px-2.5 py-1 text-xs font-black text-red-800">Vollständig storniert</span>
+                        @endif
                     </header>
 
                     <div class="space-y-5 px-6 py-5 text-sm">
@@ -161,6 +172,51 @@
                         @else
                             <div class="rounded-2xl bg-slate-100 px-4 py-3 text-center font-bold text-slate-700">
                                 Kostenloser Verkauf · keine Zahlung
+                            </div>
+                        @endif
+
+                        @if($selectedSale->reversal)
+                            <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-950">
+                                <p class="font-black">Vollständig storniert</p>
+                                <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                                    <dt class="text-red-700">Zeitpunkt</dt>
+                                    <dd class="text-right font-bold">{{ $selectedSale->reversal->reversed_at?->format('d.m.Y H:i:s') }}</dd>
+                                    <dt class="text-red-700">Durch</dt>
+                                    <dd class="text-right font-bold">{{ $selectedSale->reversal->actor->auditDisplayName() }}</dd>
+                                    <dt class="text-red-700">Grund</dt>
+                                    <dd class="text-right font-bold">{{ $selectedSale->reversal->reason }}</dd>
+                                    @if($selectedSale->reversal->cash_refund_cents > 0)
+                                        <dt class="text-red-700">Barauszahlung</dt>
+                                        <dd class="text-right font-bold">{{ Money::format((int) $selectedSale->reversal->cash_refund_cents, $currency) }}</dd>
+                                        <dt class="text-red-700">Kassenschicht</dt>
+                                        <dd class="text-right font-bold">#{{ $selectedSale->reversal->cashSession?->id }}</dd>
+                                    @endif
+                                </dl>
+                            </div>
+                        @elseif($canReverseSale)
+                            <div class="receipt-no-print rounded-2xl border border-red-200 bg-red-50 p-4">
+                                <h4 class="font-black text-red-950">Verkauf vollständig stornieren</h4>
+                                <p class="mt-1 text-xs leading-5 text-red-800">
+                                    Der Originalverkauf bleibt unverändert. Bei Barzahlung wird die Auszahlung der aktuell offenen Kassenschicht derselben Kasse belastet.
+                                </p>
+
+                                <label class="mt-4 block">
+                                    <span class="text-xs font-black uppercase tracking-wide text-red-900">Stornogrund</span>
+                                    <textarea wire:model="reversalReason" rows="3" maxlength="500" class="mt-1 w-full rounded-xl border border-red-300 bg-white px-3 py-2 text-sm text-slate-950" placeholder="Grund für das vollständige Storno"></textarea>
+                                </label>
+                                @error('reversalReason')
+                                    <p class="mt-2 text-xs font-bold text-red-700">{{ $message }}</p>
+                                @enderror
+
+                                <button
+                                    type="button"
+                                    wire:click="reverseSelectedSale"
+                                    wire:confirm="Diesen Verkauf wirklich vollständig stornieren?"
+                                    wire:loading.attr="disabled"
+                                    class="mt-3 w-full rounded-xl bg-red-700 px-4 py-3 text-sm font-black text-white hover:bg-red-800 disabled:opacity-50"
+                                >
+                                    Vollständig stornieren
+                                </button>
                             </div>
                         @endif
 

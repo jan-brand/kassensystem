@@ -19,7 +19,7 @@ final class SearchCompletedSalesQuery
         $number = trim((string) $number);
 
         return Sale::query()
-            ->with(['cashier', 'register'])
+            ->with(['cashier', 'register', 'reversal'])
             ->where('status', SaleStatus::Completed->value)
             ->when($number !== '', fn ($query) => $query->where('number', 'like', '%'.$number.'%'))
             ->when($from, fn ($query, $value) => $query->where('completed_at', '>=', $value))

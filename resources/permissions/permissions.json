@@ -10,6 +10,7 @@
         "pos.access",
         "reports.view",
         "sales.create",
+        "sales.reverse",
         "sales.view",
         "settings.manage",
         "users.cashiers.manage",

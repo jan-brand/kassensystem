@@ -30,6 +30,7 @@ use LogicException;
  * @property-read User $cashier
  * @property-read Collection<int, SaleItem> $items
  * @property-read Payment|null $payment
+ * @property-read SaleReversal|null $reversal
  */
 final class Sale extends Model
 {
@@ -90,5 +91,11 @@ final class Sale extends Model
     public function payment(): HasOne
     {
         return $this->hasOne(Payment::class);
+    }
+
+    /** @return HasOne<SaleReversal, $this> */
+    public function reversal(): HasOne
+    {
+        return $this->hasOne(SaleReversal::class);
     }
 }

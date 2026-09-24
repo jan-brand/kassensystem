@@ -47,6 +47,7 @@ final class AuthorizationService
                 Permission::CatalogManage,
                 Permission::UsersCashiersManage,
                 Permission::SalesView,
+                Permission::SalesReverse,
                 Permission::CashSessionsView,
                 Permission::ReportsView,
             ],
