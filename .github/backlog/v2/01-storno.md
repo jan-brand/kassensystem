@@ -1,21 +1,23 @@
 ## Ziel
-Abgeschlossene Verkaeufe sicher rueckabwickeln, ohne den Originalverkauf zu veraendern.
+Den bereits implementierten unveraenderlichen Vollstorno an die finale V2-Geschaeftsregel anpassen.
 
-## Umfang
-- vollstaendiges Storno
-- eigene Gegenbuchung mit Referenz auf Originalverkauf
+## Bereits vorhanden
+- Gegenbuchung statt Mutation des Originalverkaufs
 - Actor, Zeitpunkt und Pflichtgrund
-- Umsatz- und Bargeldwirkung
 - Schutz vor doppeltem Storno
-- Rollen/Permission und Audit
-- Darstellung in POS/Administration
+- Bargeldwirkung und Audit
+- Administration und Tests
+
+## Noch umzusetzen
+- Produktkennzeichnung fuer Lebensmittel/Verzehrartikel.
+- Essen und Getraenke gelten beide als Verzehrartikel.
+- Kennzeichnung wird im Sale-Item-Snapshot historisiert.
+- Ein Verkauf mit mindestens einem Verzehrartikel darf in V2 nicht vollstaendig storniert werden.
+- Gemischte Verkaeufe sind damit ebenfalls nicht stornierbar.
+- Teilstorno bleibt ausserhalb von V2.
 
 ## Akzeptanzkriterien
-- [ ] Originalverkauf und Positionen bleiben unveraendert.
-- [ ] Storno ist ein eigener unveraenderlicher Datensatz.
-- [ ] Bereits stornierter Verkauf kann nicht erneut vollstaendig storniert werden.
-- [ ] Bar-Storno korrigiert den erwarteten Kassenbestand nachvollziehbar.
-- [ ] 0-Euro-Verkauf kann ohne erfundenes Payment storniert werden.
-- [ ] Unberechtigte Rollen koennen keinen Storno ausloesen.
-- [ ] Doppelklick/Doppel-Tap erzeugt keine doppelte Gegenbuchung.
-- [ ] Tests decken Transaktion, Idempotenz und UI-Flow ab.
+- [ ] Historische Stornierbarkeit haengt nicht von spaeteren Produktupdates ab.
+- [ ] Reiner Nicht-Verzehr-Verkauf kann weiterhin vollstaendig storniert werden.
+- [ ] Verkauf mit Essen oder Getraenk wird blockiert.
+- [ ] Bestehende Idempotenz-, Cash- und Audit-Tests bleiben gruen.

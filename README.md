@@ -2,7 +2,7 @@
 
 Tablet-optimiertes Laravel-Kassensystem für Schulcafeteria und Gastronomie. Der v1-Fokus liegt auf einem schnellen, robusten Bargeld-POS mit nachvollziehbarer Kassenführung sowie einer rollenbasierten Administration.
 
-**Release-Stand:** `1.0.0`. Die technische und manuelle v1-Abnahme wurde am 2026-09-23 erfolgreich abgeschlossen.
+**Release-Stand:** `1.0.0`. Die technische und manuelle v1-Abnahme wurde am 2026-09-23 erfolgreich abgeschlossen. V2 befindet sich aktiv in Entwicklung; Release-Metadaten bleiben bis zu einem V2 Release Candidate auf v1.
 
 ## Funktionsumfang v1
 
@@ -100,7 +100,10 @@ composer release:final-check
 Einstiegspunkte:
 
 - `docs/KASSENSYSTEM_V1.md` – fachlicher v1-Umfang
-- `docs/KASSENSYSTEM_V2.md` – geplanter v2-Scope, Reihenfolge und Architekturregeln
+- `docs/KASSENSYSTEM_V2.md` – aktiver v2-Scope für Gastro, Kellner, Tickets, Küche/Bar, Payments und QR-Belege
+- `docs/ROADMAP.md` – Abgrenzung von v2, v3 und v4
+- `docs/KASSENSYSTEM_V3.md` – bewusst auf v3 verschobene Funktionen
+- `docs/KASSENSYSTEM_V4.md` – langfristig vorgemerkter Scope
 - `docs/ACCEPTANCE_V1.md` – manuelle und automatisierte Abnahme
 - `docs/RELEASE_V1.md` – Release-Candidate- und Final-Release-Ablauf
 - `docs/PRODUCTION.md` – Produktion, Backup und Restore

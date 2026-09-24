@@ -1,7 +1,10 @@
 # Documentation Index
 
 - [Kassensystem v1](KASSENSYSTEM_V1.md)
-- [Kassensystem v2 Planung](KASSENSYSTEM_V2.md)
+- [Kassensystem v2 Gastro/Kellner](KASSENSYSTEM_V2.md)
+- [Produkt-Roadmap v2-v4](ROADMAP.md)
+- [Kassensystem v3 vorgemerkt](KASSENSYSTEM_V3.md)
+- [Kassensystem v4 vorgemerkt](KASSENSYSTEM_V4.md)
 - [Changelog](../CHANGELOG.md)
 - [v1 Acceptance](ACCEPTANCE_V1.md)
 - [v1 Release Candidate](RELEASE_V1.md)

@@ -160,12 +160,14 @@
         },
         {
             "id": "V2-000",
-            "title": "[EPIC] Kassensystem v2 fachlich erweitern",
+            "title": "[EPIC] Kassensystem v2 als Gastro- und Kellnersystem ausbauen",
             "status": "open",
             "priority": "P0",
             "type": "epic",
             "areas": [
-                "foundation"
+                "foundation",
+                "pos",
+                "sales"
             ],
             "milestone": "v2",
             "body_file": ".github/backlog/v2/00-epic.md",
@@ -175,14 +177,15 @@
         },
         {
             "id": "V2-001",
-            "title": "[TECH] Storno als unveraenderliche Gegenbuchung modellieren",
-            "status": "open",
+            "title": "[TECH] Vollstorno fuer Nicht-Verzehr-Verkaeufe absichern",
+            "status": "in-progress",
             "priority": "P1",
             "type": "tech",
             "areas": [
                 "sales",
                 "cash-register",
-                "audit"
+                "audit",
+                "catalog"
             ],
             "milestone": "v2",
             "body_file": ".github/backlog/v2/01-storno.md",
@@ -192,86 +195,124 @@
         },
         {
             "id": "V2-002",
-            "title": "[TECH] Zahlungsarten und Payment-Ledger generalisieren",
+            "title": "[TECH] Gastro-Domain, Vorgaenge und Menue-Snapshots modellieren",
             "status": "open",
             "priority": "P1",
             "type": "tech",
             "areas": [
                 "sales",
+                "catalog",
                 "foundation"
             ],
             "milestone": "v2",
-            "body_file": ".github/backlog/v2/02-payment-architecture.md",
+            "body_file": ".github/backlog/v2/02-gastro-domain.md",
             "github_number": null,
             "created_at": "2026-09-24",
             "closed_at": null
         },
         {
             "id": "V2-003",
-            "title": "[FEATURE] Unbare Zahlung providerneutral ermoeglichen",
+            "title": "[FEATURE] Kellnerrolle, Bereiche, Tische und Kellner-POS",
             "status": "open",
-            "priority": "P2",
+            "priority": "P1",
             "type": "feature",
             "areas": [
-                "sales",
-                "pos"
+                "identity",
+                "pos",
+                "sales"
             ],
             "milestone": "v2",
-            "body_file": ".github/backlog/v2/03-non-cash.md",
+            "body_file": ".github/backlog/v2/03-waiter-tables.md",
             "github_number": null,
             "created_at": "2026-09-24",
             "closed_at": null
         },
         {
             "id": "V2-004",
-            "title": "[FEATURE] Kunden-/Schuelerguthaben als Buchungsledger",
+            "title": "[FEATURE] QR-Tickets und Menueberechtigungen",
             "status": "open",
-            "priority": "P2",
+            "priority": "P1",
             "type": "feature",
             "areas": [
-                "identity",
-                "sales"
+                "sales",
+                "pos",
+                "catalog"
             ],
             "milestone": "v2",
-            "body_file": ".github/backlog/v2/04-credit.md",
+            "body_file": ".github/backlog/v2/04-ticket-menu.md",
             "github_number": null,
             "created_at": "2026-09-24",
             "closed_at": null
         },
         {
             "id": "V2-005",
-            "title": "[FEATURE] Lager und Bestandsbewegungen",
+            "title": "[FEATURE] Kuechen- und Bar-Displays mit Stationsstatus",
             "status": "open",
-            "priority": "P2",
+            "priority": "P1",
             "type": "feature",
             "areas": [
-                "catalog"
+                "pos",
+                "sales"
             ],
             "milestone": "v2",
-            "body_file": ".github/backlog/v2/05-inventory.md",
+            "body_file": ".github/backlog/v2/05-preparation-displays.md",
             "github_number": null,
             "created_at": "2026-09-24",
             "closed_at": null
         },
         {
             "id": "V2-006",
-            "title": "[FEATURE] Beleg- und Hardware-Abstraktion",
+            "title": "[TECH] Payment-Ledger und PayPal.me-Zahlung",
             "status": "open",
-            "priority": "P2",
-            "type": "feature",
+            "priority": "P1",
+            "type": "tech",
             "areas": [
                 "sales",
-                "pos"
+                "pos",
+                "cash-register"
             ],
             "milestone": "v2",
-            "body_file": ".github/backlog/v2/06-hardware.md",
+            "body_file": ".github/backlog/v2/06-payment-paypal.md",
             "github_number": null,
             "created_at": "2026-09-24",
             "closed_at": null
         },
         {
             "id": "V2-007",
-            "title": "[FEATURE] Reporting und Audit fuer v2-Buchungen",
+            "title": "[FEATURE] Positionsrabatte und Tagesangebote",
+            "status": "open",
+            "priority": "P1",
+            "type": "feature",
+            "areas": [
+                "sales",
+                "catalog",
+                "pos"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/07-discounts-offers.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-008",
+            "title": "[FEATURE] Digitale Belege und QR-Abruf",
+            "status": "open",
+            "priority": "P1",
+            "type": "feature",
+            "areas": [
+                "sales",
+                "pos"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/08-digital-receipts.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-009",
+            "title": "[FEATURE] V2-Reporting, Audit und Buchhaltungs-CSV",
             "status": "open",
             "priority": "P1",
             "type": "feature",
@@ -281,13 +322,13 @@
                 "audit"
             ],
             "milestone": "v2",
-            "body_file": ".github/backlog/v2/07-reporting-audit.md",
+            "body_file": ".github/backlog/v2/09-reporting-audit.md",
             "github_number": null,
             "created_at": "2026-09-24",
             "closed_at": null
         },
         {
-            "id": "V2-008",
+            "id": "V2-010",
             "title": "[TECH] V1-Datenmigration und Rueckwaertskompatibilitaet absichern",
             "status": "open",
             "priority": "P1",
@@ -297,38 +338,182 @@
                 "sales"
             ],
             "milestone": "v2",
-            "body_file": ".github/backlog/v2/08-migration.md",
+            "body_file": ".github/backlog/v2/10-migration.md",
             "github_number": null,
             "created_at": "2026-09-24",
             "closed_at": null
         },
         {
-            "id": "V2-009",
-            "title": "[QA] Vollstaendige v2-Abnahme und Upgrade-Test",
+            "id": "V2-011",
+            "title": "[QA] Vollstaendige V2-Abnahme und Upgrade-Test",
             "status": "open",
             "priority": "P1",
             "type": "qa",
             "areas": [
                 "foundation",
-                "pos"
+                "pos",
+                "sales"
             ],
             "milestone": "v2",
-            "body_file": ".github/backlog/v2/09-acceptance.md",
+            "body_file": ".github/backlog/v2/11-acceptance.md",
             "github_number": null,
             "created_at": "2026-09-24",
             "closed_at": null
         },
         {
-            "id": "V2-010",
-            "title": "[TECH] Fiskalisierung/TSE-Anforderungen klaeren",
+            "id": "V3-000",
+            "title": "[EPIC] Kassensystem v3 Betriebsausbau planen",
             "status": "open",
-            "priority": "P3",
-            "type": "tech",
+            "priority": "P2",
+            "type": "epic",
             "areas": [
                 "foundation"
             ],
-            "milestone": "v2",
-            "body_file": ".github/backlog/v2/10-fiscal-discovery.md",
+            "milestone": "v3",
+            "body_file": ".github/backlog/v3/00-epic.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V3-001",
+            "title": "[FEATURE] Teilstorno und Split-Zahlung",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "sales",
+                "pos"
+            ],
+            "milestone": "v3",
+            "body_file": ".github/backlog/v3/01-partial-reversal-split.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V3-002",
+            "title": "[FEATURE] Schueler-/Kundenguthaben mit Barcode oder NFC",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "identity",
+                "sales"
+            ],
+            "milestone": "v3",
+            "body_file": ".github/backlog/v3/02-credit.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V3-003",
+            "title": "[FEATURE] Lager und Bestandsbewegungen",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "catalog",
+                "sales"
+            ],
+            "milestone": "v3",
+            "body_file": ".github/backlog/v3/03-inventory.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V3-004",
+            "title": "[FEATURE] Bondrucker- und Hardwareadapter",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "sales",
+                "pos"
+            ],
+            "milestone": "v3",
+            "body_file": ".github/backlog/v3/04-printer.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V3-005",
+            "title": "[TECH] Mehrere Standorte fachlich und technisch trennen",
+            "status": "open",
+            "priority": "P2",
+            "type": "tech",
+            "areas": [
+                "foundation",
+                "cash-register",
+                "reporting"
+            ],
+            "milestone": "v3",
+            "body_file": ".github/backlog/v3/05-multi-location.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V3-006",
+            "title": "[FEATURE] Produkt-Barcode-/QR-Scanning",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "catalog",
+                "pos"
+            ],
+            "milestone": "v3",
+            "body_file": ".github/backlog/v3/06-product-scanning.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V3-007",
+            "title": "[FEATURE] Tischwechsel fuer offene Vorgaenge",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "pos",
+                "sales"
+            ],
+            "milestone": "v3",
+            "body_file": ".github/backlog/v3/07-table-transfer.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V4-000",
+            "title": "[EPIC] Kassensystem v4 langfristig planen",
+            "status": "open",
+            "priority": "P3",
+            "type": "epic",
+            "areas": [
+                "foundation"
+            ],
+            "milestone": "v4",
+            "body_file": ".github/backlog/v4/00-epic.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V4-001",
+            "title": "[FEATURE] Grafischen Raumplan fuer Bereiche und Tische",
+            "status": "open",
+            "priority": "P3",
+            "type": "feature",
+            "areas": [
+                "pos"
+            ],
+            "milestone": "v4",
+            "body_file": ".github/backlog/v4/01-room-plan.md",
             "github_number": null,
             "created_at": "2026-09-24",
             "closed_at": null
