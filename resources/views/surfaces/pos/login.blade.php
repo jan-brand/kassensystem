@@ -29,14 +29,15 @@
                 <label for="pin" class="pos-login__label">PIN</label>
                 <input
                     id="pin"
-                    type="password"
+                    type="text"
                     inputmode="numeric"
                     pattern="[0-9]*"
                     maxlength="6"
                     wire:model="pin"
                     autocomplete="current-password"
-                    class="pos-login__input pos-login__input--pin"
+                    class="pos-login__input pos-login__input--pin masked-pin"
                 >
+
                 @error('pin')
                     <p class="pos-login__field-error">{{ $message }}</p>
                 @enderror

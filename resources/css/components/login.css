@@ -145,3 +145,9 @@ html[data-theme='gastro-dark'] .pos-login__submit:disabled {
     color: var(--state-disabled-text) !important;
     box-shadow: none !important;
 }
+
+/* Ersetzt die eingegebenen Zahlen visuell durch Punkte (wie bei type="password") */
+.masked-pin {
+    -webkit-text-security: disc; /* Für Safari und Chrome/Edge */
+    text-security: disc;         /* Zukunftsfähiger Standard */
+}
