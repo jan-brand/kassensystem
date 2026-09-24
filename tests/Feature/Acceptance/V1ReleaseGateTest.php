@@ -1,6 +1,6 @@
 <?php
 
-it('has no open P0 or P1 blockers for the final v1 release', function () {
+it('has no open v1 P0 or P1 blockers for the final v1 release', function () {
     $issues = json_decode(
         (string) file_get_contents(base_path('issues/issues.json')),
         true,
@@ -10,7 +10,8 @@ it('has no open P0 or P1 blockers for the final v1 release', function () {
 
     $blockers = collect($issues['issues'] ?? [])
         ->filter(
-            static fn (array $issue): bool => ($issue['status'] ?? null) === 'open'
+            static fn (array $issue): bool => ($issue['milestone'] ?? null) === 'v1'
+                && ($issue['status'] ?? null) === 'open'
                 && in_array($issue['priority'] ?? null, ['P0', 'P1'], true),
         )
         ->pluck('id')

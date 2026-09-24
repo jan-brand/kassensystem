@@ -1,6 +1,7 @@
 # Documentation Index
 
 - [Kassensystem v1](KASSENSYSTEM_V1.md)
+- [Kassensystem v2 Planung](KASSENSYSTEM_V2.md)
 - [Changelog](../CHANGELOG.md)
 - [v1 Acceptance](ACCEPTANCE_V1.md)
 - [v1 Release Candidate](RELEASE_V1.md)

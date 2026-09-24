@@ -100,6 +100,7 @@ composer release:final-check
 Einstiegspunkte:
 
 - `docs/KASSENSYSTEM_V1.md` – fachlicher v1-Umfang
+- `docs/KASSENSYSTEM_V2.md` – geplanter v2-Scope, Reihenfolge und Architekturregeln
 - `docs/ACCEPTANCE_V1.md` – manuelle und automatisierte Abnahme
 - `docs/RELEASE_V1.md` – Release-Candidate- und Final-Release-Ablauf
 - `docs/PRODUCTION.md` – Produktion, Backup und Restore

@@ -157,6 +157,181 @@
             "github_number": null,
             "created_at": "2026-09-20",
             "closed_at": "2026-09-21"
+        },
+        {
+            "id": "V2-000",
+            "title": "[EPIC] Kassensystem v2 fachlich erweitern",
+            "status": "open",
+            "priority": "P0",
+            "type": "epic",
+            "areas": [
+                "foundation"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/00-epic.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-001",
+            "title": "[TECH] Storno als unveraenderliche Gegenbuchung modellieren",
+            "status": "open",
+            "priority": "P1",
+            "type": "tech",
+            "areas": [
+                "sales",
+                "cash-register",
+                "audit"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/01-storno.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-002",
+            "title": "[TECH] Zahlungsarten und Payment-Ledger generalisieren",
+            "status": "open",
+            "priority": "P1",
+            "type": "tech",
+            "areas": [
+                "sales",
+                "foundation"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/02-payment-architecture.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-003",
+            "title": "[FEATURE] Unbare Zahlung providerneutral ermoeglichen",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "sales",
+                "pos"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/03-non-cash.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-004",
+            "title": "[FEATURE] Kunden-/Schuelerguthaben als Buchungsledger",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "identity",
+                "sales"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/04-credit.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-005",
+            "title": "[FEATURE] Lager und Bestandsbewegungen",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "catalog"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/05-inventory.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-006",
+            "title": "[FEATURE] Beleg- und Hardware-Abstraktion",
+            "status": "open",
+            "priority": "P2",
+            "type": "feature",
+            "areas": [
+                "sales",
+                "pos"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/06-hardware.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-007",
+            "title": "[FEATURE] Reporting und Audit fuer v2-Buchungen",
+            "status": "open",
+            "priority": "P1",
+            "type": "feature",
+            "areas": [
+                "reporting",
+                "sales",
+                "audit"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/07-reporting-audit.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-008",
+            "title": "[TECH] V1-Datenmigration und Rueckwaertskompatibilitaet absichern",
+            "status": "open",
+            "priority": "P1",
+            "type": "tech",
+            "areas": [
+                "foundation",
+                "sales"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/08-migration.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-009",
+            "title": "[QA] Vollstaendige v2-Abnahme und Upgrade-Test",
+            "status": "open",
+            "priority": "P1",
+            "type": "qa",
+            "areas": [
+                "foundation",
+                "pos"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/09-acceptance.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
+        },
+        {
+            "id": "V2-010",
+            "title": "[TECH] Fiskalisierung/TSE-Anforderungen klaeren",
+            "status": "open",
+            "priority": "P3",
+            "type": "tech",
+            "areas": [
+                "foundation"
+            ],
+            "milestone": "v2",
+            "body_file": ".github/backlog/v2/10-fiscal-discovery.md",
+            "github_number": null,
+            "created_at": "2026-09-24",
+            "closed_at": null
         }
     ]
 }

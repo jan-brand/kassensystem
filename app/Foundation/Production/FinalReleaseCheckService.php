@@ -217,9 +217,11 @@ final class FinalReleaseCheckService
             $id = $issue['id'] ?? null;
             $status = $issue['status'] ?? null;
             $priority = $issue['priority'] ?? null;
+            $milestone = $issue['milestone'] ?? null;
 
             if (
                 ! is_string($id)
+                || $milestone !== 'v1'
                 || $status !== 'open'
                 || ! in_array($priority, ['P0', 'P1'], true)
                 || in_array($id, ['V1-000', 'V1-008'], true)
@@ -234,8 +236,8 @@ final class FinalReleaseCheckService
             'Blocking issues',
             $blockers === [] ? 'pass' : 'fail',
             $blockers === []
-                ? 'No additional open P0/P1 issues remain.'
-                : 'Open P0/P1 issue(s): '.implode(', ', $blockers),
+                ? 'No additional open v1 P0/P1 issues remain.'
+                : 'Open v1 P0/P1 issue(s): '.implode(', ', $blockers),
         );
     }
 
