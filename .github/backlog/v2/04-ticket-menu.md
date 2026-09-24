@@ -17,3 +17,9 @@ Einmalige QR-Tickets als tagesbezogene Menueberechtigung sicher ausgeben und ein
 - [ ] Menue-Slots koennen nicht ueber ihre Berechtigung hinaus verbraucht werden.
 - [ ] Bezahlte und kostenlose Tickets bleiben reportingseitig unterscheidbar.
 - [ ] Tischschluss beendet die Nutzbarkeit des zugeordneten Tickets.
+
+## Implementierungsnotiz V2-004
+- Ticket-Tokens werden kryptografisch zufällig erzeugt; gespeichert wird nur der SHA-256-Hash.
+- Bezahlte Tickets referenzieren ausschließlich bereits abgeschlossene Verkäufe mit Payment.
+- Die Einlösung erzeugt weder Sale noch Payment und bleibt damit umsatzneutral.
+- PayPal-/Payment-Erzeugung bleibt V2-006.

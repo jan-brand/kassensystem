@@ -1,0 +1,6 @@
+{
+    "name": "Tickets",
+    "description": "QR-Tickets, Menueberechtigungen, Tischzuordnung und Einloesungen",
+    "depends_on": ["Identity", "Hospitality", "Sales", "Audit"],
+    "exports": []
+}

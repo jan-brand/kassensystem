@@ -1,0 +1,13 @@
+{
+    "name": "ticket-redemption",
+    "surface": "waiter",
+    "uri": "/tickets",
+    "route_name": "waiter.tickets",
+    "permission": "tickets.redeem",
+    "template": null,
+    "middleware": ["auth", "can:tickets.redeem"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Waiter\\Livewire\\TicketRedemptionScreen"
+    }
+}

@@ -42,6 +42,7 @@ final class AuthorizationService
         $waiter = [
             Permission::HospitalityAccess,
             Permission::HospitalityOrdersManage,
+            Permission::TicketsRedeem,
         ];
 
         return match ($role) {
@@ -55,6 +56,7 @@ final class AuthorizationService
                 Permission::UsersCashiersManage,
                 Permission::UsersWaitersManage,
                 Permission::HospitalityConfigurationManage,
+                Permission::TicketsManage,
                 Permission::SalesView,
                 Permission::SalesReverse,
                 Permission::CashSessionsView,

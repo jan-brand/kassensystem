@@ -33,6 +33,9 @@
                 @can('hospitality.configuration.manage')
                     <a href="{{ route('administration.hospitality') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.hospitality') ? 'is-active' : '' }}">Gastro</a>
                 @endcan
+                @can('tickets.manage')
+                    <a href="{{ route('administration.tickets') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.tickets') ? 'is-active' : '' }}">Tickets</a>
+                @endcan
                 @can('sales.view')
                     <a href="{{ route('administration.sales') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.sales') ? 'is-active' : '' }}">Verkäufe</a>
                 @endcan
@@ -66,6 +69,9 @@
                     @endcan
                     @can('users.cashiers.manage')
                         <a href="{{ route('administration.cashiers') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.cashiers') ? 'is-active' : '' }}">Kassierer</a>
+                    @endcan
+                    @can('tickets.manage')
+                        <a href="{{ route('administration.tickets') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.tickets') ? 'is-active' : '' }}">Tickets</a>
                     @endcan
                     @can('sales.view')
                         <a href="{{ route('administration.sales') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.sales') ? 'is-active' : '' }}">Verkäufe</a>

@@ -1,0 +1,13 @@
+{
+    "name": "tickets",
+    "surface": "administration",
+    "uri": "/tickets",
+    "route_name": "administration.tickets",
+    "permission": "tickets.manage",
+    "template": null,
+    "middleware": ["auth", "can:tickets.manage"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\TicketsScreen"
+    }
+}

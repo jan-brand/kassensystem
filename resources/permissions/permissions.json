@@ -16,6 +16,8 @@
         "sales.reverse",
         "sales.view",
         "settings.manage",
+        "tickets.manage",
+        "tickets.redeem",
         "users.cashiers.manage",
         "users.roles.manage",
         "users.waiters.manage"

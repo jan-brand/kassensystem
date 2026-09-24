@@ -5,6 +5,7 @@
         {"label": "Kassierer", "route": "administration.cashiers", "permission": "users.cashiers.manage"},
         {"label": "Kellner", "route": "administration.waiters", "permission": "users.waiters.manage"},
         {"label": "Gastro", "route": "administration.hospitality", "permission": "hospitality.configuration.manage"},
+        {"label": "Tickets", "route": "administration.tickets", "permission": "tickets.manage"},
         {"label": "Verkäufe", "route": "administration.sales", "permission": "sales.view"},
         {"label": "Berichte", "route": "administration.reporting", "permission": "reports.view"},
         {"label": "Einstellungen", "route": "administration.settings", "permission": "settings.manage"},

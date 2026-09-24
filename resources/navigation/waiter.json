@@ -4,6 +4,11 @@
             "label": "Tische",
             "route": "waiter.service",
             "permission": "hospitality.access"
+        },
+        {
+            "label": "Tickets",
+            "route": "waiter.tickets",
+            "permission": "tickets.redeem"
         }
     ]
 }

@@ -1,0 +1,13 @@
+{
+    "name": "menu-configuration",
+    "surface": "administration",
+    "uri": "/menus",
+    "route_name": "administration.menus",
+    "permission": "hospitality.configuration.manage",
+    "template": null,
+    "middleware": ["auth", "can:hospitality.configuration.manage"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\MenuConfigurationScreen"
+    }
+}
