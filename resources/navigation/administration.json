@@ -3,6 +3,8 @@
         {"label": "Übersicht", "route": "administration.dashboard", "permission": "administration.access"},
         {"label": "Katalog", "route": "administration.catalog", "permission": "catalog.manage"},
         {"label": "Kassierer", "route": "administration.cashiers", "permission": "users.cashiers.manage"},
+        {"label": "Kellner", "route": "administration.waiters", "permission": "users.waiters.manage"},
+        {"label": "Gastro", "route": "administration.hospitality", "permission": "hospitality.configuration.manage"},
         {"label": "Verkäufe", "route": "administration.sales", "permission": "sales.view"},
         {"label": "Berichte", "route": "administration.reporting", "permission": "reports.view"},
         {"label": "Einstellungen", "route": "administration.settings", "permission": "settings.manage"},

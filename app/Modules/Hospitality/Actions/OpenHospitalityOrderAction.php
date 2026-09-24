@@ -52,6 +52,8 @@ final class OpenHospitalityOrderAction
                 'number' => $this->numberGenerator->next(),
                 'table_id' => $lockedTable->id,
                 'open_table_id' => $lockedTable->id,
+                'area_name_snapshot' => $lockedTable->area->name,
+                'table_name_snapshot' => $lockedTable->name,
                 'opened_by_user_id' => $actor->id,
                 'status' => HospitalityOrderStatus::Open,
                 'note' => $note === '' ? null : $note,
@@ -70,6 +72,8 @@ final class OpenHospitalityOrderAction
                 after: [
                     'number' => $order->number,
                     'table_id' => $order->table_id,
+                    'area_name_snapshot' => $order->area_name_snapshot,
+                    'table_name_snapshot' => $order->table_name_snapshot,
                 ],
             );
 

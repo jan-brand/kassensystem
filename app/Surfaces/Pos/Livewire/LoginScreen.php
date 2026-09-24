@@ -6,6 +6,8 @@ use App\Modules\Identity\Actions\AuthenticateWithPinAction;
 use App\Modules\Identity\Exceptions\InvalidPin;
 use App\Modules\Identity\Exceptions\PinRateLimited;
 use App\Modules\Identity\Exceptions\UserInactive;
+use App\Modules\Identity\Models\User;
+use App\Modules\Identity\Services\UserLandingRouteService;
 use App\Modules\Settings\Queries\GetSystemSettingsQuery;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -22,15 +24,19 @@ final class LoginScreen extends Component
 
     public ?string $loginError = null;
 
-    public function mount(): void
+    public function mount(UserLandingRouteService $landingRoute): void
     {
-        if (Auth::check()) {
-            $this->redirectRoute('pos.register', navigate: true);
+        $user = Auth::user();
+
+        if ($user instanceof User) {
+            $this->redirectRoute($landingRoute->for($user), navigate: true);
         }
     }
 
-    public function login(AuthenticateWithPinAction $authenticate): void
-    {
+    public function login(
+        AuthenticateWithPinAction $authenticate,
+        UserLandingRouteService $landingRoute,
+    ): void {
         $this->loginError = null;
 
         $validated = $this->validate([
@@ -43,7 +49,7 @@ final class LoginScreen extends Component
         ]);
 
         try {
-            $authenticate->execute(
+            $user = $authenticate->execute(
                 username: $validated['username'],
                 pin: $validated['pin'],
                 ipAddress: request()->ip(),
@@ -67,7 +73,7 @@ final class LoginScreen extends Component
         }
 
         Session::regenerate();
-        $this->redirectRoute('pos.register', navigate: true);
+        $this->redirectRoute($landingRoute->for($user), navigate: true);
     }
 
     public function render(GetSystemSettingsQuery $settingsQuery): View

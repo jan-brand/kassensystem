@@ -1,0 +1,13 @@
+{
+    "name": "service",
+    "surface": "waiter",
+    "uri": "/",
+    "route_name": "waiter.service",
+    "permission": "hospitality.access",
+    "template": null,
+    "middleware": ["auth", "can:hospitality.access"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Waiter\\Livewire\\WaiterScreen"
+    }
+}

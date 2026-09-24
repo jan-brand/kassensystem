@@ -1,0 +1,8 @@
+{
+    "name": "waiter",
+    "description": "Touchoptimierter Kellner-POS für Bereiche, Tische und Vorgänge",
+    "prefix": "service",
+    "domain": null,
+    "middleware": ["web"],
+    "layout": "waiter"
+}

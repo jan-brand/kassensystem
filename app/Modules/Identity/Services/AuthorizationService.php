@@ -39,13 +39,22 @@ final class AuthorizationService
             Permission::CashMovementsCreate,
         ];
 
+        $waiter = [
+            Permission::HospitalityAccess,
+            Permission::HospitalityOrdersManage,
+        ];
+
         return match ($role) {
             UserRole::Cashier => $cashier,
+            UserRole::Waiter => $waiter,
             UserRole::Manager => [
                 ...$cashier,
+                ...$waiter,
                 Permission::AdministrationAccess,
                 Permission::CatalogManage,
                 Permission::UsersCashiersManage,
+                Permission::UsersWaitersManage,
+                Permission::HospitalityConfigurationManage,
                 Permission::SalesView,
                 Permission::SalesReverse,
                 Permission::CashSessionsView,

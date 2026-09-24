@@ -11,9 +11,14 @@ enum Permission: string
     case CashSessionsClose = 'cash_sessions.close';
     case CashMovementsCreate = 'cash_movements.create';
 
+    case HospitalityAccess = 'hospitality.access';
+    case HospitalityOrdersManage = 'hospitality.orders.manage';
+    case HospitalityConfigurationManage = 'hospitality.configuration.manage';
+
     case AdministrationAccess = 'administration.access';
     case CatalogManage = 'catalog.manage';
     case UsersCashiersManage = 'users.cashiers.manage';
+    case UsersWaitersManage = 'users.waiters.manage';
     case UsersRolesManage = 'users.roles.manage';
     case SalesView = 'sales.view';
     case CashSessionsView = 'cash_sessions.view';

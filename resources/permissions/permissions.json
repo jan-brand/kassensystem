@@ -7,6 +7,9 @@
         "cash_sessions.open",
         "cash_sessions.view",
         "catalog.manage",
+        "hospitality.access",
+        "hospitality.configuration.manage",
+        "hospitality.orders.manage",
         "pos.access",
         "reports.view",
         "sales.create",
@@ -14,6 +17,7 @@
         "sales.view",
         "settings.manage",
         "users.cashiers.manage",
-        "users.roles.manage"
+        "users.roles.manage",
+        "users.waiters.manage"
     ]
 }

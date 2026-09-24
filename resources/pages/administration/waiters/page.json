@@ -1,0 +1,13 @@
+{
+    "name": "waiters",
+    "surface": "administration",
+    "uri": "/waiters",
+    "route_name": "administration.waiters",
+    "permission": "users.waiters.manage",
+    "template": null,
+    "middleware": ["auth", "can:users.waiters.manage"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\WaitersScreen"
+    }
+}

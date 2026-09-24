@@ -27,6 +27,12 @@
                 @can('users.cashiers.manage')
                     <a href="{{ route('administration.cashiers') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.cashiers') ? 'is-active' : '' }}">Kassierer</a>
                 @endcan
+                @can('users.waiters.manage')
+                    <a href="{{ route('administration.waiters') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.waiters') ? 'is-active' : '' }}">Kellner</a>
+                @endcan
+                @can('hospitality.configuration.manage')
+                    <a href="{{ route('administration.hospitality') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.hospitality') ? 'is-active' : '' }}">Gastro</a>
+                @endcan
                 @can('sales.view')
                     <a href="{{ route('administration.sales') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.sales') ? 'is-active' : '' }}">Verkäufe</a>
                 @endcan
@@ -38,6 +44,9 @@
                 @endcan
                 @can('audit.view')
                     <a href="{{ route('administration.audit') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.audit') ? 'is-active' : '' }}">Audit</a>
+                @endcan
+                @can('hospitality.access')
+                    <a href="{{ route('waiter.service') }}" wire:navigate class="admin-nav__link">Kellner-POS</a>
                 @endcan
                 @can('pos.access')
                     <a href="{{ route('pos.register') }}" wire:navigate class="admin-nav__link admin-nav__link--pos">Zur Kasse</a>

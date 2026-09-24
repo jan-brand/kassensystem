@@ -1,0 +1,9 @@
+{
+    "items": [
+        {
+            "label": "Tische",
+            "route": "waiter.service",
+            "permission": "hospitality.access"
+        }
+    ]
+}

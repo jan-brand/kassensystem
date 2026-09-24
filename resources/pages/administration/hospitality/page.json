@@ -1,0 +1,13 @@
+{
+    "name": "hospitality",
+    "surface": "administration",
+    "uri": "/hospitality",
+    "route_name": "administration.hospitality",
+    "permission": "hospitality.configuration.manage",
+    "template": null,
+    "middleware": ["auth", "can:hospitality.configuration.manage"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\HospitalityConfigurationScreen"
+    }
+}

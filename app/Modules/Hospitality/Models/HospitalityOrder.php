@@ -16,6 +16,8 @@ use LogicException;
  * @property string $number
  * @property int $table_id
  * @property int|null $open_table_id
+ * @property string|null $area_name_snapshot
+ * @property string|null $table_name_snapshot
  * @property int $opened_by_user_id
  * @property HospitalityOrderStatus $status
  * @property string|null $note
