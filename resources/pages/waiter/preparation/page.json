@@ -1,0 +1,13 @@
+{
+    "name": "preparation",
+    "surface": "waiter",
+    "uri": "/preparation",
+    "route_name": "waiter.preparation",
+    "permission": "preparation.access",
+    "template": null,
+    "middleware": ["auth", "can:preparation.access"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Waiter\\Livewire\\WaiterPreparationScreen"
+    }
+}

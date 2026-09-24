@@ -1,0 +1,6 @@
+{
+    "name": "Preparation",
+    "description": "Zubereitungsstationen, Arbeitsauftraege und Browser-Displays",
+    "depends_on": ["Identity", "Catalog", "Hospitality", "Audit"],
+    "exports": []
+}

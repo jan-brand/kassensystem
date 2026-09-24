@@ -11,6 +11,8 @@
         "hospitality.configuration.manage",
         "hospitality.orders.manage",
         "pos.access",
+        "preparation.access",
+        "preparation.manage",
         "reports.view",
         "sales.create",
         "sales.reverse",

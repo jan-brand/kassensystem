@@ -1,0 +1,13 @@
+{
+    "name": "display",
+    "surface": "preparation",
+    "uri": "/",
+    "route_name": "preparation.display",
+    "permission": "preparation.access",
+    "template": null,
+    "middleware": ["auth", "can:preparation.access"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Preparation\\Livewire\\PreparationDisplayScreen"
+    }
+}

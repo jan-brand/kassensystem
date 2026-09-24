@@ -1,0 +1,13 @@
+{
+    "name": "preparation",
+    "surface": "administration",
+    "uri": "/preparation",
+    "route_name": "administration.preparation",
+    "permission": "preparation.manage",
+    "template": null,
+    "middleware": ["auth", "can:preparation.manage"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\PreparationConfigurationScreen"
+    }
+}

@@ -43,6 +43,7 @@ final class AuthorizationService
             Permission::HospitalityAccess,
             Permission::HospitalityOrdersManage,
             Permission::TicketsRedeem,
+            Permission::PreparationAccess,
         ];
 
         return match ($role) {
@@ -57,6 +58,7 @@ final class AuthorizationService
                 Permission::UsersWaitersManage,
                 Permission::HospitalityConfigurationManage,
                 Permission::TicketsManage,
+                Permission::PreparationManage,
                 Permission::SalesView,
                 Permission::SalesReverse,
                 Permission::CashSessionsView,

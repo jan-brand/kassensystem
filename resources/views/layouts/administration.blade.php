@@ -36,6 +36,9 @@
                 @can('tickets.manage')
                     <a href="{{ route('administration.tickets') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.tickets') ? 'is-active' : '' }}">Tickets</a>
                 @endcan
+                @can('preparation.manage')
+                    <a href="{{ route('administration.preparation') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.preparation') ? 'is-active' : '' }}">Zubereitung</a>
+                @endcan
                 @can('sales.view')
                     <a href="{{ route('administration.sales') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.sales') ? 'is-active' : '' }}">Verkäufe</a>
                 @endcan
@@ -72,6 +75,9 @@
                     @endcan
                     @can('tickets.manage')
                         <a href="{{ route('administration.tickets') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.tickets') ? 'is-active' : '' }}">Tickets</a>
+                    @endcan
+                    @can('preparation.manage')
+                        <a href="{{ route('administration.preparation') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.preparation') ? 'is-active' : '' }}">Zubereitung</a>
                     @endcan
                     @can('sales.view')
                         <a href="{{ route('administration.sales') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.sales') ? 'is-active' : '' }}">Verkäufe</a>

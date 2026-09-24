@@ -9,6 +9,11 @@
             "label": "Tickets",
             "route": "waiter.tickets",
             "permission": "tickets.redeem"
+        },
+        {
+            "label": "Fertig",
+            "route": "waiter.preparation",
+            "permission": "preparation.access"
         }
     ]
 }

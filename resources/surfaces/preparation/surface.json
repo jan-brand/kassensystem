@@ -1,0 +1,8 @@
+{
+    "name": "preparation",
+    "description": "Browser-Displays für Küche, Bar und weitere Zubereitungsstationen",
+    "prefix": "preparation",
+    "domain": null,
+    "middleware": ["web"],
+    "layout": "preparation"
+}

@@ -18,6 +18,10 @@
             @can('tickets.redeem')
                 <a href="{{ route('waiter.tickets') }}" wire:navigate class="rounded-xl px-4 py-2 text-sm font-black {{ request()->routeIs('waiter.tickets') ? 'bg-white text-black' : 'bg-white/5 text-white' }}">Tickets</a>
             @endcan
+            @can('preparation.access')
+                <a href="{{ route('waiter.preparation') }}" wire:navigate class="rounded-xl px-4 py-2 text-sm font-black {{ request()->routeIs('waiter.preparation') ? 'bg-white text-black' : 'bg-white/5 text-white' }}">Fertig</a>
+                <a href="{{ route('preparation.display') }}" class="rounded-xl bg-white/5 px-4 py-2 text-sm font-black text-white">Stationen</a>
+            @endcan
         </div>
     </nav>
     {{ $slot }}

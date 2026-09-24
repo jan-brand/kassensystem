@@ -16,6 +16,8 @@ enum Permission: string
     case HospitalityConfigurationManage = 'hospitality.configuration.manage';
     case TicketsRedeem = 'tickets.redeem';
     case TicketsManage = 'tickets.manage';
+    case PreparationAccess = 'preparation.access';
+    case PreparationManage = 'preparation.manage';
 
     case AdministrationAccess = 'administration.access';
     case CatalogManage = 'catalog.manage';
