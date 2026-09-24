@@ -2,6 +2,7 @@
 
 namespace App\Modules\Sales\Models;
 
+use App\Modules\Identity\Models\User;
 use App\Modules\Sales\Enums\PaymentMethod;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,9 +16,12 @@ use LogicException;
  * @property int $amount_cents
  * @property int $received_cents
  * @property int $change_cents
+ * @property int|null $confirmed_by_user_id
+ * @property string|null $provider_reference
  * @property Carbon $completed_at
  * @property Carbon $created_at
  * @property-read Sale $sale
+ * @property-read User|null $confirmedBy
  */
 final class Payment extends Model
 {
@@ -53,5 +57,11 @@ final class Payment extends Model
     public function sale(): BelongsTo
     {
         return $this->belongsTo(Sale::class);
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function confirmedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by_user_id');
     }
 }

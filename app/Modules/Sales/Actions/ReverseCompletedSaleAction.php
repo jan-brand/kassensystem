@@ -10,6 +10,7 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Identity\Services\AuthorizationService;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Enums\SaleStatus;
+use App\Modules\Sales\Models\Payment;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleItem;
 use App\Modules\Sales\Models\SaleReversal;
@@ -40,7 +41,7 @@ final class ReverseCompletedSaleAction
 
         return DB::transaction(function () use ($sale, $actor, $reason): SaleReversal {
             $locked = Sale::query()
-                ->with(['items', 'payment'])
+                ->with(['items', 'payments'])
                 ->lockForUpdate()
                 ->findOrFail($sale->id);
 
@@ -66,21 +67,30 @@ final class ReverseCompletedSaleAction
                 );
             }
 
-            $payment = $locked->payment;
-            $paymentMethod = $payment?->method;
-            $cashRefundCents = 0;
+            $payments = $locked->payments;
+            $cashRefundCents = (int) $payments
+                ->where('method', PaymentMethod::Cash)
+                ->sum('amount_cents');
             $cashSession = null;
 
-            if ($locked->total_cents > 0 && $payment === null) {
+            if ($locked->total_cents > 0 && $payments->isEmpty()) {
                 throw new LogicException('Der abgeschlossene Verkauf hat keine erwartete Zahlung.');
             }
 
-            if ($payment !== null && $payment->amount_cents !== $locked->total_cents) {
+            if ((int) $payments->sum('amount_cents') !== $locked->total_cents) {
                 throw new LogicException('Zahlungsbetrag und Verkaufssumme stimmen nicht überein.');
             }
 
-            if ($paymentMethod === PaymentMethod::Cash && $locked->total_cents > 0) {
-                $cashRefundCents = $locked->total_cents;
+            $paymentMethods = $payments
+                ->map(static fn (Payment $payment): PaymentMethod => $payment->method)
+                ->unique(static fn (PaymentMethod $method): string => $method->value)
+                ->values();
+            $singlePaymentMethod = $paymentMethods->first();
+            $paymentMethod = $paymentMethods->count() === 1 && $singlePaymentMethod instanceof PaymentMethod
+                ? $singlePaymentMethod
+                : null;
+
+            if ($cashRefundCents > 0) {
                 $cashSession = CashSession::query()
                     ->where('register_id', $locked->register_id)
                     ->where('status', CashSessionStatus::Open->value)
@@ -128,6 +138,9 @@ final class ReverseCompletedSaleAction
                     'reason' => $reason,
                     'amount_cents' => $locked->total_cents,
                     'payment_method' => $paymentMethod?->value,
+                    'payment_methods' => $paymentMethods
+                        ->map(static fn (PaymentMethod $method): string => $method->value)
+                        ->all(),
                     'cash_refund_cents' => $cashRefundCents,
                     'cash_session_id' => $cashSession?->id,
                 ],

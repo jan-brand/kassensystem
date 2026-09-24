@@ -22,3 +22,10 @@ Das v1-Payment zu einem Ledger erweitern und PayPal.me als einzige neue V2-Zahlu
 - [ ] PayPal veraendert keinen Bargeld-Sollbestand.
 - [ ] Manuelle PayPal-Bestaetigung ist auditiert.
 - [ ] Doppelbestaetigung erzeugt kein zweites Payment.
+
+## Implementierung V2-006
+- `payments` ist ein unveraenderliches Ledger mit mehreren Eintraegen pro Sale; der v1-Barzugriff bleibt kompatibel.
+- Sale-Abschluss validiert Payment-Summe und Sale-Summe in derselben Transaktion. Nur Baranteile veraendern den Bargeld-Sollbestand.
+- PayPal.me wird zentral in den Systemeinstellungen gepflegt. Der POS erzeugt einen betragsgebundenen QR-Code lokal ohne externen QR-Dienst.
+- Ein angezeigter PayPal.me-QR bucht nichts. Erst die ausdrueckliche Mitarbeiterbestaetigung erzeugt den Payment-Eintrag und ein Audit-Ereignis.
+- 0-Euro-Verkaeufe bleiben ohne Payment; PayPal-API/Webhooks bleiben ausserhalb von V2-006.

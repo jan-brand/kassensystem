@@ -1,6 +1,6 @@
 {
     "name": "Sales",
-    "description": "Warenkorb, Verkäufe, Positionen und Bargeldzahlungen",
-    "depends_on": ["Identity", "Catalog", "CashRegister", "Audit"],
+    "description": "Warenkorb, Verkäufe und unveränderliches Payment-Ledger mit Bar und PayPal.me",
+    "depends_on": ["Identity", "Catalog", "CashRegister", "Settings", "Audit"],
     "exports": []
 }

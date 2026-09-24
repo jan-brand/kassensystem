@@ -20,10 +20,14 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Sales\Actions\AddProductToCartAction;
 use App\Modules\Sales\Actions\ChangeSaleItemQuantityAction;
 use App\Modules\Sales\Actions\CompleteCashSaleAction;
+use App\Modules\Sales\Actions\CompletePaypalSaleAction;
 use App\Modules\Sales\Actions\DiscardOpenSaleAction;
+use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleItem;
 use App\Modules\Sales\Queries\GetOpenSaleForRegisterQuery;
+use App\Modules\Sales\Services\PaypalMeLinkService;
+use App\Modules\Sales\Services\QrCodeSvgService;
 use App\Modules\Settings\Queries\GetSystemSettingsQuery;
 use App\Support\Money;
 use App\Surfaces\Pos\Actions\StartRegisterClosingAction;
@@ -53,6 +57,8 @@ final class RegisterScreen extends Component
 
     public bool $paymentOpen = false;
 
+    public string $paymentMethod = 'cash';
+
     public bool $mobileCartOpen = false;
 
     public bool $cashMenuOpen = false;
@@ -76,6 +82,8 @@ final class RegisterScreen extends Component
     public ?int $lastSaleTotalCents = null;
 
     public ?int $lastChangeCents = null;
+
+    public ?string $lastPaymentMethod = null;
 
     public function boot(): void
     {
@@ -317,6 +325,7 @@ final class RegisterScreen extends Component
 
             $this->mobileCartOpen = false;
             $this->paymentOpen = true;
+            $this->paymentMethod = PaymentMethod::Cash->value;
             $this->receivedAmount = '';
         } catch (Throwable $exception) {
             $this->screenError = $this->friendlyMessage($exception);
@@ -326,6 +335,38 @@ final class RegisterScreen extends Component
     public function setReceivedAmount(int $cents): void
     {
         $this->receivedAmount = Money::decimal($cents);
+    }
+
+    public function selectPaymentMethod(string $method): void
+    {
+        $this->clearMessages();
+
+        try {
+            $paymentMethod = PaymentMethod::tryFrom($method);
+
+            if (! $paymentMethod instanceof PaymentMethod) {
+                throw new LogicException('Unbekannte Zahlungsart.');
+            }
+
+            if ($paymentMethod === PaymentMethod::Paypal) {
+                $sale = $this->saleForCurrentCashier();
+                $handle = app(PaypalMeLinkService::class)->normalizeHandle(
+                    app(GetSystemSettingsQuery::class)->execute()?->paypal_me_handle,
+                );
+
+                if ($sale === null || $sale->total_cents <= 0) {
+                    throw new LogicException('Für diesen Verkauf ist keine PayPal.me-Zahlung erforderlich.');
+                }
+
+                if ($handle === null) {
+                    throw new LogicException('PayPal.me ist nicht konfiguriert.');
+                }
+            }
+
+            $this->paymentMethod = $paymentMethod->value;
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
     }
 
     public function completeSale(CompleteCashSaleAction $completeSale): void
@@ -347,13 +388,31 @@ final class RegisterScreen extends Component
 
             $completed = $completeSale->execute($sale, $receivedCents);
 
-            $this->lastSaleNumber = $completed->number;
-            $this->lastSaleTotalCents = $completed->total_cents;
-            $this->lastChangeCents = $completed->payment->change_cents ?? 0;
-            $this->mobileCartOpen = false;
-            $this->paymentOpen = false;
-            $this->receivedAmount = '';
-            $this->notice = 'Verkauf abgeschlossen.';
+            $this->rememberCompletedSale(
+                $completed,
+                $completed->total_cents > 0 ? PaymentMethod::Cash : null,
+            );
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
+    public function completePaypalSale(CompletePaypalSaleAction $completePaypalSale): void
+    {
+        Gate::authorize(Permission::SalesCreate->value);
+
+        $this->clearMessages();
+
+        try {
+            $sale = $this->saleForCurrentCashier();
+
+            if ($sale === null) {
+                throw new LogicException('Es gibt keinen offenen Verkauf.');
+            }
+
+            $completed = $completePaypalSale->execute($sale, $this->currentUser());
+
+            $this->rememberCompletedSale($completed, PaymentMethod::Paypal);
         } catch (Throwable $exception) {
             $this->screenError = $this->friendlyMessage($exception);
         }
@@ -375,6 +434,7 @@ final class RegisterScreen extends Component
             $discard->execute($sale, $this->currentUser());
             $this->mobileCartOpen = false;
             $this->paymentOpen = false;
+            $this->paymentMethod = PaymentMethod::Cash->value;
             $this->receivedAmount = '';
             $this->notice = 'Warenkorb wurde verworfen.';
         } catch (Throwable $exception) {
@@ -424,6 +484,26 @@ final class RegisterScreen extends Component
         $cartItemCount = $sale !== null
             ? (int) $sale->items()->sum('quantity')
             : 0;
+        $paypalPaymentUrl = null;
+        $paypalQrSvg = null;
+
+        if ($this->paymentOpen && $sale !== null && $sale->total_cents > 0) {
+            try {
+                $paypalLinks = app(PaypalMeLinkService::class);
+                $paypalHandle = $paypalLinks->normalizeHandle($settings?->paypal_me_handle);
+
+                if ($paypalHandle !== null) {
+                    $paypalPaymentUrl = $paypalLinks->paymentUrl(
+                        $paypalHandle,
+                        $sale->total_cents,
+                        (string) config('kassensystem.currency', 'EUR'),
+                    );
+                    $paypalQrSvg = app(QrCodeSvgService::class)->render($paypalPaymentUrl);
+                }
+            } catch (InvalidArgumentException $exception) {
+                report($exception);
+            }
+        }
 
         $products = $catalog
             ->when(
@@ -457,6 +537,8 @@ final class RegisterScreen extends Component
             'closingDifferenceCents' => $closingDifferenceCents,
             'cartItemCount' => $cartItemCount,
             'foreignSale' => $sale !== null && $sale->cashier_id !== $user->id,
+            'paypalPaymentUrl' => $paypalPaymentUrl,
+            'paypalQrSvg' => $paypalQrSvg,
             'currency' => (string) config('kassensystem.currency', 'EUR'),
         ]);
     }
@@ -543,6 +625,21 @@ final class RegisterScreen extends Component
         return $sale;
     }
 
+    private function rememberCompletedSale(Sale $sale, ?PaymentMethod $method): void
+    {
+        $this->lastSaleNumber = $sale->number;
+        $this->lastSaleTotalCents = $sale->total_cents;
+        $this->lastChangeCents = $method === PaymentMethod::Cash
+            ? ($sale->payment?->change_cents ?? 0)
+            : 0;
+        $this->lastPaymentMethod = $method?->value;
+        $this->mobileCartOpen = false;
+        $this->paymentOpen = false;
+        $this->paymentMethod = PaymentMethod::Cash->value;
+        $this->receivedAmount = '';
+        $this->notice = 'Verkauf abgeschlossen.';
+    }
+
     private function clearMessages(): void
     {
         $this->notice = null;
@@ -550,6 +647,7 @@ final class RegisterScreen extends Component
         $this->lastSaleNumber = null;
         $this->lastSaleTotalCents = null;
         $this->lastChangeCents = null;
+        $this->lastPaymentMethod = null;
     }
 
     private function friendlyMessage(Throwable $exception): string

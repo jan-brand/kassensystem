@@ -1,4 +1,7 @@
-@php use App\Support\Money; @endphp
+@php
+    use App\Modules\Sales\Enums\PaymentMethod;
+    use App\Support\Money;
+@endphp
 <main class="admin-page admin-page--dense space-y-6">
     <style>
         @media print {
@@ -163,12 +166,21 @@
                             <span>{{ Money::format((int) $selectedSale->total_cents, $currency) }}</span>
                         </div>
 
-                        @if($selectedSale->payment)
-                            <dl class="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-dashed border-slate-300 pt-4 text-slate-600">
-                                <dt>Zahlungsart</dt><dd class="text-right font-bold text-slate-900">Bar</dd>
-                                <dt>Gegeben</dt><dd class="text-right font-bold text-slate-900">{{ Money::format((int) $selectedSale->payment->received_cents, $currency) }}</dd>
-                                <dt>Rückgeld</dt><dd class="text-right font-bold text-slate-900">{{ Money::format((int) $selectedSale->payment->change_cents, $currency) }}</dd>
-                            </dl>
+                        @if($selectedSale->payments->isNotEmpty())
+                            <div class="space-y-3 border-t border-dashed border-slate-300 pt-4">
+                                @foreach($selectedSale->payments as $payment)
+                                    <dl class="grid grid-cols-2 gap-x-4 gap-y-2 rounded-2xl bg-slate-50 p-3 text-slate-600">
+                                        <dt>Zahlungsart</dt><dd class="text-right font-bold text-slate-900">{{ $payment->method->label() }}</dd>
+                                        <dt>Betrag</dt><dd class="text-right font-bold text-slate-900">{{ Money::format((int) $payment->amount_cents, $currency) }}</dd>
+                                        @if($payment->method === PaymentMethod::Cash)
+                                            <dt>Gegeben</dt><dd class="text-right font-bold text-slate-900">{{ Money::format((int) $payment->received_cents, $currency) }}</dd>
+                                            <dt>Rückgeld</dt><dd class="text-right font-bold text-slate-900">{{ Money::format((int) $payment->change_cents, $currency) }}</dd>
+                                        @elseif($payment->method === PaymentMethod::Paypal && $payment->confirmedBy)
+                                            <dt>Manuell bestätigt</dt><dd class="text-right font-bold text-slate-900">{{ $payment->confirmedBy->auditDisplayName() }}</dd>
+                                        @endif
+                                    </dl>
+                                @endforeach
+                            </div>
                         @else
                             <div class="rounded-2xl bg-slate-100 px-4 py-3 text-center font-bold text-slate-700">
                                 Kostenloser Verkauf · keine Zahlung
@@ -197,7 +209,7 @@
                             <div class="receipt-no-print rounded-2xl border border-red-200 bg-red-50 p-4">
                                 <h4 class="font-black text-red-950">Verkauf vollständig stornieren</h4>
                                 <p class="mt-1 text-xs leading-5 text-red-800">
-                                    Der Originalverkauf bleibt unverändert. Bei Barzahlung wird die Auszahlung der aktuell offenen Kassenschicht derselben Kasse belastet.
+                                    Der Originalverkauf bleibt unverändert. Nur Baranteile belasten die aktuell offene Kassenschicht derselben Kasse. Eine externe PayPal.me-Rückzahlung wird nicht automatisiert.
                                 </p>
 
                                 <label class="mt-4 block">

@@ -29,6 +29,7 @@ use LogicException;
  * @property-read CashSession $cashSession
  * @property-read User $cashier
  * @property-read Collection<int, SaleItem> $items
+ * @property-read Collection<int, Payment> $payments
  * @property-read Payment|null $payment
  * @property-read SaleReversal|null $reversal
  */
@@ -87,10 +88,20 @@ final class Sale extends Model
         return $this->hasMany(SaleItem::class);
     }
 
-    /** @return HasOne<Payment, $this> */
+    /** @return HasMany<Payment, $this> */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class)->orderBy('id');
+    }
+
+    /**
+     * Backward-compatible access to the first ledger entry for v1 callers.
+     *
+     * @return HasOne<Payment, $this>
+     */
     public function payment(): HasOne
     {
-        return $this->hasOne(Payment::class);
+        return $this->hasOne(Payment::class)->oldestOfMany();
     }
 
     /** @return HasOne<SaleReversal, $this> */

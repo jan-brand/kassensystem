@@ -31,6 +31,8 @@ final class SettingsScreen extends Component
 
     public bool $posShowShortNames = true;
 
+    public string $paypalMeHandle = '';
+
     public ?TemporaryUploadedFile $logoUpload = null;
 
     public ?string $existingLogoPath = null;
@@ -59,6 +61,7 @@ final class SettingsScreen extends Component
         $this->registerName = $register->name
             ?? (string) config('kassensystem.register_name', 'Kasse 1');
         $this->posShowShortNames = $settings->pos_show_short_names ?? true;
+        $this->paypalMeHandle = $settings?->paypal_me_handle ?? '';
         $this->existingLogoPath = $settings?->logo_path;
     }
 
@@ -73,6 +76,7 @@ final class SettingsScreen extends Component
             'cafeteriaName' => ['required', 'string', 'max:160'],
             'registerName' => ['required', 'string', 'max:120'],
             'posShowShortNames' => ['boolean'],
+            'paypalMeHandle' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9]*$/'],
             'logoUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'removeLogo' => ['boolean'],
         ], [
@@ -80,6 +84,8 @@ final class SettingsScreen extends Component
             'cafeteriaName.max' => 'Der Cafeteria-Name darf höchstens 160 Zeichen lang sein.',
             'registerName.required' => 'Bitte einen Namen für die Kasse eingeben.',
             'registerName.max' => 'Der Kassenname darf höchstens 120 Zeichen lang sein.',
+            'paypalMeHandle.max' => 'Der PayPal.me-Name darf höchstens 20 Zeichen lang sein.',
+            'paypalMeHandle.regex' => 'Der PayPal.me-Name darf nur Buchstaben und Zahlen enthalten.',
             'logoUpload.image' => 'Das Logo muss eine Bilddatei sein.',
             'logoUpload.mimes' => 'Erlaubt sind JPG, PNG und WebP.',
             'logoUpload.max' => 'Das Logo darf höchstens 2 MB groß sein.',
@@ -109,6 +115,7 @@ final class SettingsScreen extends Component
                     cafeteriaName: $validated['cafeteriaName'],
                     logoPath: $logoPath,
                     posShowShortNames: $validated['posShowShortNames'],
+                    paypalMeHandle: $validated['paypalMeHandle'],
                 );
 
                 $register = Register::query()

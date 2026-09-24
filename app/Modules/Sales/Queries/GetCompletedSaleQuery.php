@@ -15,6 +15,7 @@ final class GetCompletedSaleQuery
                 'register',
                 'cashSession',
                 'items',
+                'payments.confirmedBy',
                 'payment',
                 'reversal.actor',
                 'reversal.cashSession',

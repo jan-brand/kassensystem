@@ -571,47 +571,101 @@
             <div class="pos-dialog-card" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom));">
                 <div class="pos-dialog-header">
                     <div>
-                        <p class="pos-eyebrow">Barzahlung</p>
+                        <p class="pos-eyebrow">Zahlung</p>
                         <h2 class="pos-dialog-total">{{ Money::format($sale->total_cents, $currency) }}</h2>
                     </div>
                     <button type="button" wire:click="$set('paymentOpen', false)" class="pos-dialog-close">Schließen</button>
                 </div>
 
                 @if ($sale->total_cents > 0)
-                    <div class="pos-dialog-field">
-                        <label for="receivedAmount" class="pos-field-label">Gegeben</label>
-                        <div class="pos-money-input">
-                            <input
-                                id="receivedAmount"
-                                type="text"
-                                inputmode="decimal"
-                                wire:model="receivedAmount"
-                                placeholder="0,00"
-                                autocomplete="off"
-                                class="pos-money-input__control"
+                    <div class="mt-5 grid gap-2 {{ $paypalPaymentUrl ? 'grid-cols-2' : 'grid-cols-1' }}">
+                        <button
+                            type="button"
+                            wire:click="selectPaymentMethod('cash')"
+                            class="min-h-12 rounded-2xl border px-4 py-3 text-sm font-black {{ $paymentMethod === 'cash' ? 'border-slate-950 bg-slate-950 text-white' : 'border-slate-300 bg-white text-slate-900' }}"
+                        >
+                            Bar
+                        </button>
+                        @if ($paypalPaymentUrl)
+                            <button
+                                type="button"
+                                wire:click="selectPaymentMethod('paypal')"
+                                class="min-h-12 rounded-2xl border px-4 py-3 text-sm font-black {{ $paymentMethod === 'paypal' ? 'border-blue-700 bg-blue-700 text-white' : 'border-slate-300 bg-white text-slate-900' }}"
                             >
-                            <span class="pos-money-input__currency">€</span>
-                        </div>
+                                PayPal.me
+                            </button>
+                        @endif
                     </div>
 
-                    <div class="pos-quick-amounts">
-                        <button type="button" wire:click="setReceivedAmount({{ $sale->total_cents }})" class="pos-quick-amount">Passend</button>
-                        @foreach ([500, 1000, 2000] as $quickAmount)
-                            <button type="button" wire:click="setReceivedAmount({{ $quickAmount }})" class="pos-quick-amount">
-                                {{ Money::format($quickAmount, $currency) }}
+                    @if ($paymentMethod === 'paypal' && $paypalPaymentUrl && $paypalQrSvg)
+                        <div class="mt-5 space-y-4">
+                            <div class="mx-auto w-full max-w-[280px] rounded-3xl bg-white p-4 ring-1 ring-slate-200" data-testid="paypal-payment-qr">
+                                {!! $paypalQrSvg !!}
+                            </div>
+
+                            <div class="rounded-2xl bg-slate-50 p-4 text-center">
+                                <p class="text-xs font-bold uppercase tracking-wide text-slate-500">PayPal.me-Zahlungslink</p>
+                                <a href="{{ $paypalPaymentUrl }}" target="_blank" rel="noopener noreferrer" class="mt-2 block break-all font-mono text-sm font-black text-blue-700 underline underline-offset-4">
+                                    {{ $paypalPaymentUrl }}
+                                </a>
+                            </div>
+
+                            <div class="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950">
+                                QR anzeigen bedeutet noch nicht bezahlt. Erst nach Sichtprüfung des Zahlungseingangs manuell bestätigen.
+                            </div>
+
+                            <button
+                                type="button"
+                                wire:click="completePaypalSale"
+                                wire:confirm="PayPal-Zahlung wurde außerhalb des Kassensystems geprüft und ist wirklich eingegangen?"
+                                wire:loading.attr="disabled"
+                                class="pos-dialog-action touch-manipulation bg-blue-700 disabled:cursor-wait disabled:opacity-60"
+                            >
+                                <span wire:loading.remove wire:target="completePaypalSale">PayPal-Zahlung nach Sichtprüfung bestätigen</span>
+                                <span wire:loading wire:target="completePaypalSale">Wird bestätigt …</span>
                             </button>
-                        @endforeach
-                    </div>
+                        </div>
+                    @else
+                        <div class="pos-dialog-field">
+                            <label for="receivedAmount" class="pos-field-label">Gegeben</label>
+                            <div class="pos-money-input">
+                                <input
+                                    id="receivedAmount"
+                                    type="text"
+                                    inputmode="decimal"
+                                    wire:model="receivedAmount"
+                                    placeholder="0,00"
+                                    autocomplete="off"
+                                    class="pos-money-input__control"
+                                >
+                                <span class="pos-money-input__currency">€</span>
+                            </div>
+                        </div>
+
+                        <div class="pos-quick-amounts">
+                            <button type="button" wire:click="setReceivedAmount({{ $sale->total_cents }})" class="pos-quick-amount">Passend</button>
+                            @foreach ([500, 1000, 2000] as $quickAmount)
+                                <button type="button" wire:click="setReceivedAmount({{ $quickAmount }})" class="pos-quick-amount">
+                                    {{ Money::format($quickAmount, $currency) }}
+                                </button>
+                            @endforeach
+                        </div>
+
+                        <button type="button" wire:click="completeSale" wire:loading.attr="disabled" class="pos-dialog-action touch-manipulation disabled:cursor-wait disabled:opacity-60">
+                            <span wire:loading.remove wire:target="completeSale">Barverkauf abschließen</span>
+                            <span wire:loading wire:target="completeSale">Wird abgeschlossen …</span>
+                        </button>
+                    @endif
                 @else
                     <div class="pos-zero-sale">
-                        Dieser Verkauf ist kostenlos und wird trotzdem vollständig protokolliert.
+                        Dieser Verkauf ist kostenlos und wird trotzdem vollständig protokolliert. Es wird kein Payment erfunden.
                     </div>
-                @endif
 
-                <button type="button" wire:click="completeSale" wire:loading.attr="disabled" class="pos-dialog-action touch-manipulation disabled:cursor-wait disabled:opacity-60">
-                    <span wire:loading.remove wire:target="completeSale">Verkauf abschließen</span>
-                    <span wire:loading wire:target="completeSale">Wird abgeschlossen …</span>
-                </button>
+                    <button type="button" wire:click="completeSale" wire:loading.attr="disabled" class="pos-dialog-action touch-manipulation disabled:cursor-wait disabled:opacity-60">
+                        <span wire:loading.remove wire:target="completeSale">Kostenlosen Verkauf abschließen</span>
+                        <span wire:loading wire:target="completeSale">Wird abgeschlossen …</span>
+                    </button>
+                @endif
             </div>
         </div>
     @endif
@@ -628,8 +682,16 @@
                         <p class="pos-sale-metric__value">{{ Money::format($lastSaleTotalCents ?? 0, $currency) }}</p>
                     </div>
                     <div class="pos-sale-metric pos-sale-metric--change">
-                        <p class="pos-sale-metric__label">Rückgeld</p>
-                        <p class="pos-sale-metric__value">{{ Money::format($lastChangeCents ?? 0, $currency) }}</p>
+                        @if ($lastPaymentMethod === 'cash')
+                            <p class="pos-sale-metric__label">Rückgeld</p>
+                            <p class="pos-sale-metric__value">{{ Money::format($lastChangeCents ?? 0, $currency) }}</p>
+                        @elseif ($lastPaymentMethod === 'paypal')
+                            <p class="pos-sale-metric__label">Zahlungsart</p>
+                            <p class="pos-sale-metric__value">PayPal.me</p>
+                        @else
+                            <p class="pos-sale-metric__label">Zahlung</p>
+                            <p class="pos-sale-metric__value">Kostenlos</p>
+                        @endif
                     </div>
                 </div>
 

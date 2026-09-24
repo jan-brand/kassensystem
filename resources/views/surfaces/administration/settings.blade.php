@@ -66,6 +66,32 @@
             </section>
 
             <section class="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
+                <h3 class="text-lg font-black">PayPal.me</h3>
+                <p class="mt-1 text-sm text-slate-500">Optionales Standortkonto für manuell bestätigte PayPal.me-Zahlungen im POS.</p>
+
+                <div class="mt-5">
+                    <label for="paypalMeHandle" class="mb-2 block text-sm font-bold">PayPal.me-Name</label>
+                    <div class="flex overflow-hidden rounded-2xl border border-slate-300 bg-white focus-within:border-slate-950 focus-within:ring-4 focus-within:ring-slate-950/10">
+                        <span class="flex items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-500">paypal.me/</span>
+                        <input
+                            id="paypalMeHandle"
+                            wire:model="paypalMeHandle"
+                            maxlength="20"
+                            autocomplete="off"
+                            placeholder="schoolcafe"
+                            class="min-w-0 flex-1 border-0 px-4 py-3 outline-none"
+                        >
+                    </div>
+                    @error('paypalMeHandle')<p class="mt-2 text-sm font-semibold text-red-700">{{ $message }}</p>@enderror
+                    <p class="mt-2 text-xs leading-5 text-slate-500">Nur den Namen hinter paypal.me/ eintragen, keine vollständige URL.</p>
+                </div>
+
+                <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                    Der POS erzeugt daraus einen QR-Code mit dem exakten Betrag. Das Anzeigen des QR-Codes ist noch keine Zahlung; Mitarbeiter bestätigen erst nach Sichtprüfung.
+                </div>
+            </section>
+
+            <section class="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
                 <h3 class="text-lg font-black">Logo</h3>
                 <p class="mt-1 text-sm text-slate-500">Optional. JPG, PNG oder WebP, maximal 2 MB.</p>
 

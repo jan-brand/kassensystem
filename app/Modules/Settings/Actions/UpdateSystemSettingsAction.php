@@ -22,11 +22,13 @@ final class UpdateSystemSettingsAction
         string $cafeteriaName,
         ?string $logoPath = null,
         bool $posShowShortNames = true,
+        ?string $paypalMeHandle = null,
     ): SystemSetting {
         $this->authorization->authorize($actor, Permission::SettingsManage);
 
         $cafeteriaName = trim($cafeteriaName);
         $logoPath = $logoPath !== null ? trim($logoPath) : null;
+        $paypalMeHandle = $paypalMeHandle !== null ? trim($paypalMeHandle) : null;
 
         if ($cafeteriaName === '') {
             throw new InvalidArgumentException('Cafeteria name must not be empty.');
@@ -40,17 +42,33 @@ final class UpdateSystemSettingsAction
             throw new InvalidArgumentException('Logo path must not be longer than 255 characters.');
         }
 
+        if ($paypalMeHandle !== null && $paypalMeHandle !== '' && ! preg_match('/^[A-Za-z0-9]{1,20}$/D', $paypalMeHandle)) {
+            throw new InvalidArgumentException(
+                'Der PayPal.me-Name darf nur Buchstaben und Zahlen enthalten und höchstens 20 Zeichen lang sein.',
+            );
+        }
+
         if ($logoPath === '') {
             $logoPath = null;
         }
 
-        return DB::transaction(function () use ($actor, $cafeteriaName, $logoPath, $posShowShortNames): SystemSetting {
+        return DB::transaction(function () use (
+            $actor,
+            $cafeteriaName,
+            $logoPath,
+            $posShowShortNames,
+            $paypalMeHandle,
+        ): SystemSetting {
             $settings = SystemSetting::query()->lockForUpdate()->find(1);
             $before = $settings?->only([
                 'cafeteria_name',
                 'logo_path',
                 'pos_show_short_names',
+                'paypal_me_handle',
             ]) ?? [];
+            $effectivePaypalMeHandle = $paypalMeHandle === null
+                ? $settings?->paypal_me_handle
+                : ($paypalMeHandle === '' ? null : $paypalMeHandle);
 
             if ($settings === null) {
                 $settings = new SystemSetting;
@@ -61,6 +79,7 @@ final class UpdateSystemSettingsAction
                 'cafeteria_name' => $cafeteriaName,
                 'logo_path' => $logoPath,
                 'pos_show_short_names' => $posShowShortNames,
+                'paypal_me_handle' => $effectivePaypalMeHandle,
                 'updated_by_user_id' => $actor->id,
             ]);
             $settings->save();
@@ -77,6 +96,7 @@ final class UpdateSystemSettingsAction
                     'cafeteria_name',
                     'logo_path',
                     'pos_show_short_names',
+                    'paypal_me_handle',
                 ]),
             );
 
