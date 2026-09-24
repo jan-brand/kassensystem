@@ -1,0 +1,6 @@
+{
+    "name": "Hospitality",
+    "description": "Gastro-Vorgaenge, Bereiche, Tische, Menues und Bestell-Snapshots",
+    "depends_on": ["Identity", "Catalog", "Audit"],
+    "exports": []
+}
