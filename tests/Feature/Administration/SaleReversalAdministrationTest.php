@@ -4,6 +4,7 @@ use App\Modules\CashRegister\Actions\OpenCashSessionAction;
 use App\Modules\CashRegister\Models\Register;
 use App\Modules\Catalog\Actions\CreateCategoryAction;
 use App\Modules\Catalog\Actions\CreateProductAction;
+use App\Modules\Catalog\Actions\SetProductConsumableAction;
 use App\Modules\Identity\Actions\CreateUserAction;
 use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Sales\Actions\AddProductToSaleAction;
@@ -38,6 +39,7 @@ it('lets a manager reverse a sale from the administration receipt', function () 
     $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 1000);
     $category = app(CreateCategoryAction::class)->execute('Snacks');
     $product = app(CreateProductAction::class)->execute($category, 'Brezel', 'Brezel', 250);
+    app(SetProductConsumableAction::class)->execute($product, false);
 
     $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
     $sale = app(AddProductToSaleAction::class)->execute($sale, $product);
@@ -81,6 +83,7 @@ it('validates the reversal reason in the administration workflow', function () {
     $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 1000);
     $category = app(CreateCategoryAction::class)->execute('Snacks');
     $product = app(CreateProductAction::class)->execute($category, 'Brezel', 'Brezel', 250);
+    app(SetProductConsumableAction::class)->execute($product, false);
 
     $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
     $sale = app(AddProductToSaleAction::class)->execute($sale, $product);

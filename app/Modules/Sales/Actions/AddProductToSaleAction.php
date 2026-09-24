@@ -45,6 +45,7 @@ final class AddProductToSaleAction
                     'product_id' => $product->id,
                     'product_name' => $product->name,
                     'unit_price_cents' => $product->price_cents,
+                    'is_consumable' => $product->is_consumable,
                     'quantity' => 1,
                     'total_cents' => $product->price_cents,
                 ]);

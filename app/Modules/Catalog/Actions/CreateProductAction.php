@@ -36,6 +36,7 @@ final class CreateProductAction
             'name' => $name,
             'short_name' => $shortName,
             'price_cents' => $priceCents,
+            'is_consumable' => true,
             'active' => true,
             'sort_order' => $sortOrder,
         ]);
@@ -52,6 +53,7 @@ final class CreateProductAction
                 'name',
                 'short_name',
                 'price_cents',
+                'is_consumable',
                 'active',
                 'sort_order',
             ]),

@@ -5,6 +5,7 @@ namespace App\Surfaces\Administration\Livewire;
 use App\Modules\Catalog\Actions\CreateCategoryAction;
 use App\Modules\Catalog\Actions\CreateProductAction;
 use App\Modules\Catalog\Actions\SetProductActiveAction;
+use App\Modules\Catalog\Actions\SetProductConsumableAction;
 use App\Modules\Catalog\Actions\UpdateCategoryAction;
 use App\Modules\Catalog\Actions\UpdateProductAction;
 use App\Modules\Catalog\Models\Category;
@@ -185,6 +186,21 @@ final class CatalogScreen extends Component
             $product = Product::query()->findOrFail($id);
             $action->execute($product, ! $product->active, $this->currentUser());
             $this->notice = 'Produktstatus wurde geändert.';
+        } catch (Throwable $e) {
+            $this->screenError = $this->message($e);
+        }
+    }
+
+    public function toggleProductConsumable(int $id, SetProductConsumableAction $action): void
+    {
+        $this->clearMessages();
+
+        try {
+            $product = Product::query()->findOrFail($id);
+            $product = $action->execute($product, ! $product->is_consumable, $this->currentUser());
+            $this->notice = $product->is_consumable
+                ? 'Produkt ist als Verzehrartikel markiert.'
+                : 'Produkt ist als Nicht-Verzehrartikel markiert.';
         } catch (Throwable $e) {
             $this->screenError = $this->message($e);
         }

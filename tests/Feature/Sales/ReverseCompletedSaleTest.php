@@ -8,6 +8,7 @@ use App\Modules\CashRegister\Actions\StartCashSessionClosingAction;
 use App\Modules\CashRegister\Models\Register;
 use App\Modules\Catalog\Actions\CreateCategoryAction;
 use App\Modules\Catalog\Actions\CreateProductAction;
+use App\Modules\Catalog\Actions\SetProductConsumableAction;
 use App\Modules\Identity\Actions\CreateUserAction;
 use App\Modules\Identity\Enums\UserRole;
 use App\Modules\Sales\Actions\AddProductToSaleAction;
@@ -44,6 +45,7 @@ it('creates one immutable counterbooking and reduces expected cash exactly once'
     $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 1000);
     $category = app(CreateCategoryAction::class)->execute('Snacks');
     $product = app(CreateProductAction::class)->execute($category, 'Brezel', 'Brezel', 250);
+    app(SetProductConsumableAction::class)->execute($product, false);
 
     $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
     $sale = app(AddProductToSaleAction::class)->execute($sale, $product);
@@ -114,6 +116,7 @@ it('allows a zero euro reversal without inventing a payment or open cash session
     $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 0);
     $category = app(CreateCategoryAction::class)->execute('Kostenlos');
     $product = app(CreateProductAction::class)->execute($category, 'Wasser gratis', 'Wasser', 0);
+    app(SetProductConsumableAction::class)->execute($product, false);
 
     $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
     $sale = app(AddProductToSaleAction::class)->execute($sale, $product);
@@ -157,6 +160,7 @@ it('requires an open drawer with enough expected cash for a cash reversal', func
     $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 0);
     $category = app(CreateCategoryAction::class)->execute('Snacks');
     $product = app(CreateProductAction::class)->execute($category, 'Snack', 'Snack', 250);
+    app(SetProductConsumableAction::class)->execute($product, false);
 
     $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
     $sale = app(AddProductToSaleAction::class)->execute($sale, $product);
@@ -212,6 +216,7 @@ it('does not allow cashiers to reverse completed sales', function () {
     $session = app(OpenCashSessionAction::class)->execute($register, $cashier, 1000);
     $category = app(CreateCategoryAction::class)->execute('Snacks');
     $product = app(CreateProductAction::class)->execute($category, 'Snack', 'Snack', 250);
+    app(SetProductConsumableAction::class)->execute($product, false);
 
     $sale = app(StartSaleAction::class)->execute($register, $session, $cashier);
     $sale = app(AddProductToSaleAction::class)->execute($sale, $product);

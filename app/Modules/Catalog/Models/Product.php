@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $name
  * @property string $short_name
  * @property int $price_cents
+ * @property bool $is_consumable
  * @property bool $active
  * @property int $sort_order
  * @property-read Category $category
@@ -24,6 +25,7 @@ final class Product extends Model
     {
         return [
             'price_cents' => 'integer',
+            'is_consumable' => 'boolean',
             'active' => 'boolean',
         ];
     }

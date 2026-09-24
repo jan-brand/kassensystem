@@ -57,8 +57,15 @@
 </div>
 @else
 <div class="flex flex-wrap items-center justify-between gap-3">
-<div><p class="font-black">{{ $product->name }} @if(!$product->active)<span class="text-sm text-slate-400">(inaktiv)</span>@endif</p><p class="text-sm text-slate-500">{{ $product->short_name }} · {{ Money::format($product->price_cents, $currency) }}</p></div>
-<div class="flex gap-2"><button wire:click="startEditProduct({{ $product->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold">Bearbeiten</button><button wire:click="toggleProduct({{ $product->id }})" class="rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold">{{ $product->active ? 'Deaktivieren' : 'Aktivieren' }}</button></div>
+<div>
+<p class="font-black">{{ $product->name }} @if(!$product->active)<span class="text-sm text-slate-400">(inaktiv)</span>@endif</p>
+<p class="text-sm text-slate-500">{{ $product->short_name }} · {{ Money::format($product->price_cents, $currency) }} · {{ $product->is_consumable ? 'Verzehrartikel' : 'Nicht-Verzehrartikel' }}</p>
+</div>
+<div class="flex flex-wrap gap-2">
+<button wire:click="startEditProduct({{ $product->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold">Bearbeiten</button>
+<button wire:click="toggleProductConsumable({{ $product->id }})" class="rounded-xl border border-slate-300 px-3 py-2 text-sm font-bold">{{ $product->is_consumable ? 'Als Nicht-Verzehr markieren' : 'Als Verzehrartikel markieren' }}</button>
+<button wire:click="toggleProduct({{ $product->id }})" class="rounded-xl bg-slate-100 px-3 py-2 text-sm font-bold">{{ $product->active ? 'Deaktivieren' : 'Aktivieren' }}</button>
+</div>
 </div>
 @endif
 </div>

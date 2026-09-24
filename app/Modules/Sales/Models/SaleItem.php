@@ -14,6 +14,7 @@ use LogicException;
  * @property int $product_id
  * @property string $product_name
  * @property int $unit_price_cents
+ * @property bool $is_consumable
  * @property int $quantity
  * @property int $total_cents
  * @property-read Sale $sale
@@ -43,6 +44,7 @@ final class SaleItem extends Model
     {
         return [
             'unit_price_cents' => 'integer',
+            'is_consumable' => 'boolean',
             'quantity' => 'integer',
             'total_cents' => 'integer',
         ];

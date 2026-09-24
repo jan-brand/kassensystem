@@ -11,6 +11,7 @@ use App\Modules\Identity\Services\AuthorizationService;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Enums\SaleStatus;
 use App\Modules\Sales\Models\Sale;
+use App\Modules\Sales\Models\SaleItem;
 use App\Modules\Sales\Models\SaleReversal;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -39,7 +40,7 @@ final class ReverseCompletedSaleAction
 
         return DB::transaction(function () use ($sale, $actor, $reason): SaleReversal {
             $locked = Sale::query()
-                ->with('payment')
+                ->with(['items', 'payment'])
                 ->lockForUpdate()
                 ->findOrFail($sale->id);
 
@@ -53,6 +54,16 @@ final class ReverseCompletedSaleAction
 
             if ($existing instanceof SaleReversal) {
                 return $existing->load(['sale', 'actor', 'cashSession']);
+            }
+
+            $containsConsumables = $locked->items->contains(
+                static fn (SaleItem $item): bool => $item->is_consumable,
+            );
+
+            if ($containsConsumables) {
+                throw new LogicException(
+                    'Verkäufe mit Lebensmitteln oder Getränken können in V2 nicht vollständig storniert werden.',
+                );
             }
 
             $payment = $locked->payment;
