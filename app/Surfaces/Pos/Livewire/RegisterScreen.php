@@ -18,14 +18,18 @@ use App\Modules\Catalog\Queries\GetPosCatalogQuery;
 use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Models\User;
 use App\Modules\Sales\Actions\AddProductToCartAction;
+use App\Modules\Sales\Actions\ApplyManualDiscountToSaleItemAction;
 use App\Modules\Sales\Actions\ChangeSaleItemQuantityAction;
 use App\Modules\Sales\Actions\CompleteCashSaleAction;
 use App\Modules\Sales\Actions\CompletePaypalSaleAction;
 use App\Modules\Sales\Actions\DiscardOpenSaleAction;
+use App\Modules\Sales\Actions\RemoveSaleItemDiscountAction;
+use App\Modules\Sales\Enums\DiscountType;
 use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleItem;
 use App\Modules\Sales\Queries\GetOpenSaleForRegisterQuery;
+use App\Modules\Sales\Services\DiscountPriceCalculator;
 use App\Modules\Sales\Services\PaypalMeLinkService;
 use App\Modules\Sales\Services\QrCodeSvgService;
 use App\Modules\Settings\Queries\GetSystemSettingsQuery;
@@ -84,6 +88,12 @@ final class RegisterScreen extends Component
     public ?int $lastChangeCents = null;
 
     public ?string $lastPaymentMethod = null;
+
+    public ?int $discountItemId = null;
+
+    public string $discountType = 'percentage';
+
+    public string $discountValue = '10';
 
     public function boot(): void
     {
@@ -310,6 +320,122 @@ final class RegisterScreen extends Component
         $this->changeItemQuantity($itemId, -1, $changeQuantity);
     }
 
+    public function openDiscount(int $itemId, DiscountPriceCalculator $calculator): void
+    {
+        Gate::authorize(Permission::SalesDiscountsApply->value);
+
+        $this->clearMessages();
+
+        try {
+            $sale = $this->saleForCurrentCashier();
+
+            if ($sale === null) {
+                throw new LogicException('Es gibt keinen offenen Verkauf.');
+            }
+
+            $item = SaleItem::query()
+                ->where('sale_id', $sale->id)
+                ->findOrFail($itemId);
+
+            $this->discountItemId = $item->id;
+            $this->discountType = $item->discount_type instanceof DiscountType ? $item->discount_type->value : DiscountType::Percentage->value;
+
+            if ($item->discount_type === DiscountType::Percentage) {
+                $this->discountValue = $calculator->formatPercentageBasisPoints((int) ($item->discount_value ?? 0));
+            } elseif ($item->discount_type !== null) {
+                $this->discountValue = Money::decimal((int) ($item->discount_value ?? 0));
+            } else {
+                $this->discountValue = '10';
+            }
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
+    public function closeDiscount(): void
+    {
+        $this->discountItemId = null;
+        $this->discountType = DiscountType::Percentage->value;
+        $this->discountValue = '10';
+    }
+
+    public function applyManualDiscount(
+        ApplyManualDiscountToSaleItemAction $action,
+        DiscountPriceCalculator $calculator,
+    ): void {
+        Gate::authorize(Permission::SalesDiscountsApply->value);
+
+        $this->clearMessages();
+
+        try {
+            if ($this->discountItemId === null) {
+                throw new LogicException('Bitte zuerst eine Position auswählen.');
+            }
+
+            $sale = $this->saleForCurrentCashier();
+
+            if ($sale === null) {
+                throw new LogicException('Es gibt keinen offenen Verkauf.');
+            }
+
+            $type = DiscountType::tryFrom($this->discountType);
+
+            if (! $type instanceof DiscountType) {
+                throw new InvalidArgumentException('Unbekannte Rabattart.');
+            }
+
+            $value = $type === DiscountType::Percentage
+                ? $calculator->parsePercentageBasisPoints($this->discountValue)
+                : Money::parseCents($this->discountValue);
+
+            $item = SaleItem::query()
+                ->where('sale_id', $sale->id)
+                ->findOrFail($this->discountItemId);
+
+            $action->execute(
+                item: $item,
+                actor: $this->currentUser(),
+                type: $type,
+                value: $value,
+            );
+
+            $this->closeDiscount();
+            $this->notice = 'Manueller Rabatt wurde angewendet.';
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
+    public function removeDiscount(RemoveSaleItemDiscountAction $action): void
+    {
+        Gate::authorize(Permission::SalesDiscountsApply->value);
+
+        $this->clearMessages();
+
+        try {
+            if ($this->discountItemId === null) {
+                throw new LogicException('Bitte zuerst eine Position auswählen.');
+            }
+
+            $sale = $this->saleForCurrentCashier();
+
+            if ($sale === null) {
+                throw new LogicException('Es gibt keinen offenen Verkauf.');
+            }
+
+            $item = SaleItem::query()
+                ->where('sale_id', $sale->id)
+                ->findOrFail($this->discountItemId);
+
+            $action->execute($item, $this->currentUser());
+
+            $this->closeDiscount();
+            $this->notice = 'Rabatt wurde entfernt.';
+        } catch (Throwable $exception) {
+            $this->screenError = $this->friendlyMessage($exception);
+        }
+    }
+
     public function showPayment(): void
     {
         Gate::authorize(Permission::SalesCreate->value);
@@ -434,6 +560,7 @@ final class RegisterScreen extends Component
             $discard->execute($sale, $this->currentUser());
             $this->mobileCartOpen = false;
             $this->paymentOpen = false;
+            $this->closeDiscount();
             $this->paymentMethod = PaymentMethod::Cash->value;
             $this->receivedAmount = '';
             $this->notice = 'Warenkorb wurde verworfen.';
@@ -484,6 +611,14 @@ final class RegisterScreen extends Component
         $cartItemCount = $sale !== null
             ? (int) $sale->items()->sum('quantity')
             : 0;
+        $discountItem = null;
+
+        if ($sale !== null && $this->discountItemId !== null) {
+            $discountItem = $sale->items->first(
+                fn (SaleItem $item): bool => $item->id === $this->discountItemId,
+            );
+        }
+
         $paypalPaymentUrl = null;
         $paypalQrSvg = null;
 
@@ -536,6 +671,7 @@ final class RegisterScreen extends Component
             'recentMovements' => $recentMovements,
             'closingDifferenceCents' => $closingDifferenceCents,
             'cartItemCount' => $cartItemCount,
+            'discountItem' => $discountItem,
             'foreignSale' => $sale !== null && $sale->cashier_id !== $user->id,
             'paypalPaymentUrl' => $paypalPaymentUrl,
             'paypalQrSvg' => $paypalQrSvg,
@@ -635,6 +771,7 @@ final class RegisterScreen extends Component
         $this->lastPaymentMethod = $method?->value;
         $this->mobileCartOpen = false;
         $this->paymentOpen = false;
+        $this->closeDiscount();
         $this->paymentMethod = PaymentMethod::Cash->value;
         $this->receivedAmount = '';
         $this->notice = 'Verkauf abgeschlossen.';

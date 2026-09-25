@@ -15,6 +15,7 @@
         "preparation.manage",
         "reports.view",
         "sales.create",
+        "sales.discounts.apply",
         "sales.reverse",
         "sales.view",
         "settings.manage",

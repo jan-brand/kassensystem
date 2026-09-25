@@ -324,7 +324,20 @@
                                     <div wire:key="cart-item-desktop-{{ $item->id }}" class="pos-cart__row flex items-center gap-3 px-5 py-4">
                                         <div class="min-w-0 flex-1">
                                             <p class="truncate font-bold">{{ $item->product_name }}</p>
-                                            <p class="pos-cart__unit text-sm text-slate-500">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
+                                            @if ($item->discount_type)
+                                                <p class="pos-cart__unit text-sm text-slate-500">
+                                                    <span class="line-through">{{ Money::format($item->original_unit_price_cents ?? $item->unit_price_cents, $currency) }}</span>
+                                                    <span class="ml-1 font-black text-emerald-700">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</span>
+                                                </p>
+                                                <p class="mt-1 text-xs font-bold text-emerald-700">{{ $item->discount_label }}</p>
+                                            @else
+                                                <p class="pos-cart__unit text-sm text-slate-500">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
+                                            @endif
+                                            @can('sales.discounts.apply')
+                                                <button type="button" wire:click="openDiscount({{ $item->id }})" class="mt-1 text-xs font-black text-indigo-700 hover:underline">
+                                                    Rabatt {{ $item->discount_type ? 'ändern' : 'setzen' }}
+                                                </button>
+                                            @endcan
                                         </div>
                                         <div class="pos-quantity flex items-center rounded-xl bg-slate-100 p-1">
                                             <button type="button" wire:click="decreaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-10 w-10 touch-manipulation rounded-lg text-xl font-black hover:bg-white disabled:opacity-50">−</button>
@@ -421,7 +434,20 @@
                             <div wire:key="cart-item-mobile-{{ $item->id }}" class="pos-mobile-cart__row flex items-center gap-3 border-t px-4 py-4 first:border-t-0">
                                 <div class="min-w-0 flex-1">
                                     <p class="truncate font-bold">{{ $item->product_name }}</p>
-                                    <p class="pos-cart__unit text-sm">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
+                                    @if ($item->discount_type)
+                                        <p class="pos-cart__unit text-sm">
+                                            <span class="line-through">{{ Money::format($item->original_unit_price_cents ?? $item->unit_price_cents, $currency) }}</span>
+                                            <span class="ml-1 font-black">{{ Money::format($item->unit_price_cents, $currency) }}</span>
+                                        </p>
+                                        <p class="text-xs font-bold text-emerald-700">{{ $item->discount_label }}</p>
+                                    @else
+                                        <p class="pos-cart__unit text-sm">{{ Money::format($item->unit_price_cents, $currency) }} je Stück</p>
+                                    @endif
+                                    @can('sales.discounts.apply')
+                                        <button type="button" wire:click="openDiscount({{ $item->id }})" class="mt-1 text-xs font-black text-indigo-700">
+                                            Rabatt {{ $item->discount_type ? 'ändern' : 'setzen' }}
+                                        </button>
+                                    @endcan
                                 </div>
                                 <div class="pos-quantity flex shrink-0 items-center rounded-xl p-1">
                                     <button type="button" wire:click="decreaseItem({{ $item->id }})" wire:loading.attr="disabled" class="h-11 w-11 touch-manipulation rounded-lg text-xl font-black disabled:opacity-50">−</button>
@@ -454,6 +480,61 @@
                     </div>
                 </footer>
             </section>
+        </div>
+    @endif
+
+    @if ($discountItem)
+        <div class="pos-dialog-backdrop fixed inset-0 z-[60] flex items-end justify-center p-0 sm:items-center sm:p-4">
+            <div class="pos-dialog-card" style="padding-bottom: max(1.25rem, env(safe-area-inset-bottom));">
+                <div class="pos-dialog-header">
+                    <div>
+                        <p class="pos-eyebrow">Positionsrabatt</p>
+                        <h2 class="pos-dialog-title">{{ $discountItem->product_name }}</h2>
+                        <p class="mt-1 text-sm text-slate-500">
+                            Ausgangspreis: {{ Money::format($discountItem->original_unit_price_cents ?? $discountItem->unit_price_cents, $currency) }}
+                        </p>
+                    </div>
+                    <button type="button" wire:click="closeDiscount" class="pos-dialog-close">Schließen</button>
+                </div>
+
+                <form wire:submit="applyManualDiscount" class="mt-5 space-y-4">
+                    <label class="block space-y-1">
+                        <span class="pos-field-label">Rabattart</span>
+                        <select wire:model.live="discountType" class="pos-text-input">
+                            <option value="new_price">Neuer Endpreis</option>
+                            <option value="fixed_amount">Fester Rabattbetrag</option>
+                            <option value="percentage">Prozent</option>
+                        </select>
+                    </label>
+
+                    <label class="block space-y-1">
+                        <span class="pos-field-label">{{ $discountType === 'percentage' ? 'Prozent' : 'Betrag' }}</span>
+                        <input
+                            type="text"
+                            inputmode="decimal"
+                            wire:model="discountValue"
+                            class="pos-text-input"
+                            placeholder="{{ $discountType === 'percentage' ? '10' : '1,00' }}"
+                            autocomplete="off"
+                        >
+                    </label>
+
+                    <div class="rounded-2xl bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+                        Ein manueller Rabatt ersetzt ein vorhandenes Tagesangebot vollständig und wird immer vom Ausgangspreis berechnet.
+                    </div>
+
+                    <div class="grid gap-2 {{ $discountItem->discount_type ? 'grid-cols-2' : 'grid-cols-1' }}">
+                        @if ($discountItem->discount_type)
+                            <button type="button" wire:click="removeDiscount" class="pos-secondary-action">
+                                Rabatt entfernen
+                            </button>
+                        @endif
+                        <button type="submit" class="pos-primary-action">
+                            Rabatt anwenden
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     @endif
 

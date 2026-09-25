@@ -2,6 +2,7 @@
     "items": [
         {"label": "Übersicht", "route": "administration.dashboard", "permission": "administration.access"},
         {"label": "Katalog", "route": "administration.catalog", "permission": "catalog.manage"},
+        {"label": "Angebote", "route": "administration.discount-offers", "permission": "catalog.manage"},
         {"label": "Kassierer", "route": "administration.cashiers", "permission": "users.cashiers.manage"},
         {"label": "Kellner", "route": "administration.waiters", "permission": "users.waiters.manage"},
         {"label": "Gastro", "route": "administration.hospitality", "permission": "hospitality.configuration.manage"},

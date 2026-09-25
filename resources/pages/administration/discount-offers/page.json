@@ -1,0 +1,13 @@
+{
+    "name": "discount-offers",
+    "surface": "administration",
+    "uri": "/discount-offers",
+    "route_name": "administration.discount-offers",
+    "permission": "catalog.manage",
+    "template": null,
+    "middleware": ["auth", "can:catalog.manage"],
+    "handler": {
+        "type": "livewire",
+        "target": "App\\Surfaces\\Administration\\Livewire\\DiscountOffersScreen"
+    }
+}

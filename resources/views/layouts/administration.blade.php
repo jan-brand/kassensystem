@@ -23,6 +23,7 @@
                 @endcan
                 @can('catalog.manage')
                     <a href="{{ route('administration.catalog') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.catalog') ? 'is-active' : '' }}">Katalog</a>
+                    <a href="{{ route('administration.discount-offers') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.discount-offers') ? 'is-active' : '' }}">Angebote</a>
                 @endcan
                 @can('users.cashiers.manage')
                     <a href="{{ route('administration.cashiers') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.cashiers') ? 'is-active' : '' }}">Kassierer</a>
@@ -69,6 +70,7 @@
                     @endcan
                     @can('catalog.manage')
                         <a href="{{ route('administration.catalog') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.catalog') ? 'is-active' : '' }}">Katalog</a>
+                        <a href="{{ route('administration.discount-offers') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.discount-offers') ? 'is-active' : '' }}">Angebote</a>
                     @endcan
                     @can('users.cashiers.manage')
                         <a href="{{ route('administration.cashiers') }}" wire:navigate class="admin-nav__link {{ request()->routeIs('administration.cashiers') ? 'is-active' : '' }}">Kassierer</a>

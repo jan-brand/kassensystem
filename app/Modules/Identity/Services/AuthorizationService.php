@@ -60,6 +60,7 @@ final class AuthorizationService
                 Permission::TicketsManage,
                 Permission::PreparationManage,
                 Permission::SalesView,
+                Permission::SalesDiscountsApply,
                 Permission::SalesReverse,
                 Permission::CashSessionsView,
                 Permission::ReportsView,

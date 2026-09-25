@@ -153,7 +153,16 @@
                                     <div class="grid grid-cols-[1fr_auto] gap-3 py-3">
                                         <div>
                                             <div class="font-black">{{ $item->product_name }}</div>
-                                            <div class="text-xs text-slate-500">{{ $item->quantity }} × {{ Money::format((int) $item->unit_price_cents, $currency) }}</div>
+                                            @if($item->discount_type)
+                                                <div class="text-xs text-slate-500">
+                                                    {{ $item->quantity }} ×
+                                                    <span class="line-through">{{ Money::format((int) ($item->original_unit_price_cents ?? $item->unit_price_cents), $currency) }}</span>
+                                                    {{ Money::format((int) $item->unit_price_cents, $currency) }}
+                                                </div>
+                                                <div class="mt-1 text-xs font-bold text-emerald-700">{{ $item->discount_label }}</div>
+                                            @else
+                                                <div class="text-xs text-slate-500">{{ $item->quantity }} × {{ Money::format((int) $item->unit_price_cents, $currency) }}</div>
+                                            @endif
                                         </div>
                                         <div class="whitespace-nowrap font-black">{{ Money::format((int) $item->total_cents, $currency) }}</div>
                                     </div>

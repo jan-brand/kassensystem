@@ -15,8 +15,8 @@ Vordefinierte Rabatte koennen:
 - nach Wochentagen und Zeitfenstern wiederkehren.
 
 ## Akzeptanzkriterien
-- [ ] Ausgangspreis, Rabattart/-wert und Endpreis werden gesnapshottet.
-- [ ] Rabatt kann den Positionspreis nicht negativ machen.
-- [ ] Eigene Permission schuetzt manuelle Rabatte.
-- [ ] Tagesangebot und manueller Rabatt werden nicht gestapelt.
-- [ ] Reporting kann Rabattwirkung separat ausweisen.
+- [x] Ausgangspreis, Rabattart/-wert und Endpreis werden gesnapshottet.
+- [x] Rabatt kann den Positionspreis nicht negativ machen.
+- [x] Eigene Permission schuetzt manuelle Rabatte.
+- [x] Tagesangebot und manueller Rabatt werden nicht gestapelt.
+- [x] Reporting kann Rabattwirkung separat ausweisen.
