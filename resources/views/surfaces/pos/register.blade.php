@@ -776,6 +776,20 @@
                     </div>
                 </div>
 
+                @if ($lastReceiptUrl)
+                    <div class="mt-5 rounded-3xl bg-white p-4 text-slate-950 ring-1 ring-slate-200" data-testid="sale-receipt-link">
+                        <p class="text-center text-xs font-black uppercase tracking-wide text-slate-500">Digitaler Beleg</p>
+                        @if ($lastReceiptQrSvg)
+                            <div class="mx-auto mt-3 w-full max-w-[220px]" data-testid="sale-receipt-qr">
+                                {!! $lastReceiptQrSvg !!}
+                            </div>
+                        @endif
+                        <a href="{{ $lastReceiptUrl }}" target="_blank" rel="noopener noreferrer" class="mt-3 block break-all text-center text-sm font-black text-blue-700 underline underline-offset-4">
+                            Beleg öffnen
+                        </a>
+                    </div>
+                @endif
+
                 <button type="button" wire:click="$set('lastSaleNumber', null)" class="pos-dialog-action">
                     Nächster Verkauf
                 </button>

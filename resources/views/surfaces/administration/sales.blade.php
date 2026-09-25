@@ -196,6 +196,19 @@
                             </div>
                         @endif
 
+                        @if($saleReceiptUrl)
+                            <div class="receipt-no-print rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="admin-sale-receipt-link">
+                                <p class="font-black">Digitaler Beleg</p>
+                                <p class="mt-1 text-xs leading-5 text-slate-500">QR erneut anzeigen oder den öffentlichen Beleg in einem neuen Tab öffnen.</p>
+                                @if($saleReceiptQrSvg)
+                                    <div class="mx-auto mt-3 w-full max-w-[190px] rounded-2xl bg-white p-3 ring-1 ring-slate-200" data-testid="admin-sale-receipt-qr">
+                                        {!! $saleReceiptQrSvg !!}
+                                    </div>
+                                @endif
+                                <a href="{{ $saleReceiptUrl }}" target="_blank" rel="noopener noreferrer" class="mt-3 block break-all text-center text-xs font-black text-blue-700 underline underline-offset-4">Öffentlichen Beleg öffnen</a>
+                            </div>
+                        @endif
+
                         @if($selectedSale->reversal)
                             <div class="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-950">
                                 <p class="font-black">Vollständig storniert</p>
@@ -213,6 +226,18 @@
                                         <dd class="text-right font-bold">#{{ $selectedSale->reversal->cashSession?->id }}</dd>
                                     @endif
                                 </dl>
+
+                                @if($reversalReceiptUrl)
+                                    <div class="receipt-no-print mt-4 rounded-2xl border border-red-200 bg-white p-3" data-testid="admin-reversal-receipt-link">
+                                        <p class="text-xs font-black uppercase tracking-wide text-red-700">Digitaler Stornobeleg</p>
+                                        @if($reversalReceiptQrSvg)
+                                            <div class="mx-auto mt-3 w-full max-w-[180px]" data-testid="admin-reversal-receipt-qr">
+                                                {!! $reversalReceiptQrSvg !!}
+                                            </div>
+                                        @endif
+                                        <a href="{{ $reversalReceiptUrl }}" target="_blank" rel="noopener noreferrer" class="mt-3 block break-all text-center text-xs font-black text-red-700 underline underline-offset-4">Stornobeleg öffnen</a>
+                                    </div>
+                                @endif
                             </div>
                         @elseif($canReverseSale)
                             <div class="receipt-no-print rounded-2xl border border-red-200 bg-red-50 p-4">

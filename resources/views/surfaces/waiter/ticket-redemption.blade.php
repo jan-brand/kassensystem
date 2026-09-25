@@ -40,6 +40,20 @@
                     @endif
                 </div>
 
+                @if($ticketReceiptUrl)
+                    <div class="mt-5 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 p-4" data-testid="ticket-sale-receipt-link">
+                        <p class="text-xs font-black uppercase tracking-[0.18em] text-cyan-100/70">Digitaler Kaufbeleg</p>
+                        @if($ticketReceiptQrSvg)
+                            <div class="mx-auto mt-3 w-full max-w-[220px] rounded-2xl bg-white p-3" data-testid="ticket-sale-receipt-qr">
+                                {!! $ticketReceiptQrSvg !!}
+                            </div>
+                        @endif
+                        <a href="{{ $ticketReceiptUrl }}" target="_blank" rel="noopener noreferrer" class="mt-3 block break-all text-center text-sm font-black text-cyan-100 underline underline-offset-4">
+                            Beleg öffnen
+                        </a>
+                    </div>
+                @endif
+
                 @if($ticket->assignedOrder)
                     <div class="mt-4 rounded-2xl border border-amber-300/30 bg-amber-300/10 p-4">
                         <p class="font-black">Dauerhaft zugeordnet: {{ $ticket->assignedOrder->area_name_snapshot }} / {{ $ticket->assignedOrder->table_name_snapshot }}</p>

@@ -92,6 +92,26 @@
             </section>
 
             <section class="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
+                <h3 class="text-lg font-black">Digitale Belege</h3>
+                <p class="mt-1 text-sm text-slate-500">Öffentliche Beleglinks laufen automatisch nach der festgelegten Zeit ab.</p>
+
+                <label class="mt-5 block">
+                    <span class="mb-2 block text-sm font-bold">Aufbewahrungsdauer in Tagen</span>
+                    <input
+                        wire:model="receiptRetentionDays"
+                        type="number"
+                        min="1"
+                        max="3650"
+                        class="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none focus:border-slate-950 focus:ring-4 focus:ring-slate-950/10"
+                    >
+                    @error('receiptRetentionDays')<p class="mt-2 text-sm font-semibold text-red-700">{{ $message }}</p>@enderror
+                </label>
+                <p class="mt-2 text-xs leading-5 text-slate-500">
+                    Der Zeitraum wird beim Ausstellen festgeschrieben. Interne Verkaufs- und Auditdaten bleiben davon unberührt.
+                </p>
+            </section>
+
+            <section class="rounded-3xl bg-white p-6 ring-1 ring-slate-200">
                 <h3 class="text-lg font-black">Logo</h3>
                 <p class="mt-1 text-sm text-slate-500">Optional. JPG, PNG oder WebP, maximal 2 MB.</p>
 

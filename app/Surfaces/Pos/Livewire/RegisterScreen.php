@@ -29,6 +29,7 @@ use App\Modules\Sales\Enums\PaymentMethod;
 use App\Modules\Sales\Models\Sale;
 use App\Modules\Sales\Models\SaleItem;
 use App\Modules\Sales\Queries\GetOpenSaleForRegisterQuery;
+use App\Modules\Sales\Services\DigitalReceiptService;
 use App\Modules\Sales\Services\DiscountPriceCalculator;
 use App\Modules\Sales\Services\PaypalMeLinkService;
 use App\Modules\Sales\Services\QrCodeSvgService;
@@ -88,6 +89,10 @@ final class RegisterScreen extends Component
     public ?int $lastChangeCents = null;
 
     public ?string $lastPaymentMethod = null;
+
+    public ?string $lastReceiptUrl = null;
+
+    public ?string $lastReceiptQrSvg = null;
 
     public ?int $discountItemId = null;
 
@@ -769,6 +774,22 @@ final class RegisterScreen extends Component
             ? $sale->payment->change_cents
             : 0;
         $this->lastPaymentMethod = $method?->value;
+        $this->lastReceiptUrl = null;
+        $this->lastReceiptQrSvg = null;
+
+        try {
+            $receipts = app(DigitalReceiptService::class);
+            $receipt = $receipts->ensureSaleReceipt($sale);
+
+            if (! $receipt->isExpired()) {
+                $receiptUrl = $receipts->publicUrl($receipt);
+                $this->lastReceiptUrl = $receiptUrl;
+                $this->lastReceiptQrSvg = app(QrCodeSvgService::class)->render($receiptUrl);
+            }
+        } catch (Throwable $exception) {
+            report($exception);
+        }
+
         $this->mobileCartOpen = false;
         $this->paymentOpen = false;
         $this->closeDiscount();
@@ -785,6 +806,8 @@ final class RegisterScreen extends Component
         $this->lastSaleTotalCents = null;
         $this->lastChangeCents = null;
         $this->lastPaymentMethod = null;
+        $this->lastReceiptUrl = null;
+        $this->lastReceiptQrSvg = null;
     }
 
     private function friendlyMessage(Throwable $exception): string

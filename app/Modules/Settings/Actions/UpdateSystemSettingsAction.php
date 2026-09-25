@@ -23,6 +23,7 @@ final class UpdateSystemSettingsAction
         ?string $logoPath = null,
         bool $posShowShortNames = true,
         ?string $paypalMeHandle = null,
+        ?int $receiptRetentionDays = null,
     ): SystemSetting {
         $this->authorization->authorize($actor, Permission::SettingsManage);
 
@@ -48,6 +49,12 @@ final class UpdateSystemSettingsAction
             );
         }
 
+        if ($receiptRetentionDays !== null && ($receiptRetentionDays < 1 || $receiptRetentionDays > 3650)) {
+            throw new InvalidArgumentException(
+                'Die Aufbewahrungsdauer für digitale Belege muss zwischen 1 und 3650 Tagen liegen.',
+            );
+        }
+
         if ($logoPath === '') {
             $logoPath = null;
         }
@@ -58,6 +65,7 @@ final class UpdateSystemSettingsAction
             $logoPath,
             $posShowShortNames,
             $paypalMeHandle,
+            $receiptRetentionDays,
         ): SystemSetting {
             $settings = SystemSetting::query()->lockForUpdate()->find(1);
             $before = $settings?->only([
@@ -65,10 +73,14 @@ final class UpdateSystemSettingsAction
                 'logo_path',
                 'pos_show_short_names',
                 'paypal_me_handle',
+                'receipt_retention_days',
             ]) ?? [];
             $effectivePaypalMeHandle = $paypalMeHandle === null
                 ? $settings?->paypal_me_handle
                 : ($paypalMeHandle === '' ? null : $paypalMeHandle);
+            $effectiveReceiptRetentionDays = $receiptRetentionDays
+                ?? $settings->receipt_retention_days
+                ?? 365;
 
             if ($settings === null) {
                 $settings = new SystemSetting;
@@ -80,6 +92,7 @@ final class UpdateSystemSettingsAction
                 'logo_path' => $logoPath,
                 'pos_show_short_names' => $posShowShortNames,
                 'paypal_me_handle' => $effectivePaypalMeHandle,
+                'receipt_retention_days' => $effectiveReceiptRetentionDays,
                 'updated_by_user_id' => $actor->id,
             ]);
             $settings->save();
@@ -97,6 +110,7 @@ final class UpdateSystemSettingsAction
                     'logo_path',
                     'pos_show_short_names',
                     'paypal_me_handle',
+                    'receipt_retention_days',
                 ]),
             );
 

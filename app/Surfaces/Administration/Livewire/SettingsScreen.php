@@ -33,6 +33,8 @@ final class SettingsScreen extends Component
 
     public string $paypalMeHandle = '';
 
+    public int $receiptRetentionDays = 365;
+
     public ?TemporaryUploadedFile $logoUpload = null;
 
     public ?string $existingLogoPath = null;
@@ -62,6 +64,7 @@ final class SettingsScreen extends Component
             ?? (string) config('kassensystem.register_name', 'Kasse 1');
         $this->posShowShortNames = $settings->pos_show_short_names ?? true;
         $this->paypalMeHandle = $settings->paypal_me_handle ?? '';
+        $this->receiptRetentionDays = (int) ($settings->receipt_retention_days ?? 365);
         $this->existingLogoPath = $settings?->logo_path;
     }
 
@@ -77,6 +80,7 @@ final class SettingsScreen extends Component
             'registerName' => ['required', 'string', 'max:120'],
             'posShowShortNames' => ['boolean'],
             'paypalMeHandle' => ['nullable', 'string', 'max:20', 'regex:/^[A-Za-z0-9]*$/'],
+            'receiptRetentionDays' => ['required', 'integer', 'min:1', 'max:3650'],
             'logoUpload' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'removeLogo' => ['boolean'],
         ], [
@@ -86,6 +90,8 @@ final class SettingsScreen extends Component
             'registerName.max' => 'Der Kassenname darf höchstens 120 Zeichen lang sein.',
             'paypalMeHandle.max' => 'Der PayPal.me-Name darf höchstens 20 Zeichen lang sein.',
             'paypalMeHandle.regex' => 'Der PayPal.me-Name darf nur Buchstaben und Zahlen enthalten.',
+            'receiptRetentionDays.min' => 'Digitale Belege müssen mindestens 1 Tag abrufbar bleiben.',
+            'receiptRetentionDays.max' => 'Digitale Belege können höchstens 3650 Tage abrufbar bleiben.',
             'logoUpload.image' => 'Das Logo muss eine Bilddatei sein.',
             'logoUpload.mimes' => 'Erlaubt sind JPG, PNG und WebP.',
             'logoUpload.max' => 'Das Logo darf höchstens 2 MB groß sein.',
@@ -116,6 +122,7 @@ final class SettingsScreen extends Component
                     logoPath: $logoPath,
                     posShowShortNames: $validated['posShowShortNames'],
                     paypalMeHandle: $validated['paypalMeHandle'],
+                    receiptRetentionDays: $validated['receiptRetentionDays'],
                 );
 
                 $register = Register::query()

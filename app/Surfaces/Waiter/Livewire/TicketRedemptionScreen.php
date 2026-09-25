@@ -6,6 +6,8 @@ use App\Modules\Hospitality\Enums\HospitalityOrderStatus;
 use App\Modules\Hospitality\Models\HospitalityOrder;
 use App\Modules\Identity\Enums\Permission;
 use App\Modules\Identity\Models\User;
+use App\Modules\Sales\Services\DigitalReceiptService;
+use App\Modules\Sales\Services\QrCodeSvgService;
 use App\Modules\Tickets\Actions\AssignTicketToHospitalityOrderAction;
 use App\Modules\Tickets\Actions\RedeemTicketEntitlementAction;
 use App\Modules\Tickets\Models\Ticket;
@@ -184,10 +186,28 @@ final class TicketRedemptionScreen extends Component
                     ->with('product')])
                 ->find($this->selectedEntitlementId)
             : null;
+        $ticketReceiptUrl = null;
+        $ticketReceiptQrSvg = null;
+
+        if ($ticket instanceof Ticket && $ticket->sale !== null) {
+            try {
+                $receipts = app(DigitalReceiptService::class);
+                $receipt = $receipts->ensureSaleReceipt($ticket->sale);
+
+                if (! $receipt->isExpired()) {
+                    $ticketReceiptUrl = $receipts->publicUrl($receipt);
+                    $ticketReceiptQrSvg = app(QrCodeSvgService::class)->render($ticketReceiptUrl);
+                }
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
 
         return view('surfaces.waiter.ticket-redemption', [
             'ticket' => $ticket,
             'selectedEntitlement' => $selectedEntitlement,
+            'ticketReceiptUrl' => $ticketReceiptUrl,
+            'ticketReceiptQrSvg' => $ticketReceiptQrSvg,
             'openOrders' => HospitalityOrder::query()
                 ->where('status', HospitalityOrderStatus::Open->value)
                 ->with('table.area')

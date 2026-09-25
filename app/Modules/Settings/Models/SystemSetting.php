@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $logo_path
  * @property bool $pos_show_short_names
  * @property string|null $paypal_me_handle
+ * @property int $receipt_retention_days
  * @property int|null $updated_by_user_id
  * @property-read User|null $updatedBy
  */
@@ -24,6 +25,7 @@ final class SystemSetting extends Model
     {
         return [
             'pos_show_short_names' => 'boolean',
+            'receipt_retention_days' => 'integer',
         ];
     }
 

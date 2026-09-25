@@ -7,6 +7,8 @@ use App\Modules\Identity\Models\User;
 use App\Modules\Sales\Actions\ReverseCompletedSaleAction;
 use App\Modules\Sales\Queries\GetCompletedSaleQuery;
 use App\Modules\Sales\Queries\SearchCompletedSalesQuery;
+use App\Modules\Sales\Services\DigitalReceiptService;
+use App\Modules\Sales\Services\QrCodeSvgService;
 use App\Modules\Settings\Queries\GetSystemSettingsQuery;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\View\View;
@@ -141,6 +143,33 @@ final class SalesScreen extends Component
             ? $saleQuery->execute($this->selectedSaleId)
             : null;
         $settings = $settingsQuery->execute();
+        $saleReceiptUrl = null;
+        $saleReceiptQrSvg = null;
+        $reversalReceiptUrl = null;
+        $reversalReceiptQrSvg = null;
+
+        if ($selectedSale !== null) {
+            try {
+                $receipts = app(DigitalReceiptService::class);
+                $saleReceipt = $receipts->ensureSaleReceipt($selectedSale);
+
+                if (! $saleReceipt->isExpired()) {
+                    $saleReceiptUrl = $receipts->publicUrl($saleReceipt);
+                    $saleReceiptQrSvg = app(QrCodeSvgService::class)->render($saleReceiptUrl);
+                }
+
+                if ($selectedSale->reversal !== null) {
+                    $reversalReceipt = $receipts->ensureReversalReceipt($selectedSale->reversal);
+
+                    if (! $reversalReceipt->isExpired()) {
+                        $reversalReceiptUrl = $receipts->publicUrl($reversalReceipt);
+                        $reversalReceiptQrSvg = app(QrCodeSvgService::class)->render($reversalReceiptUrl);
+                    }
+                }
+            } catch (Throwable $exception) {
+                report($exception);
+            }
+        }
 
         return view('surfaces.administration.sales', [
             'sales' => $search->execute(
@@ -149,6 +178,10 @@ final class SalesScreen extends Component
                 to: $to,
             ),
             'selectedSale' => $selectedSale,
+            'saleReceiptUrl' => $saleReceiptUrl,
+            'saleReceiptQrSvg' => $saleReceiptQrSvg,
+            'reversalReceiptUrl' => $reversalReceiptUrl,
+            'reversalReceiptQrSvg' => $reversalReceiptQrSvg,
             'canReverseSale' => Gate::allows(Permission::SalesReverse->value),
             'cafeteriaName' => $settings?->cafeteria_name ?: (string) config('app.name'),
             'currency' => (string) config('kassensystem.currency', 'EUR'),
