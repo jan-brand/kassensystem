@@ -13,8 +13,6 @@ use InvalidArgumentException;
  */
 final class QrCodeSvgService
 {
-    private const VERSION = 6;
-
     private const SIZE = 41;
 
     private const DATA_CODEWORDS = 136;
@@ -147,7 +145,10 @@ final class QrCodeSvgService
         }
     }
 
-    /** @param list<int> $data @return list<int> */
+    /**
+     * @param  list<int>  $data
+     * @return list<int>
+     */
     private function errorCorrectionCodewords(array $data): array
     {
         $generator = $this->generatorPolynomial(self::ECC_CODEWORDS);
@@ -321,7 +322,10 @@ final class QrCodeSvgService
         return $digits;
     }
 
-    /** @param array<int, array<int, bool|null>> $matrix @param list<int> $codewords */
+    /**
+     * @param  array<int, array<int, bool|null>>  $matrix
+     * @param  list<int>  $codewords
+     */
     private function placeData(array &$matrix, array $codewords): void
     {
         $increment = -1;

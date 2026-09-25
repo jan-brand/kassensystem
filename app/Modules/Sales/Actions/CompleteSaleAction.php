@@ -176,7 +176,7 @@ final class CompleteSaleAction
         $normalized = [];
 
         foreach ($entries as $entry) {
-            $method = $entry['method'] ?? null;
+            $method = $entry['method'];
             $method = $method instanceof PaymentMethod
                 ? $method
                 : PaymentMethod::tryFrom((string) $method);
@@ -185,7 +185,7 @@ final class CompleteSaleAction
                 throw new InvalidArgumentException('Unknown payment method.');
             }
 
-            $amount = (int) ($entry['amount_cents'] ?? 0);
+            $amount = (int) $entry['amount_cents'];
 
             if ($amount <= 0) {
                 throw new InvalidArgumentException('Payment amount must be positive.');

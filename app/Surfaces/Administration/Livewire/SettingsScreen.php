@@ -61,7 +61,7 @@ final class SettingsScreen extends Component
         $this->registerName = $register->name
             ?? (string) config('kassensystem.register_name', 'Kasse 1');
         $this->posShowShortNames = $settings->pos_show_short_names ?? true;
-        $this->paypalMeHandle = $settings?->paypal_me_handle ?? '';
+        $this->paypalMeHandle = $settings->paypal_me_handle ?? '';
         $this->existingLogoPath = $settings?->logo_path;
     }
 
