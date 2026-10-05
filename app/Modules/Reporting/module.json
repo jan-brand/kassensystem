@@ -1,6 +1,6 @@
 {
     "name": "Reporting",
-    "description": "Umsatz-, Produkt- und Kassenschichtauswertungen",
-    "depends_on": ["Sales", "Catalog", "CashRegister", "Identity"],
+    "description": "V2-Tagesreporting für Umsatz, Zahlungen, Rabatte, Gastro, Tickets, Zubereitung und Audit",
+    "depends_on": ["Sales", "Catalog", "CashRegister", "Identity", "Hospitality", "Tickets", "Preparation", "Audit"],
     "exports": []
 }

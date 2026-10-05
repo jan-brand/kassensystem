@@ -1,0 +1,25 @@
+[33m28f620b[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m feat: add digital receipts
+ .github/backlog/v2/08-digital-receipts.md          |   8 [32m+[m
+ app/Modules/Sales/Enums/DigitalReceiptKind.php     |  17 [32m+++[m
+ .../Http/Controllers/PublicReceiptController.php   |  26 [32m++++[m
+ app/Modules/Sales/Models/DigitalReceipt.php        |  71 [32m+++++++++[m
+ .../Sales/Services/DigitalReceiptService.php       | 170 [32m+++++++++++++++++++++[m
+ ..._09_25_110010_create_digital_receipts_table.php |  34 [32m+++++[m
+ app/Modules/Sales/module.json                      |   2 [32m+[m[31m-[m
+ .../Sales/resources/views/public-receipt.blade.php | 115 [32m++++++++++++++[m
+ app/Modules/Sales/routes/web.php                   |   9 [32m++[m
+ .../Actions/UpdateSystemSettingsAction.php         |  14 [32m++[m
+ app/Modules/Settings/Models/SystemSetting.php      |   2 [32m+[m
+ ...d_receipt_retention_days_to_system_settings.php |  22 [32m+++[m
+ .../Administration/Livewire/SalesScreen.php        |  33 [32m++++[m
+ .../Administration/Livewire/SettingsScreen.php     |   7 [32m+[m
+ app/Surfaces/Pos/Livewire/RegisterScreen.php       |  23 [32m+++[m
+ .../Waiter/Livewire/TicketRedemptionScreen.php     |  20 [32m+++[m
+ .../views/surfaces/administration/sales.blade.php  |  25 [32m+++[m
+ .../surfaces/administration/settings.blade.php     |  20 [32m+++[m
+ resources/views/surfaces/pos/register.blade.php    |  14 [32m++[m
+ .../surfaces/waiter/ticket-redemption.blade.php    |  14 [32m++[m
+ tests/Feature/Pos/DigitalReceiptSurfaceTest.php    |  95 [32m++++++++++++[m
+ tests/Feature/Sales/DigitalReceiptTest.php         | 146 [32m++++++++++++++++++[m
+ .../Settings/DigitalReceiptSettingsTest.php        |  50 [32m++++++[m
+ 23 files changed, 936 insertions(+), 1 deletion(-)

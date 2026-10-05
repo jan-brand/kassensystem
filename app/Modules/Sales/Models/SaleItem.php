@@ -15,6 +15,7 @@ use LogicException;
  * @property int $sale_id
  * @property int $product_id
  * @property string $product_name
+ * @property string|null $category_name
  * @property int|null $original_unit_price_cents
  * @property int $unit_price_cents
  * @property DiscountType|null $discount_type

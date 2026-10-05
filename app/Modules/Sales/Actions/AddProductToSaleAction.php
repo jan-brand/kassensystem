@@ -60,6 +60,7 @@ final class AddProductToSaleAction
                     'sale_id' => $locked->id,
                     'product_id' => $product->id,
                     'product_name' => $product->name,
+                    'category_name' => $product->category->name,
                     'original_unit_price_cents' => $original,
                     'unit_price_cents' => $unitPrice,
                     'discount_type' => $offer?->type,
